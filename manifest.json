@@ -1,0 +1,23 @@
+{
+    "name": "業務支援システム：玄武",
+    "short_name": "玄武",
+    "start_url": "/",
+    "display": "standalone",
+    "background_color": "#f1f5f9",
+    "theme_color": "#0f172a",
+    "description": "鉄骨ボルトの集計と発注を管理するアプリ",
+    "icons": [
+        {
+            "src": "192.png",
+            "type": "image/png",
+            "sizes": "192x192",
+            "purpose": "any maskable"
+        },
+        {
+            "src": "512.png",
+            "type": "image/png",
+            "sizes": "512x512",
+            "purpose": "any maskable"
+        }
+    ]
+}
