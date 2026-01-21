@@ -53,6 +53,7 @@ import {
   renderStaticColorPalette,
   toggleFab,
   updateQuickNavVisibility,
+  populateJointDropdownForEdit,
 } from "./modules/ui.js";
 
 import {
