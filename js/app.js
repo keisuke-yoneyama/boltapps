@@ -52,6 +52,7 @@ import {
   openEditModal,
   renderStaticColorPalette,
   toggleFab,
+  updateQuickNavVisibility,
 } from "./modules/ui.js";
 
 import {
@@ -1895,7 +1896,7 @@ document.addEventListener("DOMContentLoaded", () => {
       count: "",
     }));
     if (isBundledWithColumnInput) isBundledWithColumnInput.checked = false; // ★追加
-    updateJointFormUI(false);
+    updateJointFformUI(false);
   };
 
   const generateCustomInputFields = (count, container, prefix, values = []) => {
