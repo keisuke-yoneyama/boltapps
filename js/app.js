@@ -51,6 +51,7 @@ import {
   updateJointFormUI,
   openEditModal,
   renderStaticColorPalette,
+  toggleFab,
 } from "./modules/ui.js";
 
 import {
@@ -1623,42 +1624,42 @@ document.addEventListener("DOMContentLoaded", () => {
     openModal(boltSelectorModal);
   };
 
-  const openEditProjectModal = (project) => {
-    editProjectIdInput.value = project.id;
-    editProjectNameInput.value = project.name;
-    document.getElementById("edit-property-name").value =
-      project.propertyName || ""; // この行を追加
-    const isAdvanced = project.mode === "advanced";
-    document
-      .getElementById("edit-advanced-toggle-wrapper")
-      .classList.add("hidden");
-    editSimpleProjectSettings.classList.toggle("hidden", isAdvanced);
-    editAdvancedProjectSettings.classList.toggle("hidden", !isAdvanced);
+  // const openEditProjectModal = (project) => {
+  //   editProjectIdInput.value = project.id;
+  //   editProjectNameInput.value = project.name;
+  //   document.getElementById("edit-property-name").value =
+  //     project.propertyName || ""; // この行を追加
+  //   const isAdvanced = project.mode === "advanced";
+  //   document
+  //     .getElementById("edit-advanced-toggle-wrapper")
+  //     .classList.add("hidden");
+  //   editSimpleProjectSettings.classList.toggle("hidden", isAdvanced);
+  //   editAdvancedProjectSettings.classList.toggle("hidden", !isAdvanced);
 
-    if (isAdvanced) {
-      levelNameCache = [...project.customLevels];
-      areaNameCache = [...project.customAreas];
-      editCustomLevelsCountInput.value = project.customLevels.length;
-      editCustomAreasCountInput.value = project.customAreas.length;
-      generateCustomInputFields(
-        project.customLevels.length,
-        editCustomLevelsContainer,
-        "edit-level",
-        levelNameCache,
-      );
-      generateCustomInputFields(
-        project.customAreas.length,
-        editCustomAreasContainer,
-        "edit-area",
-        areaNameCache,
-      );
-    } else {
-      editProjectFloorsInput.value = project.floors;
-      editProjectSectionsInput.value = project.sections;
-      editProjectHasPhInput.checked = project.hasPH;
-    }
-    openModal(editProjectModal);
-  };
+  //   if (isAdvanced) {
+  //     levelNameCache = [...project.customLevels];
+  //     areaNameCache = [...project.customAreas];
+  //     editCustomLevelsCountInput.value = project.customLevels.length;
+  //     editCustomAreasCountInput.value = project.customAreas.length;
+  //     generateCustomInputFields(
+  //       project.customLevels.length,
+  //       editCustomLevelsContainer,
+  //       "edit-level",
+  //       levelNameCache,
+  //     );
+  //     generateCustomInputFields(
+  //       project.customAreas.length,
+  //       editCustomAreasContainer,
+  //       "edit-area",
+  //       areaNameCache,
+  //     );
+  //   } else {
+  //     editProjectFloorsInput.value = project.floors;
+  //     editProjectSectionsInput.value = project.sections;
+  //     editProjectHasPhInput.checked = project.hasPH;
+  //   }
+  //   openModal(editProjectModal);
+  // };
 
   const populateJointSelectorModal = (project, currentJointId) => {
     if (!project) return;
@@ -1738,92 +1739,92 @@ document.addEventListener("DOMContentLoaded", () => {
     jointOptionsContainer.innerHTML = html;
   };
 
-  const populateTempBoltMappingModal = (project) => {
-    if (!project) return;
-    tempBoltMappingContainer.innerHTML = "";
-    const requiredFinalBolts = new Set();
+  // const populateTempBoltMappingModal = (project) => {
+  //   if (!project) return;
+  //   tempBoltMappingContainer.innerHTML = "";
+  //   const requiredFinalBolts = new Set();
 
-    project.joints
-      .filter(
-        (j) =>
-          j.tempBoltSetting === "calculated" &&
-          j.type !== "wall_girt" &&
-          j.type !== "roof_purlin" &&
-          j.type !== "column",
-      )
-      .forEach((j) => {
-        if (j.isComplexSpl && j.webInputs) {
-          j.webInputs.forEach((input) => {
-            if (input.size) {
-              requiredFinalBolts.add(input.size);
-            }
-          });
-        } else {
-          if (j.flangeSize) requiredFinalBolts.add(j.flangeSize);
-          if (j.webSize) requiredFinalBolts.add(j.webSize);
-        }
-      });
+  //   project.joints
+  //     .filter(
+  //       (j) =>
+  //         j.tempBoltSetting === "calculated" &&
+  //         j.type !== "wall_girt" &&
+  //         j.type !== "roof_purlin" &&
+  //         j.type !== "column",
+  //     )
+  //     .forEach((j) => {
+  //       if (j.isComplexSpl && j.webInputs) {
+  //         j.webInputs.forEach((input) => {
+  //           if (input.size) {
+  //             requiredFinalBolts.add(input.size);
+  //           }
+  //         });
+  //       } else {
+  //         if (j.flangeSize) requiredFinalBolts.add(j.flangeSize);
+  //         if (j.webSize) requiredFinalBolts.add(j.webSize);
+  //       }
+  //     });
 
-    if (requiredFinalBolts.size === 0) {
-      tempBoltMappingContainer.innerHTML =
-        '<p class="text-slate-500">仮ボルトを使用する継手が登録されていません。</p>';
-      return;
-    }
+  //   if (requiredFinalBolts.size === 0) {
+  //     tempBoltMappingContainer.innerHTML =
+  //       '<p class="text-slate-500">仮ボルトを使用する継手が登録されていません。</p>';
+  //     return;
+  //   }
 
-    // ▼▼▼ ここからが修正箇所: ボルトサイズを径と長さでソートする処理 ▼▼▼
-    const sortedFinalBolts = Array.from(requiredFinalBolts).sort((a, b) => {
-      const regex = /M(\d+)[×xX](\d+)/;
-      const matchA = a.match(regex);
-      const matchB = b.match(regex);
+  //   // ▼▼▼ ここからが修正箇所: ボルトサイズを径と長さでソートする処理 ▼▼▼
+  //   const sortedFinalBolts = Array.from(requiredFinalBolts).sort((a, b) => {
+  //     const regex = /M(\d+)[×xX](\d+)/;
+  //     const matchA = a.match(regex);
+  //     const matchB = b.match(regex);
 
-      if (matchA && matchB) {
-        const diameterA = parseInt(matchA[1]);
-        const lengthA = parseInt(matchA[2]);
-        const diameterB = parseInt(matchB[1]);
-        const lengthB = parseInt(matchB[2]);
+  //     if (matchA && matchB) {
+  //       const diameterA = parseInt(matchA[1]);
+  //       const lengthA = parseInt(matchA[2]);
+  //       const diameterB = parseInt(matchB[1]);
+  //       const lengthB = parseInt(matchB[2]);
 
-        // 最初に径で比較
-        if (diameterA !== diameterB) {
-          return diameterA - diameterB;
-        }
-        // 径が同じ場合は長さで比較
-        return lengthA - lengthB;
-      }
+  //       // 最初に径で比較
+  //       if (diameterA !== diameterB) {
+  //         return diameterA - diameterB;
+  //       }
+  //       // 径が同じ場合は長さで比較
+  //       return lengthA - lengthB;
+  //     }
 
-      // "M"から始まらないボルトサイズ（D-Lock等）は、通常の文字順でソート
-      return a.localeCompare(b);
-    });
-    // ▲▲▲ ここまでが修正箇所 ▲▲▲
+  //     // "M"から始まらないボルトサイズ（D-Lock等）は、通常の文字順でソート
+  //     return a.localeCompare(b);
+  //   });
+  //   // ▲▲▲ ここまでが修正箇所 ▲▲▲
 
-    const existingMap = project.tempBoltMap || {};
-    const rowsHtml = sortedFinalBolts
-      .map((boltSize) => {
-        const boltSeriesMatch = boltSize.match(/M\d+/);
-        if (!boltSeriesMatch) return "";
+  //   const existingMap = project.tempBoltMap || {};
+  //   const rowsHtml = sortedFinalBolts
+  //     .map((boltSize) => {
+  //       const boltSeriesMatch = boltSize.match(/M\d+/);
+  //       if (!boltSeriesMatch) return "";
 
-        const boltSeries = boltSeriesMatch[0];
-        const availableHugBolts = HUG_BOLT_SIZES[boltSeries] || [];
-        const savedHugBolt = existingMap[boltSize] || "";
-        const hugBoltOptions = availableHugBolts
-          .map(
-            (size) =>
-              `<option value="${size}" ${
-                size === savedHugBolt ? "selected" : ""
-              }>${size}</option>`,
-          )
-          .join("");
-        return `
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 items-center p-3 bg-slate-50 dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700">
-                    <label class="font-medium text-slate-800 dark:text-slate-100">本ボルト: ${boltSize}</label>
-                    <select data-final-bolt="${boltSize}" class="temp-bolt-map-select w-full bg-white dark:bg-slate-700 border-slate-300 dark:border-slate-600 text-slate-900 dark:text-slate-100 rounded-lg p-2 focus:ring-yellow-500 focus:border-yellow-500">
-                        <option value="">仮ボルトを選択...</option>
-                        ${hugBoltOptions}
-                    </select>
-                </div>`;
-      })
-      .join("");
-    tempBoltMappingContainer.innerHTML = `<div class="space-y-3">${rowsHtml}</div>`;
-  };
+  //       const boltSeries = boltSeriesMatch[0];
+  //       const availableHugBolts = HUG_BOLT_SIZES[boltSeries] || [];
+  //       const savedHugBolt = existingMap[boltSize] || "";
+  //       const hugBoltOptions = availableHugBolts
+  //         .map(
+  //           (size) =>
+  //             `<option value="${size}" ${
+  //               size === savedHugBolt ? "selected" : ""
+  //             }>${size}</option>`,
+  //         )
+  //         .join("");
+  //       return `
+  //               <div class="grid grid-cols-1 md:grid-cols-2 gap-4 items-center p-3 bg-slate-50 dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700">
+  //                   <label class="font-medium text-slate-800 dark:text-slate-100">本ボルト: ${boltSize}</label>
+  //                   <select data-final-bolt="${boltSize}" class="temp-bolt-map-select w-full bg-white dark:bg-slate-700 border-slate-300 dark:border-slate-600 text-slate-900 dark:text-slate-100 rounded-lg p-2 focus:ring-yellow-500 focus:border-yellow-500">
+  //                       <option value="">仮ボルトを選択...</option>
+  //                       ${hugBoltOptions}
+  //                   </select>
+  //               </div>`;
+  //     })
+  //     .join("");
+  //   tempBoltMappingContainer.innerHTML = `<div class="space-y-3">${rowsHtml}</div>`;
+  // };
 
   // const populateJointDropdownForEdit = (selectElement, currentJointId) => {
   //   const project = state.projects.find((p) => p.id === state.currentProjectId);
@@ -7900,127 +7901,127 @@ document.addEventListener("DOMContentLoaded", () => {
   let isFabOpen = false;
 
   // ▼▼▼ 修正：登録用FABの制御ロジック（一括登録ボタンを追加） ▼▼▼
-  const toggleFab = (forceState) => {
-    const newState = typeof forceState === "boolean" ? forceState : !isFabOpen;
-    if (newState === isFabOpen) return;
-    isFabOpen = newState;
+  // const toggleFab = (forceState) => {
+  //   const newState = typeof forceState === "boolean" ? forceState : !isFabOpen;
+  //   if (newState === isFabOpen) return;
+  //   isFabOpen = newState;
 
-    // 配列に fabBulkAddMember を追加
-    const buttons = [fabAddJoint, fabAddMember, fabBulkAddMember, fabTempBolt];
+  //   // 配列に fabBulkAddMember を追加
+  //   const buttons = [fabAddJoint, fabAddMember, fabBulkAddMember, fabTempBolt];
 
-    if (isFabOpen) {
-      fabIconPlus.style.transform = "rotate(45deg)";
-      buttons.forEach((btn) => {
-        btn.classList.remove(
-          "translate-y-10",
-          "opacity-0",
-          "pointer-events-none",
-        );
-        btn.classList.add("pointer-events-auto");
-      });
-    } else {
-      fabIconPlus.style.transform = "rotate(0deg)";
-      buttons.forEach((btn) => {
-        btn.classList.add("translate-y-10", "opacity-0", "pointer-events-none");
-        btn.classList.remove("pointer-events-auto");
-      });
-    }
-  };
+  //   if (isFabOpen) {
+  //     fabIconPlus.style.transform = "rotate(45deg)";
+  //     buttons.forEach((btn) => {
+  //       btn.classList.remove(
+  //         "translate-y-10",
+  //         "opacity-0",
+  //         "pointer-events-none",
+  //       );
+  //       btn.classList.add("pointer-events-auto");
+  //     });
+  //   } else {
+  //     fabIconPlus.style.transform = "rotate(0deg)";
+  //     buttons.forEach((btn) => {
+  //       btn.classList.add("translate-y-10", "opacity-0", "pointer-events-none");
+  //       btn.classList.remove("pointer-events-auto");
+  //     });
+  //   }
+  // };
   // ▲▲▲ 修正ここまで ▲▲▲
   // クリックで開閉
-  fabToggle.addEventListener("click", (e) => {
-    e.stopPropagation();
-    toggleFab();
-  });
+  // fabToggle.addEventListener("click", (e) => {
+  //   e.stopPropagation();
+  //   toggleFab();
+  // });
 
   // 画面の他の場所をクリックしたら閉じる
-  document.addEventListener("click", (e) => {
-    if (isFabOpen && !fabContainer.contains(e.target)) {
-      toggleFab(false);
-    }
-  });
+  // document.addEventListener("click", (e) => {
+  //   if (isFabOpen && !fabContainer.contains(e.target)) {
+  //     toggleFab(false);
+  //   }
+  // });
 
   // ■ 継手登録ボタンが押された時の処理
-  fabAddJoint.addEventListener("click", () => {
-    toggleFab(false); // 閉じる
+  // fabAddJoint.addEventListener("click", () => {
+  //   toggleFab(false); // 閉じる
 
-    document.querySelector("#edit-joint-modal h3").textContent =
-      "継手の新規登録";
+  //   document.querySelector("#edit-joint-modal h3").textContent =
+  //     "継手の新規登録";
 
-    // フォームリセット
-    editJointIdInput.value = "";
-    editJointNameInput.value = "";
-    editJointTypeInput.value = "girder";
-    editFlangeSizeInput.value = "";
-    editFlangeCountInput.value = "";
-    editWebSizeInput.value = "";
-    editWebCountInput.value = "";
-    editIsPinJointInput.checked = false;
-    editIsDoubleShearInput.checked = false;
-    editCountAsMemberInput.checked = false;
-    editHasShopSplInput.checked = false;
-    editHasBoltCorrectionInput.checked = false;
-    editIsComplexSplInput.checked = false;
-    editTempBoltSettingInput.value = "calculated";
-    editComplexSplCountInput.value = "2";
-    document.getElementById("edit-shop-temp-bolt-count").value = "";
-    document.getElementById("edit-shop-temp-bolt-size").value = "";
-    document.getElementById("edit-shop-temp-bolt-count-f").value = "";
-    document.getElementById("edit-shop-temp-bolt-size-f").value = "";
-    document.getElementById("edit-shop-temp-bolt-count-w").value = "";
-    document.getElementById("edit-shop-temp-bolt-size-w").value = "";
-    editComplexSplCache = Array.from({ length: 4 }, () => ({
-      size: "",
-      count: "",
-    }));
-    // ▼▼▼ 追加：色のリセット処理 ▼▼▼
-    if (editJointColorInput) {
-      editJointColorInput.value = "#ffffff";
-      editJointColorInput.dataset.isNull = "true";
-      // パレットの選択解除（関数が定義済みであれば）
-      if (typeof renderColorPalette === "function") renderColorPalette(null);
-    }
-    // ▲▲▲ 追加ここまで ▲▲▲
-    updateJointFormUI(true);
-    openModal(editModal);
-  });
+  //   // フォームリセット
+  //   editJointIdInput.value = "";
+  //   editJointNameInput.value = "";
+  //   editJointTypeInput.value = "girder";
+  //   editFlangeSizeInput.value = "";
+  //   editFlangeCountInput.value = "";
+  //   editWebSizeInput.value = "";
+  //   editWebCountInput.value = "";
+  //   editIsPinJointInput.checked = false;
+  //   editIsDoubleShearInput.checked = false;
+  //   editCountAsMemberInput.checked = false;
+  //   editHasShopSplInput.checked = false;
+  //   editHasBoltCorrectionInput.checked = false;
+  //   editIsComplexSplInput.checked = false;
+  //   editTempBoltSettingInput.value = "calculated";
+  //   editComplexSplCountInput.value = "2";
+  //   document.getElementById("edit-shop-temp-bolt-count").value = "";
+  //   document.getElementById("edit-shop-temp-bolt-size").value = "";
+  //   document.getElementById("edit-shop-temp-bolt-count-f").value = "";
+  //   document.getElementById("edit-shop-temp-bolt-size-f").value = "";
+  //   document.getElementById("edit-shop-temp-bolt-count-w").value = "";
+  //   document.getElementById("edit-shop-temp-bolt-size-w").value = "";
+  //   editComplexSplCache = Array.from({ length: 4 }, () => ({
+  //     size: "",
+  //     count: "",
+  //   }));
+  //   // ▼▼▼ 追加：色のリセット処理 ▼▼▼
+  //   if (editJointColorInput) {
+  //     editJointColorInput.value = "#ffffff";
+  //     editJointColorInput.dataset.isNull = "true";
+  //     // パレットの選択解除（関数が定義済みであれば）
+  //     if (typeof renderColorPalette === "function") renderColorPalette(null);
+  //   }
+  //   // ▲▲▲ 追加ここまで ▲▲▲
+  //   updateJointFormUI(true);
+  //   openModal(editModal);
+  // });
 
   // ■ 部材登録ボタンが押された時の処理
   // ■ 部材登録ボタンが押された時の処理（修正版）
-  fabAddMember.addEventListener("click", () => {
-    toggleFab(false);
-    const project = state.projects.find((p) => p.id === state.currentProjectId);
-    if (!project) return;
-    document.querySelector("#edit-member-modal h3").textContent =
-      "部材の新規登録";
-    editMemberIdInput.value = "";
-    editMemberNameInput.value = "";
-    populateJointDropdownForEdit(editMemberJointSelect, "");
+  // fabAddMember.addEventListener("click", () => {
+  //   toggleFab(false);
+  //   const project = state.projects.find((p) => p.id === state.currentProjectId);
+  //   if (!project) return;
+  //   document.querySelector("#edit-member-modal h3").textContent =
+  //     "部材の新規登録";
+  //   editMemberIdInput.value = "";
+  //   editMemberNameInput.value = "";
+  //   populateJointDropdownForEdit(editMemberJointSelect, "");
 
-    // ▼▼▼ 追加：チェックボックス生成（全て空で初期化） ▼▼▼
-    const levelsContainer = document.getElementById(
-      "edit-member-levels-container",
-    );
-    levelsContainer.innerHTML = "";
-    const levels = getProjectLevels(project);
-    levels.forEach((lvl) => {
-      const label = document.createElement("label");
-      label.className = "flex items-center gap-2 text-sm cursor-pointer";
-      label.innerHTML = `<input type="checkbox" value="${lvl.id}" class="level-checkbox h-4 w-4 text-blue-600 rounded border-gray-300"> ${lvl.label}`;
-      levelsContainer.appendChild(label);
-    });
-    // ▲▲▲ 追加ここまで ▲▲▲
+  //   // ▼▼▼ 追加：チェックボックス生成（全て空で初期化） ▼▼▼
+  //   const levelsContainer = document.getElementById(
+  //     "edit-member-levels-container",
+  //   );
+  //   levelsContainer.innerHTML = "";
+  //   const levels = getProjectLevels(project);
+  //   levels.forEach((lvl) => {
+  //     const label = document.createElement("label");
+  //     label.className = "flex items-center gap-2 text-sm cursor-pointer";
+  //     label.innerHTML = `<input type="checkbox" value="${lvl.id}" class="level-checkbox h-4 w-4 text-blue-600 rounded border-gray-300"> ${lvl.label}`;
+  //     levelsContainer.appendChild(label);
+  //   });
+  //   // ▲▲▲ 追加ここまで ▲▲▲
 
-    openModal(editMemberModal);
-  });
+  //   openModal(editMemberModal);
+  // });
 
   // ■ 仮ボルト設定ボタンの処理
-  fabTempBolt.addEventListener("click", () => {
-    toggleFab(false);
-    const project = state.projects.find((p) => p.id === state.currentProjectId);
-    populateTempBoltMappingModal(project);
-    openModal(tempBoltMappingModal);
-  });
+  // fabTempBolt.addEventListener("click", () => {
+  //   toggleFab(false);
+  //   const project = state.projects.find((p) => p.id === state.currentProjectId);
+  //   populateTempBoltMappingModal(project);
+  //   openModal(tempBoltMappingModal);
+  // });
   // ▲▲▲ 修正ここまで ▲▲▲
 
   // ▼▼▼ 追加：部材一括登録の実装 ▼▼▼
@@ -8357,24 +8358,24 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   });
 
-  // ★ 修正版：表示制御（クイックナビとFABの両方を制御）
-  const updateQuickNavVisibility = () => {
-    // プロジェクトが開かれているならクイックナビは常に表示
-    if (state.currentProjectId) {
-      quickNavContainer.classList.remove("hidden");
+  // // ★ 修正版：表示制御（クイックナビとFABの両方を制御）
+  // const updateQuickNavVisibility = () => {
+  //   // プロジェクトが開かれているならクイックナビは常に表示
+  //   if (state.currentProjectId) {
+  //     quickNavContainer.classList.remove("hidden");
 
-      // 登録FABは「継手と部材」タブの時だけ表示
-      if (state.activeTab === "joints") {
-        fabContainer.classList.remove("hidden");
-      } else {
-        fabContainer.classList.add("hidden");
-        if (isFabOpen) toggleFab(); // タブ切り替え時に閉じる
-      }
-    } else {
-      quickNavContainer.classList.add("hidden");
-      fabContainer.classList.add("hidden");
-    }
-  };
+  //     // 登録FABは「継手と部材」タブの時だけ表示
+  //     if (state.activeTab === "joints") {
+  //       fabContainer.classList.remove("hidden");
+  //     } else {
+  //       fabContainer.classList.add("hidden");
+  //       if (isFabOpen) toggleFab(); // タブ切り替え時に閉じる
+  //     }
+  //   } else {
+  //     quickNavContainer.classList.add("hidden");
+  //     fabContainer.classList.add("hidden");
+  //   }
+  // };
   // 既存の switchView / switchTab 関数にも、この updateQuickNavVisibility() を呼び出す処理を入れる必要があります。
   // しかし、ここでは MutationObserver などを仕込むよりも、
   // 単純に定期的、またはクリックイベントにフックさせるのが簡単です。

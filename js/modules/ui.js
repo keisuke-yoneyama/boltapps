@@ -29,7 +29,10 @@ export function resetNewComplexSplCache() {
   }));
 }
 
-export function resetEditComplexSplCache() {
+// キャッシュリセット用ヘルパー
+function resetEditComplexSplCache() {
+  // editComplexSplCache変数を初期化
+  // (ui.js内の変数editComplexSplCacheにアクセス)
   editComplexSplCache = Array.from({ length: 4 }, () => ({
     size: "",
     count: "",
@@ -615,57 +618,302 @@ export const populateJointDropdownForEdit = (selectElement, currentJointId) => {
 };
 
 /**
- * メンバー編集モーダルを開く（階層チェックボックス生成含む）
+ * 登録用FAB（フローティングアクションボタン）の開閉を切り替える
+ * @param {boolean} [forceState] - 強制的に開く(true)か閉じる(false)か指定したい場合
  */
-export const openEditMemberModal = (memberId) => {
-  // 1. プロジェクト・メンバーデータの取得
+export function toggleFab(forceState) {
+  // 1. 新しい状態を決定
+  const newState = typeof forceState === "boolean" ? forceState : !isFabOpen;
+  if (newState === isFabOpen) return;
+
+  isFabOpen = newState;
+
+  // 2. DOM要素の取得 (IDはHTMLに合わせてください)
+  const fabIconPlus = document.getElementById("fab-icon-plus");
+  const buttons = [
+    document.getElementById("fab-add-joint"),
+    document.getElementById("fab-add-member"),
+    document.getElementById("fab-bulk-add-member"), // 追加されたボタン
+    document.getElementById("fab-temp-bolt"),
+  ].filter((el) => el !== null); // 存在しない要素は除外
+
+  // 3. クラスの付け替え（アニメーション制御）
+  if (isFabOpen) {
+    if (fabIconPlus) fabIconPlus.style.transform = "rotate(45deg)";
+
+    buttons.forEach((btn) => {
+      btn.classList.remove(
+        "translate-y-10",
+        "opacity-0",
+        "pointer-events-none",
+      );
+      btn.classList.add("pointer-events-auto");
+    });
+  } else {
+    if (fabIconPlus) fabIconPlus.style.transform = "rotate(0deg)";
+
+    buttons.forEach((btn) => {
+      btn.classList.add("translate-y-10", "opacity-0", "pointer-events-none");
+      btn.classList.remove("pointer-events-auto");
+    });
+  }
+}
+
+// --- FABの外部クリック判定用 ---
+export function closeFabIfOutside(targetElement) {
+  // isFabOpen は ui.js 内のローカル変数
+  const fabContainer = document.getElementById("fab-container");
+  // FABが開いていて、かつクリックされたのがFABの外側なら閉じる
+  if (isFabOpen && fabContainer && !fabContainer.contains(targetElement)) {
+    toggleFab(false);
+  }
+}
+
+/**
+ * 継手の新規登録モーダルを開く（フォームリセット含む）
+ */
+export function openNewJointModal() {
+  toggleFab(false); // メニューを閉じる
+
+  // タイトル変更
+  const title = document.querySelector("#edit-joint-modal h3");
+  if (title) title.textContent = "継手の新規登録";
+
+  // フォームリセット (ヘルパー関数を作ると楽ですが、ベタ書きでもOK)
+  const setVal = (id, val) => {
+    const el = document.getElementById(id);
+    if (el) el.value = val;
+  };
+  const setCheck = (id, val) => {
+    const el = document.getElementById(id);
+    if (el) el.checked = val;
+  };
+
+  setVal("edit-joint-id", "");
+  setVal("edit-joint-name", "");
+  setVal("edit-joint-type", "girder");
+
+  setVal("edit-flange-size", "");
+  setVal("edit-flange-count", "");
+  setVal("edit-web-size", "");
+  setVal("edit-web-count", "");
+
+  setCheck("edit-is-pin-joint", false);
+  setCheck("edit-is-double-shear", false);
+  setCheck("edit-count-as-member", false);
+  setCheck("edit-has-shop-spl", false);
+  setCheck("edit-has-bolt-correction", false);
+  setCheck("edit-is-complex-spl", false);
+
+  setVal("edit-temp-bolt-setting", "calculated");
+  setVal("edit-complex-spl-count", "2");
+
+  // 仮ボルト詳細リセット
+  ["count", "size", "count-f", "size-f", "count-w", "size-w"].forEach(
+    (suffix) => {
+      setVal(`edit-shop-temp-bolt-${suffix}`, "");
+    },
+  );
+
+  // キャッシュのリセット (ui.js内の変数)
+  // editComplexSplCache は let で定義されている必要があります
+  // もし export されていないなら直接代入、 export されているならセッター関数を使う
+  resetEditComplexSplCache(); // ※下で作る関数
+
+  // 色のリセット
+  const colorInput = document.getElementById("edit-joint-color");
+  if (colorInput) {
+    colorInput.value = "#ffffff";
+    colorInput.dataset.isNull = "true";
+    renderColorPalette(null); // 選択解除
+  }
+
+  updateJointFormUI(true);
+
+  const modal = document.getElementById("edit-joint-modal"); // ID確認
+  openModal(modal);
+}
+
+/**
+ * 部材の新規登録モーダルを開く
+ */
+export function openNewMemberModal() {
+  toggleFab(false);
+
   const project = state.projects.find((p) => p.id === state.currentProjectId);
   if (!project) return;
 
-  const member = (project.members || []).find((m) => m.id === memberId);
-  if (!member) return;
+  const title = document.querySelector("#edit-member-modal h3");
+  if (title) title.textContent = "部材の新規登録";
 
-  // 2. DOM要素の取得 (変数は使えないので getElementById)
   const idInput = document.getElementById("edit-member-id");
   const nameInput = document.getElementById("edit-member-name");
   const jointSelect = document.getElementById("edit-member-joint-select");
   const levelsContainer = document.getElementById(
     "edit-member-levels-container",
   );
-  const modal = document.getElementById("edit-member-modal");
 
-  // 3. 値のセット
-  if (idInput) idInput.value = member.id;
-  if (nameInput) nameInput.value = member.name;
+  if (idInput) idInput.value = "";
+  if (nameInput) nameInput.value = "";
 
-  // 同じ ui.js 内の関数を利用
-  populateJointDropdownForEdit(jointSelect, member.jointId);
+  // ドロップダウン生成
+  populateJointDropdownForEdit(jointSelect, "");
 
-  // 4. 階層チェックボックスの生成
+  // 階層チェックボックス生成
   if (levelsContainer) {
     levelsContainer.innerHTML = "";
-    const levels = getProjectLevels(project); // logic.jsからインポートした関数
-    const targetLevels = member.targetLevels || [];
-
+    const levels = getProjectLevels(project);
     levels.forEach((lvl) => {
-      const isChecked = targetLevels.includes(lvl.id);
       const label = document.createElement("label");
       label.className = "flex items-center gap-2 text-sm cursor-pointer";
-
-      // テンプレートリテラルでHTML生成
-      label.innerHTML = `
-                <input type="checkbox" 
-                       value="${lvl.id}" 
-                       class="level-checkbox h-4 w-4 text-blue-600 rounded border-gray-300" 
-                       ${isChecked ? "checked" : ""}> 
-                ${lvl.label}
-            `;
+      label.innerHTML = `<input type="checkbox" value="${lvl.id}" class="level-checkbox h-4 w-4 text-blue-600 rounded border-gray-300"> ${lvl.label}`;
       levelsContainer.appendChild(label);
     });
   }
 
-  // 5. モーダル表示
+  const modal = document.getElementById("edit-member-modal");
   openModal(modal);
+}
+
+/**
+ * 仮ボルト設定モーダルを開く
+ */
+export function openTempBoltSettingsModal() {
+  toggleFab(false);
+  const project = state.projects.find((p) => p.id === state.currentProjectId);
+
+  // populateTempBoltMappingModal が ui.js にあるか、importしている前提
+  populateTempBoltMappingModal(project);
+
+  const modal = document.getElementById("temp-bolt-mapping-modal");
+  openModal(modal);
+}
+
+/**
+ * 仮ボルト設定モーダルの中身（マッピングリスト）を生成する
+ */
+export const populateTempBoltMappingModal = (project) => {
+  if (!project) return;
+
+  // 1. 要素の取得 (変数は使えないのでIDで取得)
+  const container = document.getElementById("temp-bolt-mapping-container");
+  if (!container) return;
+
+  container.innerHTML = "";
+  const requiredFinalBolts = new Set();
+
+  // 2. 必要なボルトの抽出 (ロジックはそのまま)
+  project.joints
+    .filter(
+      (j) =>
+        j.tempBoltSetting === "calculated" &&
+        j.type !== "wall_girt" &&
+        j.type !== "roof_purlin" &&
+        j.type !== "column",
+    )
+    .forEach((j) => {
+      if (j.isComplexSpl && j.webInputs) {
+        j.webInputs.forEach((input) => {
+          if (input.size) {
+            requiredFinalBolts.add(input.size);
+          }
+        });
+      } else {
+        if (j.flangeSize) requiredFinalBolts.add(j.flangeSize);
+        if (j.webSize) requiredFinalBolts.add(j.webSize);
+      }
+    });
+
+  if (requiredFinalBolts.size === 0) {
+    container.innerHTML =
+      '<p class="text-slate-500">仮ボルトを使用する継手が登録されていません。</p>';
+    return;
+  }
+
+  // 3. ソート処理 (そのまま)
+  const sortedFinalBolts = Array.from(requiredFinalBolts).sort((a, b) => {
+    const regex = /M(\d+)[×xX](\d+)/;
+    const matchA = a.match(regex);
+    const matchB = b.match(regex);
+
+    if (matchA && matchB) {
+      const diameterA = parseInt(matchA[1]);
+      const lengthA = parseInt(matchA[2]);
+      const diameterB = parseInt(matchB[1]);
+      const lengthB = parseInt(matchB[2]);
+
+      if (diameterA !== diameterB) {
+        return diameterA - diameterB;
+      }
+      return lengthA - lengthB;
+    }
+    return a.localeCompare(b);
+  });
+
+  // 4. HTML生成 (HUG_BOLT_SIZESを使用)
+  const existingMap = project.tempBoltMap || {};
+  const rowsHtml = sortedFinalBolts
+    .map((boltSize) => {
+      const boltSeriesMatch = boltSize.match(/M\d+/);
+      if (!boltSeriesMatch) return "";
+
+      const boltSeries = boltSeriesMatch[0];
+      // ここで HUG_BOLT_SIZES を使う
+      const availableHugBolts = HUG_BOLT_SIZES[boltSeries] || [];
+      const savedHugBolt = existingMap[boltSize] || "";
+
+      const hugBoltOptions = availableHugBolts
+        .map(
+          (size) =>
+            `<option value="${size}" ${
+              size === savedHugBolt ? "selected" : ""
+            }>${size}</option>`,
+        )
+        .join("");
+
+      return `
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 items-center p-3 bg-slate-50 dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700">
+                <label class="font-medium text-slate-800 dark:text-slate-100">本ボルト: ${boltSize}</label>
+                <select data-final-bolt="${boltSize}" class="temp-bolt-map-select w-full bg-white dark:bg-slate-700 border-slate-300 dark:border-slate-600 text-slate-900 dark:text-slate-100 rounded-lg p-2 focus:ring-yellow-500 focus:border-yellow-500">
+                    <option value="">仮ボルトを選択...</option>
+                    ${hugBoltOptions}
+                </select>
+            </div>`;
+    })
+    .join("");
+
+  container.innerHTML = `<div class="space-y-3">${rowsHtml}</div>`;
+};
+
+/**
+ * クイックナビとFABボタンの表示/非表示を更新する
+ */
+export const updateQuickNavVisibility = () => {
+  // 1. 要素の取得 (IDはHTMLに合わせてください)
+  const quickNavContainer = document.getElementById("quick-nav-container");
+  const fabContainer = document.getElementById("fab-container");
+
+  if (!quickNavContainer || !fabContainer) return;
+
+  // 2. 表示ロジック
+  // プロジェクトが開かれているならクイックナビは常に表示
+  if (state.currentProjectId) {
+    quickNavContainer.classList.remove("hidden");
+
+    // 登録FABは「継手と部材(joints)」タブの時だけ表示
+    if (state.activeTab === "joints") {
+      fabContainer.classList.remove("hidden");
+    } else {
+      fabContainer.classList.add("hidden");
+
+      // FABを強制的に閉じる (falseを渡せば閉じるように作ったはずなのでこれでOK)
+      toggleFab(false);
+    }
+  } else {
+    // プロジェクトが開いていないときは両方隠す
+    quickNavContainer.classList.add("hidden");
+    fabContainer.classList.add("hidden");
+  }
 };
 
 /**
@@ -715,7 +963,7 @@ export function selectStaticColor(color) {
   }
 
   // 3. 入力欄の更新
-  const input = document.getElementById("joint-color-input"); // ※ID確認
+  const input = document.getElementById("joint-color"); // ※ID確認
   if (input) {
     input.value = color;
   }

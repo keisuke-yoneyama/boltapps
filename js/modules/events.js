@@ -7,6 +7,11 @@ import {
   selectColor,
   updateEditComplexSplCacheItem,
   selectStaticColor,
+  toggleFab,
+  closeFabIfOutside,
+  openNewJointModal,
+  openNewMemberModal,
+  openTempBoltSettingsModal,
 } from "./ui.js"; // ui.jsで作った関数を使う
 
 import { resetTempJointData } from "./state.js";
@@ -30,6 +35,8 @@ export function setupEventListeners() {
 
   setupColorPalleteEvents(); //カラーパレット関係
 
+  setupFloatingFABBottunEvents(); //登録用フローティングボタン
+
   // ▼▼▼ 追加: 編集モーダル複合スプライス入力の監視 (4セット分) ▼▼▼
   for (let i = 1; i <= 4; i++) {
     const suffix = i > 1 ? `-${i}` : "";
@@ -50,6 +57,57 @@ export function setupEventListeners() {
         updateEditComplexSplCacheItem(i - 1, "count", e.target.value);
       });
     }
+  }
+}
+
+//登録用フローティングボタンイベント
+function setupFloatingFABBottunEvents() {
+  // // メインのFABボタン
+  // const fabMainBtn = document.getElementById("fab-toggle"); // IDは確認してください
+  // if (fabMainBtn) {
+  //   fabMainBtn.addEventListener("click", () => {
+  //     toggleFab(); // 引数なし＝トグル
+  //   });
+  // }
+
+  // (オプション) メニュー内のボタンを押したら閉じるようにしたい場合
+  const subButtons = document.querySelectorAll(".fab-sub-button"); // htmlのクラス名で取得する
+  subButtons.forEach((btn) => {
+    btn.addEventListener("click", () => {
+      toggleFab(false); // 強制的に閉じる
+    });
+  });
+
+  // 1. FAB開閉ボタン
+  const fabToggle = document.getElementById("fab-toggle"); // ID確認
+  if (fabToggle) {
+    fabToggle.addEventListener("click", (e) => {
+      e.stopPropagation(); // 親への伝播を止める
+      toggleFab();
+    });
+  }
+
+  // 2. 画面の他の場所をクリックしたら閉じる
+  document.addEventListener("click", (e) => {
+    closeFabIfOutside(e.target);
+  });
+
+  // 3. 継手登録ボタン (fab-add-joint)
+  const fabAddJoint = document.getElementById("fab-add-joint");
+  if (fabAddJoint) {
+    fabAddJoint.addEventListener("click", openNewJointModal);
+  }
+
+  // 4. 部材登録ボタン (fab-add-member)
+  const fabAddMember = document.getElementById("fab-add-member");
+  if (fabAddMember) {
+    fabAddMember.addEventListener("click", openNewMemberModal);
+  }
+
+  // 5. 仮ボルト設定ボタン (fab-temp-bolt)
+  const fabTempBolt = document.getElementById("fab-temp-bolt");
+  if (fabTempBolt) {
+    fabTempBolt.addEventListener("click", openTempBoltSettingsModal);
   }
 }
 
