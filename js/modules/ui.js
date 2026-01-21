@@ -667,3 +667,56 @@ export const openEditMemberModal = (memberId) => {
   // 5. モーダル表示
   openModal(modal);
 };
+
+/**
+ * 常設フォーム用のカラーパレットを描画する
+ */
+export function renderStaticColorPalette(selectedColor) {
+  // ※IDはHTMLに合わせて修正してください
+  const container = document.getElementById("static-color-palette-container");
+  if (!container) return;
+
+  container.innerHTML = "";
+
+  PRESET_COLORS.forEach((color) => {
+    const swatch = document.createElement("div");
+    swatch.className = "color-swatch";
+    swatch.style.backgroundColor = color;
+    swatch.dataset.color = color; // データ属性に色を持たせる
+
+    if (color === selectedColor) {
+      swatch.classList.add("selected");
+    }
+
+    // ★イベントリスナーはここには書かない！
+
+    container.appendChild(swatch);
+  });
+}
+
+/**
+ * 常設フォームの色が選択されたときのUI更新処理
+ */
+export function selectStaticColor(color) {
+  const container = document.getElementById("static-color-palette-container");
+  if (!container) return;
+
+  // 1. このコンテナ内の選択状態だけを解除
+  container.querySelectorAll(".color-swatch").forEach((el) => {
+    el.classList.remove("selected");
+  });
+
+  // 2. 該当する色を選択状態に
+  const targetSwatch = container.querySelector(
+    `.color-swatch[data-color="${color}"]`,
+  );
+  if (targetSwatch) {
+    targetSwatch.classList.add("selected");
+  }
+
+  // 3. 入力欄の更新
+  const input = document.getElementById("joint-color-input"); // ※ID確認
+  if (input) {
+    input.value = color;
+  }
+}

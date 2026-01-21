@@ -6,6 +6,7 @@ import {
   updateJointFormUI,
   selectColor,
   updateEditComplexSplCacheItem,
+  selectStaticColor,
 } from "./ui.js"; // ui.jsで作った関数を使う
 
 import { resetTempJointData } from "./state.js";
@@ -20,30 +21,14 @@ export function setupEventListeners() {
   setupComfirmAddModalEvents();
 
   setupEditModalConplexSplPlusMinusBtnEvents();
-  setupModalConplexSplPlusMinusBtnEvents();
-  setupJointTypeChangedEvents();
+  setupModalConplexSplPlusMinusBtnEvents(); //継手
+  setupJointTypeChangedEvents(); //継手登録常設フォーム
   setupEditJointTypeChangedEvents();
 
   setupCloseBoltSizeSelectModalBtnEvents();
   setupCloseCustomAlertModalBtnEvents();
 
-  // ▼▼▼ 追加: カラーパレットのクリックイベント ▼▼▼
-  const paletteContainer = document.getElementById("color-palette-container");
-
-  if (paletteContainer) {
-    paletteContainer.addEventListener("click", (e) => {
-      // クリックされた要素が .color-swatch かどうか確認
-      const swatch = e.target.closest(".color-swatch");
-
-      if (swatch) {
-        // swatchが持っている色情報を取得
-        const color = swatch.dataset.color;
-
-        // UI更新関数を呼び出す
-        selectColor(color);
-      }
-    });
-  }
+  setupColorPalleteEvents(); //カラーパレット関係
 
   // ▼▼▼ 追加: 編集モーダル複合スプライス入力の監視 (4セット分) ▼▼▼
   for (let i = 1; i <= 4; i++) {
@@ -65,6 +50,42 @@ export function setupEventListeners() {
         updateEditComplexSplCacheItem(i - 1, "count", e.target.value);
       });
     }
+  }
+}
+
+//カラーバレット関係のイベントセットアップ
+function setupColorPalleteEvents() {
+  // ▼▼▼ 追加: カラーパレットのクリックイベント ▼▼▼
+  const paletteContainer = document.getElementById("color-palette-container");
+
+  if (paletteContainer) {
+    paletteContainer.addEventListener("click", (e) => {
+      // クリックされた要素が .color-swatch かどうか確認
+      const swatch = e.target.closest(".color-swatch");
+
+      if (swatch) {
+        // swatchが持っている色情報を取得
+        const color = swatch.dataset.color;
+
+        // UI更新関数を呼び出す
+        selectColor(color);
+      }
+    });
+  }
+
+  // ▼▼▼ 追加: 常設フォーム用カラーパレットのクリック ▼▼▼
+  const staticContainer = document.getElementById(
+    "static-color-palette-container",
+  );
+
+  if (staticContainer) {
+    staticContainer.addEventListener("click", (e) => {
+      const swatch = e.target.closest(".color-swatch");
+      if (swatch) {
+        const color = swatch.dataset.color;
+        selectStaticColor(color); // UI更新関数を呼ぶ
+      }
+    });
   }
 }
 

@@ -50,6 +50,7 @@ import {
   renderColorPalette,
   updateJointFormUI,
   openEditModal,
+  renderStaticColorPalette,
 } from "./modules/ui.js";
 
 import {
@@ -1270,31 +1271,31 @@ document.addEventListener("DOMContentLoaded", () => {
   renderColorPalette(null);
   // ▲▲▲ 修正ここまで ▲▲▲
   // ▼▼▼ 追加：常設フォーム用カラーパレット制御 ▼▼▼
-  const renderStaticColorPalette = (selectedColor) => {
-    if (!staticColorPaletteContainer) return;
-    staticColorPaletteContainer.innerHTML = "";
-    PRESET_COLORS.forEach((color) => {
-      const swatch = document.createElement("div");
-      swatch.className = "color-swatch";
-      swatch.style.backgroundColor = color;
+  // const renderStaticColorPalette = (selectedColor) => {
+  //   if (!staticColorPaletteContainer) return;
+  //   staticColorPaletteContainer.innerHTML = "";
+  //   PRESET_COLORS.forEach((color) => {
+  //     const swatch = document.createElement("div");
+  //     swatch.className = "color-swatch";
+  //     swatch.style.backgroundColor = color;
 
-      if (color === selectedColor) {
-        swatch.classList.add("selected");
-      }
+  //     if (color === selectedColor) {
+  //       swatch.classList.add("selected");
+  //     }
 
-      swatch.addEventListener("click", () => {
-        // 選択状態の更新
-        staticColorPaletteContainer
-          .querySelectorAll(".color-swatch")
-          .forEach((el) => el.classList.remove("selected"));
-        swatch.classList.add("selected");
-        // 入力値の更新
-        jointColorInput.value = color;
-      });
+  //     swatch.addEventListener("click", () => {
+  //       // 選択状態の更新
+  //       staticColorPaletteContainer
+  //         .querySelectorAll(".color-swatch")
+  //         .forEach((el) => el.classList.remove("selected"));
+  //       swatch.classList.add("selected");
+  //       // 入力値の更新
+  //       jointColorInput.value = color;
+  //     });
 
-      staticColorPaletteContainer.appendChild(swatch);
-    });
-  };
+  //     staticColorPaletteContainer.appendChild(swatch);
+  //   });
+  // };
 
   // トグルスイッチの制御
   if (jointColorToggle) {
