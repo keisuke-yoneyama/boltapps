@@ -2,6 +2,7 @@ import { PRESET_COLORS } from "./config.js";
 import { state } from "./state.js";
 import { getProjectLevels } from "./calculator.js";
 
+let isFabOpen = false;
 let levelNameCache = [];
 let areaNameCache = [];
 let editComplexSplCache = Array.from({ length: 4 }, () => ({
