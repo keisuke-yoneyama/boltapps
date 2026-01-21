@@ -1,4 +1,6 @@
 import { PRESET_COLORS } from "./config.js";
+import { state } from "./state.js";
+import { getProjectLevels } from "./calculator.js";
 
 let levelNameCache = [];
 let areaNameCache = [];
@@ -578,3 +580,90 @@ export function openEditModal(joint) {
   const editModal = document.getElementById("edit-joint-modal");
   openModal(editModal);
 }
+
+/**
+ * 編集用ドロップダウンに選択肢（ジョイント一覧）を生成する
+ * @param {HTMLElement} selectElement - <select>要素
+ * @param {string} currentJointId - 現在選択されているID
+ */
+export const populateJointDropdownForEdit = (selectElement, currentJointId) => {
+  // 安全対策: 要素がなければ何もしない
+  if (!selectElement) return;
+
+  const project = state.projects.find((p) => p.id === state.currentProjectId);
+  if (!project) return;
+
+  selectElement.innerHTML = "";
+
+  // 表示用データの作成（フィルタリングとソート）
+  const availableJoints = project.joints
+    .filter((j) => !j.countAsMember)
+    .sort((a, b) => a.name.localeCompare(b.name, "ja"));
+
+  // 選択肢の生成
+  availableJoints.forEach((joint) => {
+    const option = document.createElement("option");
+    option.value = joint.id;
+    option.textContent = joint.name;
+
+    if (joint.id === currentJointId) {
+      option.selected = true;
+    }
+
+    selectElement.appendChild(option);
+  });
+};
+
+/**
+ * メンバー編集モーダルを開く（階層チェックボックス生成含む）
+ */
+export const openEditMemberModal = (memberId) => {
+  // 1. プロジェクト・メンバーデータの取得
+  const project = state.projects.find((p) => p.id === state.currentProjectId);
+  if (!project) return;
+
+  const member = (project.members || []).find((m) => m.id === memberId);
+  if (!member) return;
+
+  // 2. DOM要素の取得 (変数は使えないので getElementById)
+  const idInput = document.getElementById("edit-member-id");
+  const nameInput = document.getElementById("edit-member-name");
+  const jointSelect = document.getElementById("edit-member-joint-select");
+  const levelsContainer = document.getElementById(
+    "edit-member-levels-container",
+  );
+  const modal = document.getElementById("edit-member-modal");
+
+  // 3. 値のセット
+  if (idInput) idInput.value = member.id;
+  if (nameInput) nameInput.value = member.name;
+
+  // 同じ ui.js 内の関数を利用
+  populateJointDropdownForEdit(jointSelect, member.jointId);
+
+  // 4. 階層チェックボックスの生成
+  if (levelsContainer) {
+    levelsContainer.innerHTML = "";
+    const levels = getProjectLevels(project); // logic.jsからインポートした関数
+    const targetLevels = member.targetLevels || [];
+
+    levels.forEach((lvl) => {
+      const isChecked = targetLevels.includes(lvl.id);
+      const label = document.createElement("label");
+      label.className = "flex items-center gap-2 text-sm cursor-pointer";
+
+      // テンプレートリテラルでHTML生成
+      label.innerHTML = `
+                <input type="checkbox" 
+                       value="${lvl.id}" 
+                       class="level-checkbox h-4 w-4 text-blue-600 rounded border-gray-300" 
+                       ${isChecked ? "checked" : ""}> 
+                ${lvl.label}
+            `;
+      levelsContainer.appendChild(label);
+    });
+  }
+
+  // 5. モーダル表示
+  openModal(modal);
+};

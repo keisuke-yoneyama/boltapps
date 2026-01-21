@@ -1566,39 +1566,39 @@ document.addEventListener("DOMContentLoaded", () => {
   //   openModal(editModal);
   // };
   // ★ 修正版：openEditMemberModal（階層チェックボックス生成）
-  const openEditMemberModal = (memberId) => {
-    const project = state.projects.find((p) => p.id === state.currentProjectId);
-    if (!project) return;
-    const member = (project.members || []).find((m) => m.id === memberId);
-    if (!member) return;
+  // const openEditMemberModal = (memberId) => {
+  //   const project = state.projects.find((p) => p.id === state.currentProjectId);
+  //   if (!project) return;
+  //   const member = (project.members || []).find((m) => m.id === memberId);
+  //   if (!member) return;
 
-    editMemberIdInput.value = member.id;
-    editMemberNameInput.value = member.name;
-    populateJointDropdownForEdit(editMemberJointSelect, member.jointId);
+  //   editMemberIdInput.value = member.id;
+  //   editMemberNameInput.value = member.name;
+  //   populateJointDropdownForEdit(editMemberJointSelect, member.jointId);
 
-    // ▼▼▼ 追加：階層チェックボックスの生成と初期値セット ▼▼▼
-    const levelsContainer = document.getElementById(
-      "edit-member-levels-container",
-    );
-    levelsContainer.innerHTML = "";
-    const levels = getProjectLevels(project);
-    const targetLevels = member.targetLevels || []; // 未設定なら空(全フロア扱いだがUI上はチェックなし)
+  //   // ▼▼▼ 追加：階層チェックボックスの生成と初期値セット ▼▼▼
+  //   const levelsContainer = document.getElementById(
+  //     "edit-member-levels-container",
+  //   );
+  //   levelsContainer.innerHTML = "";
+  //   const levels = getProjectLevels(project);
+  //   const targetLevels = member.targetLevels || []; // 未設定なら空(全フロア扱いだがUI上はチェックなし)
 
-    levels.forEach((lvl) => {
-      const isChecked = targetLevels.includes(lvl.id);
-      const label = document.createElement("label");
-      label.className = "flex items-center gap-2 text-sm cursor-pointer";
-      label.innerHTML = `<input type="checkbox" value="${
-        lvl.id
-      }" class="level-checkbox h-4 w-4 text-blue-600 rounded border-gray-300" ${
-        isChecked ? "checked" : ""
-      }> ${lvl.label}`;
-      levelsContainer.appendChild(label);
-    });
-    // ▲▲▲ 追加ここまで ▲▲▲
+  //   levels.forEach((lvl) => {
+  //     const isChecked = targetLevels.includes(lvl.id);
+  //     const label = document.createElement("label");
+  //     label.className = "flex items-center gap-2 text-sm cursor-pointer";
+  //     label.innerHTML = `<input type="checkbox" value="${
+  //       lvl.id
+  //     }" class="level-checkbox h-4 w-4 text-blue-600 rounded border-gray-300" ${
+  //       isChecked ? "checked" : ""
+  //     }> ${lvl.label}`;
+  //     levelsContainer.appendChild(label);
+  //   });
+  //   // ▲▲▲ 追加ここまで ▲▲▲
 
-    openModal(editMemberModal);
-  };
+  //   openModal(editMemberModal);
+  // };
 
   const openConfirmDeleteModal = (id, type) => {
     const confirmDeleteModal = document.getElementById("confirm-delete-modal");
@@ -1824,25 +1824,25 @@ document.addEventListener("DOMContentLoaded", () => {
     tempBoltMappingContainer.innerHTML = `<div class="space-y-3">${rowsHtml}</div>`;
   };
 
-  const populateJointDropdownForEdit = (selectElement, currentJointId) => {
-    const project = state.projects.find((p) => p.id === state.currentProjectId);
-    if (!project) return;
+  // const populateJointDropdownForEdit = (selectElement, currentJointId) => {
+  //   const project = state.projects.find((p) => p.id === state.currentProjectId);
+  //   if (!project) return;
 
-    selectElement.innerHTML = "";
-    const availableJoints = project.joints
-      .filter((j) => !j.countAsMember)
-      .sort((a, b) => a.name.localeCompare(b.name, "ja"));
+  //   selectElement.innerHTML = "";
+  //   const availableJoints = project.joints
+  //     .filter((j) => !j.countAsMember)
+  //     .sort((a, b) => a.name.localeCompare(b.name, "ja"));
 
-    availableJoints.forEach((joint) => {
-      const option = document.createElement("option");
-      option.value = joint.id;
-      option.textContent = joint.name;
-      if (joint.id === currentJointId) {
-        option.selected = true;
-      }
-      selectElement.appendChild(option);
-    });
-  };
+  //   availableJoints.forEach((joint) => {
+  //     const option = document.createElement("option");
+  //     option.value = joint.id;
+  //     option.textContent = joint.name;
+  //     if (joint.id === currentJointId) {
+  //       option.selected = true;
+  //     }
+  //     selectElement.appendChild(option);
+  //   });
+  // };
 
   const populateHugBoltSelector = (selectElement) => {
     const allHugBolts = Object.values(HUG_BOLT_SIZES).flat();
