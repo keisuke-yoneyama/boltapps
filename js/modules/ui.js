@@ -1,4 +1,4 @@
-import { PRESET_COLORS } from "./config.js";
+import { PRESET_COLORS, HUG_BOLT_SIZES } from "./config.js";
 import { state } from "./state.js";
 import { getProjectLevels } from "./calculator.js";
 
