@@ -12,9 +12,11 @@ import {
   openNewJointModal,
   openNewMemberModal,
   openTempBoltSettingsModal,
+  populateGlobalBoltSelectorModal,
+  openModal,
 } from "./ui.js"; // ui.jsで作った関数を使う
 
-import { resetTempJointData } from "./state.js";
+import { resetTempJointData, state } from "./state.js";
 /**
  * アプリ全体のイベントリスナーを設定する関数
  */
@@ -36,6 +38,9 @@ export function setupEventListeners() {
   setupColorPalleteEvents(); //カラーパレット関係
 
   setupFloatingFABBottunEvents(); //登録用フローティングボタン
+  
+  setupBoltSizeInputClicked();
+
 
   // ▼▼▼ 追加: 編集モーダル複合スプライス入力の監視 (4セット分) ▼▼▼
   for (let i = 1; i <= 4; i++) {
@@ -394,4 +399,19 @@ function setupComfirmAddModalEvents() {
         resetTempJointData();
       });
     });
+}
+
+function setupBoltSizeInputClicked() {
+  // 例: ボルトサイズ入力欄がクリックされたら
+  boltSizeInput.addEventListener('click', (e) => {
+    // 1. ターゲットを保存
+    state.activeBoltTarget = e.target;
+
+    // 2. モーダルの中身を作る
+    populateGlobalBoltSelectorModal();
+
+    // 3. モーダルを開く
+    const modal = document.getElementById("bolt-selector-modal");
+    openModal(modal);
+  })
 }

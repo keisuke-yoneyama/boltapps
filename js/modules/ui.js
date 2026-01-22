@@ -1,6 +1,13 @@
 import { PRESET_COLORS, HUG_BOLT_SIZES } from "./config.js";
 import { state } from "./state.js";
-import { getProjectLevels } from "./calculator.js";
+import { getProjectLevels, getMasterOrderedKeys, getBoltWeight, boltSort } from "./calculator.js";
+
+// 並び順の定義（定数として外に出しました）
+const BOLT_TYPE_ORDER = [
+  "M16", "M16めっき", "M20", "M20めっき", "M22", "M22めっき",
+  "中ボ(Mネジ) M16", "中ボ(Mネジ) M20", "中ボ(Mネジ) M22",
+  "Dドブ12", "Dユニ12", "Dドブ16", "Dユニ16",
+];
 
 let isFabOpen = false;
 let levelNameCache = [];
@@ -866,8 +873,7 @@ export const populateTempBoltMappingModal = (project) => {
       const hugBoltOptions = availableHugBolts
         .map(
           (size) =>
-            `<option value="${size}" ${
-              size === savedHugBolt ? "selected" : ""
+            `<option value="${size}" ${size === savedHugBolt ? "selected" : ""
             }>${size}</option>`,
         )
         .join("");
@@ -969,3 +975,475 @@ export function selectStaticColor(color) {
     input.value = color;
   }
 }
+
+//まとめ設定関係の変数
+export let currentGroupingState = {};
+export let currentViewMode = "detailed";
+
+// 外部からモードを変更するためのセッター関数（あると便利）
+export function setCurrentViewMode(mode) {
+  currentViewMode = mode;
+}
+export function resetCurrentGroupingState() {
+  currentGroupingState = {};
+}
+
+/**
+ * 工区まとめ設定UIを描画する関数
+ */
+export function renderGroupingControls(container, originalResults, project, onUpdate) {
+  // 安全対策
+  if (!container) return;
+
+  // 現在の開閉状態を保存
+  const existingDetails = container.querySelector("details");
+  const wasOpen = existingDetails ? existingDetails.open : false;
+
+  container.innerHTML = "";
+
+  // 変数は同じファイル内にあるのでそのまま参照可能
+  if (currentViewMode === "floor") {
+    container.style.display = "none";
+    return;
+  }
+  container.style.display = "block";
+
+  // ★ getMasterOrderedKeys は import したものを使用
+  const masterKeys = getMasterOrderedKeys(project);
+  const targetKeys = masterKeys.filter((k) => originalResults[k]);
+
+  const details = document.createElement("details");
+  details.className =
+    "mb-6 bg-blue-50 dark:bg-slate-800/60 rounded-xl border border-blue-100 dark:border-slate-700 shadow-sm group";
+  details.open = wasOpen;
+
+  const summary = document.createElement("summary");
+  summary.className =
+    "flex items-center justify-between p-4 cursor-pointer list-none select-none hover:bg-blue-100/50 dark:hover:bg-slate-700/50 rounded-xl transition-colors";
+
+  summary.innerHTML = `
+        <div class="flex items-center gap-3">
+            <div class="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-full text-blue-600 dark:text-blue-400">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                </svg>
+            </div>
+            <div>
+                <h4 class="text-sm font-bold text-slate-800 dark:text-slate-100">工区まとめ設定</h4>
+                <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                    詳細モード用：同じ番号を選択した工区を合算します
+                </p>
+            </div>
+        </div>
+        <div class="transform transition-transform duration-200 group-open:rotate-180 text-slate-400">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+            </svg>
+        </div>
+    `;
+
+  const content = document.createElement("div");
+  content.className =
+    "px-4 pb-4 border-t border-blue-100 dark:border-slate-700 pt-4";
+
+  // リセットボタンエリア
+  const actionArea = document.createElement("div");
+  actionArea.className = "flex justify-end mb-3";
+
+  const resetBtn = document.createElement("button");
+  resetBtn.type = "button";
+  resetBtn.className =
+    "px-3 py-1.5 text-xs font-medium bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded hover:bg-slate-50 dark:hover:bg-slate-600 transition-colors text-slate-600 dark:text-slate-300 flex items-center gap-1";
+  resetBtn.innerHTML = `
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+        </svg>
+        設定をリセット
+    `;
+
+  resetBtn.onclick = (e) => {
+    e.stopPropagation();
+    targetKeys.forEach((key, index) => {
+      // 同じファイル内の変数なので直接更新OK
+      currentGroupingState[key] = index + 1;
+    });
+    onUpdate(); // コールバック実行
+  };
+
+  actionArea.appendChild(resetBtn);
+  content.appendChild(actionArea);
+
+  // ドロップダウンリスト
+  const controlsGrid = document.createElement("div");
+  controlsGrid.className = "flex flex-wrap gap-2";
+
+  const maxOptions = targetKeys.length;
+
+  targetKeys.forEach((section) => {
+    const item = document.createElement("div");
+    item.className =
+      "w-28 bg-white dark:bg-slate-800 p-2 rounded-lg border border-gray-200 dark:border-slate-600 flex flex-col";
+
+    const label = document.createElement("span");
+    label.className =
+      "text-xs font-bold text-slate-600 dark:text-slate-400 mb-1 truncate text-center";
+    label.textContent = section;
+    label.title = section;
+
+    const select = document.createElement("select");
+    select.className =
+      "w-full text-sm py-1 px-1 bg-gray-50 dark:bg-slate-700 border-gray-300 dark:border-slate-500 rounded focus:ring-blue-500 focus:border-blue-500 dark:text-white cursor-pointer text-center";
+
+    for (let i = 1; i <= maxOptions; i++) {
+      const option = document.createElement("option");
+      option.value = i;
+      option.textContent = `No.${i}`;
+      if (currentGroupingState[section] === i) {
+        option.selected = true;
+      }
+      select.appendChild(option);
+    }
+
+    select.addEventListener("change", (e) => {
+      currentGroupingState[section] = Number(e.target.value);
+      onUpdate();
+    });
+
+    select.addEventListener("click", (e) => e.stopPropagation());
+
+    item.appendChild(label);
+    item.appendChild(select);
+    controlsGrid.appendChild(item);
+  });
+
+  content.appendChild(controlsGrid);
+  details.appendChild(summary);
+  details.appendChild(content);
+  container.appendChild(details);
+}
+
+/**
+ * テーブル群を描画する関数（汎用版）
+ * * @param {HTMLElement} container  描画先のdiv要素
+ * @param {Object} aggregatedCounts [本ボルト用] 合算されたデータ { "1F": { "M16...": 10 } }
+ * @param {Array} sortedKeys        [本ボルト用] 表示順序のキー配列 ["M2F", "2F", ...]
+ * @param {Object} specialBolts     [特殊用] { dLock: {...}, naka: {...}, column: {...} }
+ * @param {boolean} onlySpecial     trueなら本ボルト(aggregatedCounts)の描画をスキップする
+ */
+function renderAggregatedTables(
+  container,
+  aggregatedCounts,
+  sortedKeys,
+  specialBolts = {},
+  onlySpecial = false,
+) {
+  // コンテナのクリア
+  container.innerHTML = "";
+
+  // データ生成ヘルパー
+  const renderTableHtml = (title, data, color, customHeader = null) => {
+    if (!data || Object.keys(data).length === 0) return "";
+
+    // 通常ヘッダー
+    const defaultHeader = `<tr>
+            <th class="px-4 py-2 border border-${color}-300 dark:border-slate-600 text-center bg-${color}-200 dark:bg-slate-700 text-${color}-800 dark:text-${color}-200 whitespace-nowrap">種別</th>
+            <th class="px-4 py-2 border border-${color}-300 dark:border-slate-600 text-center bg-${color}-200 dark:bg-slate-700 text-${color}-800 dark:text-${color}-200 whitespace-nowrap">ボルトサイズ</th>
+            <th class="px-4 py-2 border border-${color}-300 dark:border-slate-600 text-center bg-${color}-200 dark:bg-slate-700 text-${color}-800 dark:text-${color}-200 whitespace-nowrap">本数</th>
+            <th class="px-4 py-2 border border-${color}-300 dark:border-slate-600 text-center bg-${color}-200 dark:bg-slate-700 text-${color}-800 dark:text-${color}-200 whitespace-nowrap">重量(kg)</th>
+        </tr>`;
+
+    const headers = customHeader || defaultHeader;
+    let body = "";
+    let tableTotalWeight = 0;
+
+    Object.keys(data)
+      .sort(boltSort)
+      .forEach((key) => {
+        const boltCount = data[key];
+        const singleWeightG = getBoltWeight(key);
+        const rowWeightKg = (boltCount * singleWeightG) / 1000;
+        tableTotalWeight += rowWeightKg;
+
+        const weightValue = rowWeightKg > 0 ? rowWeightKg.toFixed(1) : "-";
+        const weightTooltip =
+          singleWeightG > 0 ? `単体重量: ${singleWeightG} g` : "";
+        // ▼▼▼ 修正: 末尾チェック(endsWith)から、文字を含むか(includes)に変更 ▼▼▼
+        const type = key.includes("■") ? "F8T" : "S10T";
+        // ▲▲▲ 修正ここまで ▲▲▲
+        const commonCellClass = `px-4 py-2 border border-${color}-200 dark:border-slate-700 text-center`;
+
+        let rowContent = "";
+        if (customHeader) {
+          // 簡易版（D-Lockなど）
+          rowContent = `
+                    <td class="${commonCellClass}">${key}</td>
+                    <td class="${commonCellClass} font-medium">${boltCount.toLocaleString()}</td>
+                `;
+        } else {
+          // 通常版
+          const displayKey = title === "柱用" ? key.replace("(本柱)", "") : key;
+          rowContent = `
+                    <td class="${commonCellClass}">${type}</td>
+                    <td class="${commonCellClass}">${displayKey}</td>
+                    <td class="${commonCellClass} font-medium">${boltCount.toLocaleString()}</td>
+                    <td class="${commonCellClass} text-slate-500" title="${weightTooltip}">${weightValue}</td>
+                `;
+        }
+
+        body += `<tr class="hover:bg-${color}-50 dark:hover:bg-slate-700/50">${rowContent}</tr>`;
+      });
+
+    const totalWeightDisplay =
+      !customHeader && tableTotalWeight > 0
+        ? `<span class="ml-auto text-sm font-bold text-red-600 dark:text-red-400">合計: ${tableTotalWeight.toFixed(
+          1,
+        )} kg</span>`
+        : "";
+
+    return `
+            <div class="min-w-[320px] flex-grow-0 flex-shrink-0 bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden mb-6">
+                <div class="px-4 py-3 bg-slate-50 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between">
+                    <h3 class="text-lg font-bold text-slate-800 dark:text-slate-200 truncate pr-2" title="${title}">${title}</h3>
+                    ${totalWeightDisplay}
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-sm border-collapse">
+                        <tbody>${headers}${body}</tbody>
+                    </table>
+                </div>
+            </div>`;
+  };
+
+  let tablesHtml = "";
+
+  // 1. 通常データ（本ボルトなど）の描画
+  // onlySpecialがfalseのときだけ実行される（本ボルトセクション用）
+  if (!onlySpecial && sortedKeys) {
+    // マスタ順序にあるキーを表示
+    sortedKeys.forEach((groupName) => {
+      if (aggregatedCounts[groupName]) {
+        tablesHtml += renderTableHtml(
+          groupName,
+          aggregatedCounts[groupName],
+          "slate",
+        );
+      }
+    });
+    // マスタ外（その他）のキーを表示
+    Object.keys(aggregatedCounts).forEach((key) => {
+      if (!sortedKeys.includes(key)) {
+        tablesHtml += renderTableHtml(key, aggregatedCounts[key], "slate");
+      }
+    });
+  }
+
+  // 2. 特殊データ（指定があれば描画）
+  if (specialBolts) {
+    // 柱用 (Purple) -> 本ボルトセクションの一部として表示される想定
+    if (specialBolts.column) {
+      tablesHtml += renderTableHtml("柱用", specialBolts.column, "purple");
+    }
+
+    // 簡易ヘッダー定義
+    const simpleHeader = (color) => `<tr>
+            <th class="px-4 py-2 border border-${color}-300 dark:border-slate-600 text-center bg-${color}-200 dark:bg-slate-700 text-${color}-800 dark:text-${color}-200 whitespace-nowrap">ボルトサイズ</th>
+            <th class="px-4 py-2 border border-${color}-300 dark:border-slate-600 text-center bg-${color}-200 dark:bg-slate-700 text-${color}-800 dark:text-${color}-200 whitespace-nowrap">本数</th>
+        </tr>`;
+
+    // D-Lock (Gray)
+    if (specialBolts.dLock) {
+      tablesHtml += renderTableHtml(
+        "D-Lock",
+        specialBolts.dLock,
+        "gray",
+        simpleHeader("gray"),
+      );
+    }
+    // 中ボルト・ミリ (Blue)
+    if (specialBolts.naka) {
+      tablesHtml += renderTableHtml(
+        "中ボルト(ミリ)",
+        specialBolts.naka,
+        "blue",
+        simpleHeader("blue"),
+      );
+    }
+    // 中ボルト・Mネジ (Teal)
+    if (specialBolts.nakaM) {
+      tablesHtml += renderTableHtml(
+        "中ボルト(Mネジ)",
+        specialBolts.nakaM,
+        "teal",
+        simpleHeader("teal"),
+      );
+    }
+  }
+
+  if (tablesHtml === "") {
+    container.innerHTML =
+      '<p class="text-gray-500 w-full p-4">データがありません</p>';
+  } else {
+    container.innerHTML = tablesHtml;
+  }
+}
+
+/**
+ * モーダル要素をドラッグ可能にするUIヘルパー関数
+ * @param {HTMLElement} modalElement - ドラッグ対象のモーダル要素
+ */
+export const makeDraggable = (modalElement) => {
+  // 安全対策
+  if (!modalElement) return;
+
+  const header = modalElement.querySelector(".border-b"); // ヘッダー部分をハンドルにする
+  if (!header) return;
+
+  header.style.cursor = "move"; // マウス用カーソル
+  header.style.touchAction = "none"; // タッチ時のスクロールを無効化（ドラッグ優先）
+
+  let isDragging = false;
+  let startX, startY, initialLeft, initialTop;
+
+  // --- 共通処理：ドラッグ開始 ---
+  const startDrag = (clientX, clientY) => {
+    isDragging = true;
+    startX = clientX;
+    startY = clientY;
+
+    // 現在の位置を取得
+    const rect = modalElement.getBoundingClientRect();
+
+    // CSSのtransformによる中央揃えを解除し、絶対座標に変換して固定する
+    if (modalElement.style.transform !== "none") {
+      modalElement.style.left = `${rect.left}px`;
+      modalElement.style.top = `${rect.top}px`;
+      modalElement.style.transform = "none";
+      modalElement.style.bottom = "auto";
+      modalElement.style.right = "auto";
+    }
+
+    initialLeft = parseInt(modalElement.style.left || rect.left);
+    initialTop = parseInt(modalElement.style.top || rect.top);
+  };
+
+  // --- 共通処理：ドラッグ中 ---
+  const moveDrag = (clientX, clientY) => {
+    if (!isDragging) return;
+    const dx = clientX - startX;
+    const dy = clientY - startY;
+    modalElement.style.left = `${initialLeft + dx}px`;
+    modalElement.style.top = `${initialTop + dy}px`;
+  };
+
+  // --- 共通処理：ドラッグ終了 ---
+  const endDrag = () => {
+    isDragging = false;
+  };
+
+  // --- マウスイベントの設定 ---
+  header.addEventListener("mousedown", (e) => startDrag(e.clientX, e.clientY));
+  document.addEventListener("mousemove", (e) => {
+    if (isDragging) {
+      e.preventDefault();
+      moveDrag(e.clientX, e.clientY);
+    }
+  });
+  document.addEventListener("mouseup", endDrag);
+
+  // --- タッチイベントの設定 ---
+  header.addEventListener("touchstart", (e) => {
+    if (e.touches.length === 1) {
+      const touch = e.touches[0];
+      startDrag(touch.clientX, touch.clientY);
+    }
+  }, { passive: false }
+  );
+
+  document.addEventListener("touchmove", (e) => {
+    if (isDragging && e.touches.length === 1) {
+      e.preventDefault();
+      const touch = e.touches[0];
+      moveDrag(touch.clientX, touch.clientY);
+    }
+  }, { passive: false }
+  );
+
+  document.addEventListener("touchend", endDrag);
+};
+
+/**
+ * グローバルボルト選択モーダルの中身を生成する
+ */
+export const populateGlobalBoltSelectorModal = () => {
+  // 1. 要素の取得
+  const container = document.getElementById("bolt-options-container");
+  if (!container) return;
+
+  container.innerHTML = "";
+
+  const bolts = state.globalBoltSizes || [];
+
+  // 2. 種類ごとにグループ化
+  const grouped = {};
+  bolts.forEach((b) => {
+    const type = b.type;
+    if (!grouped[type]) grouped[type] = [];
+    grouped[type].push(b);
+  });
+
+  // 3. 定義順にソート
+  const sortedTypes = Object.keys(grouped).sort((a, b) => {
+    const idxA = BOLT_TYPE_ORDER.indexOf(a);
+    const idxB = BOLT_TYPE_ORDER.indexOf(b);
+    if (idxA !== -1 && idxB !== -1) return idxA - idxB;
+    if (idxA !== -1) return -1;
+    if (idxB !== -1) return 1;
+    return a.localeCompare(b);
+  });
+
+  // 4. HTML生成
+  sortedTypes.forEach((type) => {
+    const list = grouped[type];
+
+    // ヘッダー
+    const header = document.createElement("h4");
+    header.className = "font-bold text-slate-700 dark:text-slate-200 mb-2 mt-4 border-b border-gray-200 dark:border-slate-700 pb-1";
+    header.textContent = type;
+    container.appendChild(header);
+
+    // グリッド
+    const grid = document.createElement("div");
+    grid.className = "grid grid-cols-3 gap-2";
+
+    list.forEach((bolt) => {
+      const btn = document.createElement("button");
+      btn.className = "bolt-option-btn text-sm p-2 hover:bg-yellow-200 border border-blue-200 rounded-md transition-transform duration-150 hover:scale-105 dark:border-slate-600 dark:hover:bg-yellow-600 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-200";
+      btn.textContent = bolt.label;
+      btn.dataset.value = bolt.id;
+
+      // クリックイベント
+      btn.addEventListener("click", () => {
+        // state.activeBoltTarget に保存された入力欄要素へ値をセット
+        if (state.activeBoltTarget) {
+          state.activeBoltTarget.value = bolt.id;
+
+          // changeイベントを発火させて、計算処理などを走らせる
+          state.activeBoltTarget.dispatchEvent(
+            new Event("change", { bubbles: true }),
+          );
+
+          // 処理完了後の後始末
+          state.activeBoltTarget = null;
+
+          const modal = document.getElementById("bolt-selector-modal"); // ID確認
+          if (modal && typeof closeModal === 'function') {
+            closeModal(modal);
+          }
+        }
+      });
+
+      grid.appendChild(btn);
+    });
+    container.appendChild(grid);
+  });
+};

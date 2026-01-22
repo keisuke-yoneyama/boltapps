@@ -54,6 +54,8 @@ import {
   toggleFab,
   updateQuickNavVisibility,
   populateJointDropdownForEdit,
+  renderAggregatedTables,
+  makeDraggable,
 } from "./modules/ui.js";
 
 import {
@@ -170,90 +172,90 @@ let dragSourceElement = null;
 //   renderComplexSplInputs(newCount, cache, isModal);
 // };
 
-const makeDraggable = (modalElement) => {
-  const header = modalElement.querySelector(".border-b"); // ヘッダー部分をハンドルにする
-  if (!header) return;
+// const makeDraggable = (modalElement) => {
+//   const header = modalElement.querySelector(".border-b"); // ヘッダー部分をハンドルにする
+//   if (!header) return;
 
-  header.style.cursor = "move"; // マウス用カーソル
-  header.style.touchAction = "none"; // タッチ時のスクロールを無効化（ドラッグ優先）
+//   header.style.cursor = "move"; // マウス用カーソル
+//   header.style.touchAction = "none"; // タッチ時のスクロールを無効化（ドラッグ優先）
 
-  let isDragging = false;
-  let startX, startY, initialLeft, initialTop;
+//   let isDragging = false;
+//   let startX, startY, initialLeft, initialTop;
 
-  // --- 共通処理：ドラッグ開始 ---
-  const startDrag = (clientX, clientY) => {
-    isDragging = true;
-    startX = clientX;
-    startY = clientY;
+//   // --- 共通処理：ドラッグ開始 ---
+//   const startDrag = (clientX, clientY) => {
+//     isDragging = true;
+//     startX = clientX;
+//     startY = clientY;
 
-    // 現在の位置を取得
-    const rect = modalElement.getBoundingClientRect();
+//     // 現在の位置を取得
+//     const rect = modalElement.getBoundingClientRect();
 
-    // CSSのtransformによる中央揃えを解除し、絶対座標に変換して固定する
-    // (これを行わないとドラッグ時に座標がズレたり、初期位置に戻ったりするため)
-    if (modalElement.style.transform !== "none") {
-      modalElement.style.left = `${rect.left}px`;
-      modalElement.style.top = `${rect.top}px`;
-      modalElement.style.transform = "none";
-      modalElement.style.bottom = "auto";
-      modalElement.style.right = "auto";
-    }
+//     // CSSのtransformによる中央揃えを解除し、絶対座標に変換して固定する
+//     // (これを行わないとドラッグ時に座標がズレたり、初期位置に戻ったりするため)
+//     if (modalElement.style.transform !== "none") {
+//       modalElement.style.left = `${rect.left}px`;
+//       modalElement.style.top = `${rect.top}px`;
+//       modalElement.style.transform = "none";
+//       modalElement.style.bottom = "auto";
+//       modalElement.style.right = "auto";
+//     }
 
-    // style.left/top が未設定（初期状態）の場合は rect の値を使う
-    initialLeft = parseInt(modalElement.style.left || rect.left);
-    initialTop = parseInt(modalElement.style.top || rect.top);
-  };
+//     // style.left/top が未設定（初期状態）の場合は rect の値を使う
+//     initialLeft = parseInt(modalElement.style.left || rect.left);
+//     initialTop = parseInt(modalElement.style.top || rect.top);
+//   };
 
-  // --- 共通処理：ドラッグ中 ---
-  const moveDrag = (clientX, clientY) => {
-    if (!isDragging) return;
-    const dx = clientX - startX;
-    const dy = clientY - startY;
-    modalElement.style.left = `${initialLeft + dx}px`;
-    modalElement.style.top = `${initialTop + dy}px`;
-  };
+//   // --- 共通処理：ドラッグ中 ---
+//   const moveDrag = (clientX, clientY) => {
+//     if (!isDragging) return;
+//     const dx = clientX - startX;
+//     const dy = clientY - startY;
+//     modalElement.style.left = `${initialLeft + dx}px`;
+//     modalElement.style.top = `${initialTop + dy}px`;
+//   };
 
-  // --- 共通処理：ドラッグ終了 ---
-  const endDrag = () => {
-    isDragging = false;
-  };
+//   // --- 共通処理：ドラッグ終了 ---
+//   const endDrag = () => {
+//     isDragging = false;
+//   };
 
-  // --- マウスイベントの設定 ---
-  header.addEventListener("mousedown", (e) => startDrag(e.clientX, e.clientY));
-  document.addEventListener("mousemove", (e) => {
-    if (isDragging) {
-      e.preventDefault(); // テキスト選択などを防止
-      moveDrag(e.clientX, e.clientY);
-    }
-  });
-  document.addEventListener("mouseup", endDrag);
+//   // --- マウスイベントの設定 ---
+//   header.addEventListener("mousedown", (e) => startDrag(e.clientX, e.clientY));
+//   document.addEventListener("mousemove", (e) => {
+//     if (isDragging) {
+//       e.preventDefault(); // テキスト選択などを防止
+//       moveDrag(e.clientX, e.clientY);
+//     }
+//   });
+//   document.addEventListener("mouseup", endDrag);
 
-  // --- タッチイベントの設定（追加部分）---
-  header.addEventListener(
-    "touchstart",
-    (e) => {
-      if (e.touches.length === 1) {
-        const touch = e.touches[0];
-        startDrag(touch.clientX, touch.clientY);
-      }
-    },
-    { passive: false },
-  );
+//   // --- タッチイベントの設定（追加部分）---
+//   header.addEventListener(
+//     "touchstart",
+//     (e) => {
+//       if (e.touches.length === 1) {
+//         const touch = e.touches[0];
+//         startDrag(touch.clientX, touch.clientY);
+//       }
+//     },
+//     { passive: false },
+//   );
 
-  document.addEventListener(
-    "touchmove",
-    (e) => {
-      if (isDragging && e.touches.length === 1) {
-        e.preventDefault(); // 画面スクロールを防止してドラッグを優先
-        const touch = e.touches[0];
-        moveDrag(touch.clientX, touch.clientY);
-      }
-    },
-    { passive: false },
-  );
+//   document.addEventListener(
+//     "touchmove",
+//     (e) => {
+//       if (isDragging && e.touches.length === 1) {
+//         e.preventDefault(); // 画面スクロールを防止してドラッグを優先
+//         const touch = e.touches[0];
+//         moveDrag(touch.clientX, touch.clientY);
+//       }
+//     },
+//     { passive: false },
+//   );
 
-  document.addEventListener("touchend", endDrag);
-};
+//   document.addEventListener("touchend", endDrag);
+// };
 // const openModal = (modalElement) => {
 //   modalElement.classList.remove("hidden");
 
@@ -273,144 +275,144 @@ const makeDraggable = (modalElement) => {
 // ▼ 注文明細：工区合算＆マスタ順表示機能（修正完了版） ▼
 // ==========================================
 
-// グルーピング状態を保持する変数
-let currentGroupingState = {};
-// 表示モードを保持する変数
-let currentViewMode = "detailed";
+// // グルーピング状態を保持する変数
+// let currentGroupingState = {};
+// // 表示モードを保持する変数
+// let currentViewMode = "detailed";
 
-/**
- * 工区まとめ設定UIを描画する関数（修正版：リセットボタン付き）
- */
-function renderGroupingControls(container, originalResults, project, onUpdate) {
-  // 現在の開閉状態を保存（再描画時に引き継ぐため）
-  const existingDetails = container.querySelector("details");
-  const wasOpen = existingDetails ? existingDetails.open : false; // デフォルトはfalse
+// /**
+//  * 工区まとめ設定UIを描画する関数（修正版：リセットボタン付き）
+//  */
+// function renderGroupingControls(container, originalResults, project, onUpdate) {
+//   // 現在の開閉状態を保存（再描画時に引き継ぐため）
+//   const existingDetails = container.querySelector("details");
+//   const wasOpen = existingDetails ? existingDetails.open : false; // デフォルトはfalse
 
-  container.innerHTML = "";
+//   container.innerHTML = "";
 
-  // フロアモード時は非表示
-  if (currentViewMode === "floor") {
-    container.style.display = "none";
-    return;
-  }
-  container.style.display = "block";
+//   // フロアモード時は非表示
+//   if (currentViewMode === "floor") {
+//     container.style.display = "none";
+//     return;
+//   }
+//   container.style.display = "block";
 
-  // マスタ順のキーリストを取得
-  const masterKeys = getMasterOrderedKeys(project);
-  const targetKeys = masterKeys.filter((k) => originalResults[k]);
+//   // マスタ順のキーリストを取得
+//   const masterKeys = getMasterOrderedKeys(project);
+//   const targetKeys = masterKeys.filter((k) => originalResults[k]);
 
-  // 折りたたみ可能なコンテナ
-  const details = document.createElement("details");
-  details.className =
-    "mb-6 bg-blue-50 dark:bg-slate-800/60 rounded-xl border border-blue-100 dark:border-slate-700 shadow-sm group";
-  details.open = wasOpen;
+//   // 折りたたみ可能なコンテナ
+//   const details = document.createElement("details");
+//   details.className =
+//     "mb-6 bg-blue-50 dark:bg-slate-800/60 rounded-xl border border-blue-100 dark:border-slate-700 shadow-sm group";
+//   details.open = wasOpen;
 
-  // ヘッダー部分
-  const summary = document.createElement("summary");
-  summary.className =
-    "flex items-center justify-between p-4 cursor-pointer list-none select-none hover:bg-blue-100/50 dark:hover:bg-slate-700/50 rounded-xl transition-colors";
+//   // ヘッダー部分
+//   const summary = document.createElement("summary");
+//   summary.className =
+//     "flex items-center justify-between p-4 cursor-pointer list-none select-none hover:bg-blue-100/50 dark:hover:bg-slate-700/50 rounded-xl transition-colors";
 
-  summary.innerHTML = `
-        <div class="flex items-center gap-3">
-            <div class="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-full text-blue-600 dark:text-blue-400">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
-                </svg>
-            </div>
-            <div>
-                <h4 class="text-sm font-bold text-slate-800 dark:text-slate-100">工区まとめ設定</h4>
-                <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                    詳細モード用：同じ番号を選択した工区を合算します
-                </p>
-            </div>
-        </div>
-        <div class="transform transition-transform duration-200 group-open:rotate-180 text-slate-400">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
-            </svg>
-        </div>
-    `;
+//   summary.innerHTML = `
+//         <div class="flex items-center gap-3">
+//             <div class="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-full text-blue-600 dark:text-blue-400">
+//                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+//                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+//                 </svg>
+//             </div>
+//             <div>
+//                 <h4 class="text-sm font-bold text-slate-800 dark:text-slate-100">工区まとめ設定</h4>
+//                 <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+//                     詳細モード用：同じ番号を選択した工区を合算します
+//                 </p>
+//             </div>
+//         </div>
+//         <div class="transform transition-transform duration-200 group-open:rotate-180 text-slate-400">
+//             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+//                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+//             </svg>
+//         </div>
+//     `;
 
-  // 中身のエリア
-  const content = document.createElement("div");
-  content.className =
-    "px-4 pb-4 border-t border-blue-100 dark:border-slate-700 pt-4";
+//   // 中身のエリア
+//   const content = document.createElement("div");
+//   content.className =
+//     "px-4 pb-4 border-t border-blue-100 dark:border-slate-700 pt-4";
 
-  // ★リセットボタンエリア
-  const actionArea = document.createElement("div");
-  actionArea.className = "flex justify-end mb-3";
+//   // ★リセットボタンエリア
+//   const actionArea = document.createElement("div");
+//   actionArea.className = "flex justify-end mb-3";
 
-  const resetBtn = document.createElement("button");
-  resetBtn.type = "button";
-  resetBtn.className =
-    "px-3 py-1.5 text-xs font-medium bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded hover:bg-slate-50 dark:hover:bg-slate-600 transition-colors text-slate-600 dark:text-slate-300 flex items-center gap-1";
-  resetBtn.innerHTML = `
-        <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-        </svg>
-        設定をリセット
-    `;
+//   const resetBtn = document.createElement("button");
+//   resetBtn.type = "button";
+//   resetBtn.className =
+//     "px-3 py-1.5 text-xs font-medium bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded hover:bg-slate-50 dark:hover:bg-slate-600 transition-colors text-slate-600 dark:text-slate-300 flex items-center gap-1";
+//   resetBtn.innerHTML = `
+//         <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+//             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+//         </svg>
+//         設定をリセット
+//     `;
 
-  // リセット処理：連番（1, 2, 3...）に戻す
-  resetBtn.onclick = (e) => {
-    e.stopPropagation(); // summaryが閉じないように
-    targetKeys.forEach((key, index) => {
-      currentGroupingState[key] = index + 1;
-    });
-    onUpdate();
-  };
+//   // リセット処理：連番（1, 2, 3...）に戻す
+//   resetBtn.onclick = (e) => {
+//     e.stopPropagation(); // summaryが閉じないように
+//     targetKeys.forEach((key, index) => {
+//       currentGroupingState[key] = index + 1;
+//     });
+//     onUpdate();
+//   };
 
-  actionArea.appendChild(resetBtn);
-  content.appendChild(actionArea);
+//   actionArea.appendChild(resetBtn);
+//   content.appendChild(actionArea);
 
-  // ドロップダウンリスト表示
-  const controlsGrid = document.createElement("div");
-  controlsGrid.className = "flex flex-wrap gap-2";
+//   // ドロップダウンリスト表示
+//   const controlsGrid = document.createElement("div");
+//   controlsGrid.className = "flex flex-wrap gap-2";
 
-  const maxOptions = targetKeys.length;
+//   const maxOptions = targetKeys.length;
 
-  targetKeys.forEach((section) => {
-    const item = document.createElement("div");
-    item.className =
-      "w-28 bg-white dark:bg-slate-800 p-2 rounded-lg border border-gray-200 dark:border-slate-600 flex flex-col";
+//   targetKeys.forEach((section) => {
+//     const item = document.createElement("div");
+//     item.className =
+//       "w-28 bg-white dark:bg-slate-800 p-2 rounded-lg border border-gray-200 dark:border-slate-600 flex flex-col";
 
-    const label = document.createElement("span");
-    label.className =
-      "text-xs font-bold text-slate-600 dark:text-slate-400 mb-1 truncate text-center";
-    label.textContent = section;
-    label.title = section;
+//     const label = document.createElement("span");
+//     label.className =
+//       "text-xs font-bold text-slate-600 dark:text-slate-400 mb-1 truncate text-center";
+//     label.textContent = section;
+//     label.title = section;
 
-    const select = document.createElement("select");
-    select.className =
-      "w-full text-sm py-1 px-1 bg-gray-50 dark:bg-slate-700 border-gray-300 dark:border-slate-500 rounded focus:ring-blue-500 focus:border-blue-500 dark:text-white cursor-pointer text-center";
+//     const select = document.createElement("select");
+//     select.className =
+//       "w-full text-sm py-1 px-1 bg-gray-50 dark:bg-slate-700 border-gray-300 dark:border-slate-500 rounded focus:ring-blue-500 focus:border-blue-500 dark:text-white cursor-pointer text-center";
 
-    for (let i = 1; i <= maxOptions; i++) {
-      const option = document.createElement("option");
-      option.value = i;
-      option.textContent = `No.${i}`;
-      if (currentGroupingState[section] === i) {
-        option.selected = true;
-      }
-      select.appendChild(option);
-    }
+//     for (let i = 1; i <= maxOptions; i++) {
+//       const option = document.createElement("option");
+//       option.value = i;
+//       option.textContent = `No.${i}`;
+//       if (currentGroupingState[section] === i) {
+//         option.selected = true;
+//       }
+//       select.appendChild(option);
+//     }
 
-    select.addEventListener("change", (e) => {
-      currentGroupingState[section] = Number(e.target.value);
-      onUpdate();
-    });
+//     select.addEventListener("change", (e) => {
+//       currentGroupingState[section] = Number(e.target.value);
+//       onUpdate();
+//     });
 
-    select.addEventListener("click", (e) => e.stopPropagation());
+//     select.addEventListener("click", (e) => e.stopPropagation());
 
-    item.appendChild(label);
-    item.appendChild(select);
-    controlsGrid.appendChild(item);
-  });
+//     item.appendChild(label);
+//     item.appendChild(select);
+//     controlsGrid.appendChild(item);
+//   });
 
-  content.appendChild(controlsGrid);
-  details.appendChild(summary);
-  details.appendChild(content);
-  container.appendChild(details);
-}
+//   content.appendChild(controlsGrid);
+//   details.appendChild(summary);
+//   details.appendChild(content);
+//   container.appendChild(details);
+// }
 /**
  * 注文詳細画面の描画（修正版：トップ余白を mt-8 に統一）
  */
@@ -682,170 +684,170 @@ const renderOrderDetails = (container, project, resultsByLocation) => {
   }
 };
 
-/**
- * テーブル群を描画する関数（汎用版）
- * * @param {HTMLElement} container  描画先のdiv要素
- * @param {Object} aggregatedCounts [本ボルト用] 合算されたデータ { "1F": { "M16...": 10 } }
- * @param {Array} sortedKeys        [本ボルト用] 表示順序のキー配列 ["M2F", "2F", ...]
- * @param {Object} specialBolts     [特殊用] { dLock: {...}, naka: {...}, column: {...} }
- * @param {boolean} onlySpecial     trueなら本ボルト(aggregatedCounts)の描画をスキップする
- */
-function renderAggregatedTables(
-  container,
-  aggregatedCounts,
-  sortedKeys,
-  specialBolts = {},
-  onlySpecial = false,
-) {
-  // コンテナのクリア
-  container.innerHTML = "";
+// /**
+//  * テーブル群を描画する関数（汎用版）
+//  * * @param {HTMLElement} container  描画先のdiv要素
+//  * @param {Object} aggregatedCounts [本ボルト用] 合算されたデータ { "1F": { "M16...": 10 } }
+//  * @param {Array} sortedKeys        [本ボルト用] 表示順序のキー配列 ["M2F", "2F", ...]
+//  * @param {Object} specialBolts     [特殊用] { dLock: {...}, naka: {...}, column: {...} }
+//  * @param {boolean} onlySpecial     trueなら本ボルト(aggregatedCounts)の描画をスキップする
+//  */
+// function renderAggregatedTables(
+//   container,
+//   aggregatedCounts,
+//   sortedKeys,
+//   specialBolts = {},
+//   onlySpecial = false,
+// ) {
+//   // コンテナのクリア
+//   container.innerHTML = "";
 
-  // データ生成ヘルパー
-  const renderTableHtml = (title, data, color, customHeader = null) => {
-    if (!data || Object.keys(data).length === 0) return "";
+//   // データ生成ヘルパー
+//   const renderTableHtml = (title, data, color, customHeader = null) => {
+//     if (!data || Object.keys(data).length === 0) return "";
 
-    // 通常ヘッダー
-    const defaultHeader = `<tr>
-            <th class="px-4 py-2 border border-${color}-300 dark:border-slate-600 text-center bg-${color}-200 dark:bg-slate-700 text-${color}-800 dark:text-${color}-200 whitespace-nowrap">種別</th>
-            <th class="px-4 py-2 border border-${color}-300 dark:border-slate-600 text-center bg-${color}-200 dark:bg-slate-700 text-${color}-800 dark:text-${color}-200 whitespace-nowrap">ボルトサイズ</th>
-            <th class="px-4 py-2 border border-${color}-300 dark:border-slate-600 text-center bg-${color}-200 dark:bg-slate-700 text-${color}-800 dark:text-${color}-200 whitespace-nowrap">本数</th>
-            <th class="px-4 py-2 border border-${color}-300 dark:border-slate-600 text-center bg-${color}-200 dark:bg-slate-700 text-${color}-800 dark:text-${color}-200 whitespace-nowrap">重量(kg)</th>
-        </tr>`;
+//     // 通常ヘッダー
+//     const defaultHeader = `<tr>
+//             <th class="px-4 py-2 border border-${color}-300 dark:border-slate-600 text-center bg-${color}-200 dark:bg-slate-700 text-${color}-800 dark:text-${color}-200 whitespace-nowrap">種別</th>
+//             <th class="px-4 py-2 border border-${color}-300 dark:border-slate-600 text-center bg-${color}-200 dark:bg-slate-700 text-${color}-800 dark:text-${color}-200 whitespace-nowrap">ボルトサイズ</th>
+//             <th class="px-4 py-2 border border-${color}-300 dark:border-slate-600 text-center bg-${color}-200 dark:bg-slate-700 text-${color}-800 dark:text-${color}-200 whitespace-nowrap">本数</th>
+//             <th class="px-4 py-2 border border-${color}-300 dark:border-slate-600 text-center bg-${color}-200 dark:bg-slate-700 text-${color}-800 dark:text-${color}-200 whitespace-nowrap">重量(kg)</th>
+//         </tr>`;
 
-    const headers = customHeader || defaultHeader;
-    let body = "";
-    let tableTotalWeight = 0;
+//     const headers = customHeader || defaultHeader;
+//     let body = "";
+//     let tableTotalWeight = 0;
 
-    Object.keys(data)
-      .sort(boltSort)
-      .forEach((key) => {
-        const boltCount = data[key];
-        const singleWeightG = getBoltWeight(key);
-        const rowWeightKg = (boltCount * singleWeightG) / 1000;
-        tableTotalWeight += rowWeightKg;
+//     Object.keys(data)
+//       .sort(boltSort)
+//       .forEach((key) => {
+//         const boltCount = data[key];
+//         const singleWeightG = getBoltWeight(key);
+//         const rowWeightKg = (boltCount * singleWeightG) / 1000;
+//         tableTotalWeight += rowWeightKg;
 
-        const weightValue = rowWeightKg > 0 ? rowWeightKg.toFixed(1) : "-";
-        const weightTooltip =
-          singleWeightG > 0 ? `単体重量: ${singleWeightG} g` : "";
-        // ▼▼▼ 修正: 末尾チェック(endsWith)から、文字を含むか(includes)に変更 ▼▼▼
-        const type = key.includes("■") ? "F8T" : "S10T";
-        // ▲▲▲ 修正ここまで ▲▲▲
-        const commonCellClass = `px-4 py-2 border border-${color}-200 dark:border-slate-700 text-center`;
+//         const weightValue = rowWeightKg > 0 ? rowWeightKg.toFixed(1) : "-";
+//         const weightTooltip =
+//           singleWeightG > 0 ? `単体重量: ${singleWeightG} g` : "";
+//         // ▼▼▼ 修正: 末尾チェック(endsWith)から、文字を含むか(includes)に変更 ▼▼▼
+//         const type = key.includes("■") ? "F8T" : "S10T";
+//         // ▲▲▲ 修正ここまで ▲▲▲
+//         const commonCellClass = `px-4 py-2 border border-${color}-200 dark:border-slate-700 text-center`;
 
-        let rowContent = "";
-        if (customHeader) {
-          // 簡易版（D-Lockなど）
-          rowContent = `
-                    <td class="${commonCellClass}">${key}</td>
-                    <td class="${commonCellClass} font-medium">${boltCount.toLocaleString()}</td>
-                `;
-        } else {
-          // 通常版
-          const displayKey = title === "柱用" ? key.replace("(本柱)", "") : key;
-          rowContent = `
-                    <td class="${commonCellClass}">${type}</td>
-                    <td class="${commonCellClass}">${displayKey}</td>
-                    <td class="${commonCellClass} font-medium">${boltCount.toLocaleString()}</td>
-                    <td class="${commonCellClass} text-slate-500" title="${weightTooltip}">${weightValue}</td>
-                `;
-        }
+//         let rowContent = "";
+//         if (customHeader) {
+//           // 簡易版（D-Lockなど）
+//           rowContent = `
+//                     <td class="${commonCellClass}">${key}</td>
+//                     <td class="${commonCellClass} font-medium">${boltCount.toLocaleString()}</td>
+//                 `;
+//         } else {
+//           // 通常版
+//           const displayKey = title === "柱用" ? key.replace("(本柱)", "") : key;
+//           rowContent = `
+//                     <td class="${commonCellClass}">${type}</td>
+//                     <td class="${commonCellClass}">${displayKey}</td>
+//                     <td class="${commonCellClass} font-medium">${boltCount.toLocaleString()}</td>
+//                     <td class="${commonCellClass} text-slate-500" title="${weightTooltip}">${weightValue}</td>
+//                 `;
+//         }
 
-        body += `<tr class="hover:bg-${color}-50 dark:hover:bg-slate-700/50">${rowContent}</tr>`;
-      });
+//         body += `<tr class="hover:bg-${color}-50 dark:hover:bg-slate-700/50">${rowContent}</tr>`;
+//       });
 
-    const totalWeightDisplay =
-      !customHeader && tableTotalWeight > 0
-        ? `<span class="ml-auto text-sm font-bold text-red-600 dark:text-red-400">合計: ${tableTotalWeight.toFixed(
-            1,
-          )} kg</span>`
-        : "";
+//     const totalWeightDisplay =
+//       !customHeader && tableTotalWeight > 0
+//         ? `<span class="ml-auto text-sm font-bold text-red-600 dark:text-red-400">合計: ${tableTotalWeight.toFixed(
+//             1,
+//           )} kg</span>`
+//         : "";
 
-    return `
-            <div class="min-w-[320px] flex-grow-0 flex-shrink-0 bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden mb-6">
-                <div class="px-4 py-3 bg-slate-50 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between">
-                    <h3 class="text-lg font-bold text-slate-800 dark:text-slate-200 truncate pr-2" title="${title}">${title}</h3>
-                    ${totalWeightDisplay}
-                </div>
-                <div class="overflow-x-auto">
-                    <table class="w-full text-sm border-collapse">
-                        <tbody>${headers}${body}</tbody>
-                    </table>
-                </div>
-            </div>`;
-  };
+//     return `
+//             <div class="min-w-[320px] flex-grow-0 flex-shrink-0 bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden mb-6">
+//                 <div class="px-4 py-3 bg-slate-50 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between">
+//                     <h3 class="text-lg font-bold text-slate-800 dark:text-slate-200 truncate pr-2" title="${title}">${title}</h3>
+//                     ${totalWeightDisplay}
+//                 </div>
+//                 <div class="overflow-x-auto">
+//                     <table class="w-full text-sm border-collapse">
+//                         <tbody>${headers}${body}</tbody>
+//                     </table>
+//                 </div>
+//             </div>`;
+//   };
 
-  let tablesHtml = "";
+//   let tablesHtml = "";
 
-  // 1. 通常データ（本ボルトなど）の描画
-  // onlySpecialがfalseのときだけ実行される（本ボルトセクション用）
-  if (!onlySpecial && sortedKeys) {
-    // マスタ順序にあるキーを表示
-    sortedKeys.forEach((groupName) => {
-      if (aggregatedCounts[groupName]) {
-        tablesHtml += renderTableHtml(
-          groupName,
-          aggregatedCounts[groupName],
-          "slate",
-        );
-      }
-    });
-    // マスタ外（その他）のキーを表示
-    Object.keys(aggregatedCounts).forEach((key) => {
-      if (!sortedKeys.includes(key)) {
-        tablesHtml += renderTableHtml(key, aggregatedCounts[key], "slate");
-      }
-    });
-  }
+//   // 1. 通常データ（本ボルトなど）の描画
+//   // onlySpecialがfalseのときだけ実行される（本ボルトセクション用）
+//   if (!onlySpecial && sortedKeys) {
+//     // マスタ順序にあるキーを表示
+//     sortedKeys.forEach((groupName) => {
+//       if (aggregatedCounts[groupName]) {
+//         tablesHtml += renderTableHtml(
+//           groupName,
+//           aggregatedCounts[groupName],
+//           "slate",
+//         );
+//       }
+//     });
+//     // マスタ外（その他）のキーを表示
+//     Object.keys(aggregatedCounts).forEach((key) => {
+//       if (!sortedKeys.includes(key)) {
+//         tablesHtml += renderTableHtml(key, aggregatedCounts[key], "slate");
+//       }
+//     });
+//   }
 
-  // 2. 特殊データ（指定があれば描画）
-  if (specialBolts) {
-    // 柱用 (Purple) -> 本ボルトセクションの一部として表示される想定
-    if (specialBolts.column) {
-      tablesHtml += renderTableHtml("柱用", specialBolts.column, "purple");
-    }
+//   // 2. 特殊データ（指定があれば描画）
+//   if (specialBolts) {
+//     // 柱用 (Purple) -> 本ボルトセクションの一部として表示される想定
+//     if (specialBolts.column) {
+//       tablesHtml += renderTableHtml("柱用", specialBolts.column, "purple");
+//     }
 
-    // 簡易ヘッダー定義
-    const simpleHeader = (color) => `<tr>
-            <th class="px-4 py-2 border border-${color}-300 dark:border-slate-600 text-center bg-${color}-200 dark:bg-slate-700 text-${color}-800 dark:text-${color}-200 whitespace-nowrap">ボルトサイズ</th>
-            <th class="px-4 py-2 border border-${color}-300 dark:border-slate-600 text-center bg-${color}-200 dark:bg-slate-700 text-${color}-800 dark:text-${color}-200 whitespace-nowrap">本数</th>
-        </tr>`;
+//     // 簡易ヘッダー定義
+//     const simpleHeader = (color) => `<tr>
+//             <th class="px-4 py-2 border border-${color}-300 dark:border-slate-600 text-center bg-${color}-200 dark:bg-slate-700 text-${color}-800 dark:text-${color}-200 whitespace-nowrap">ボルトサイズ</th>
+//             <th class="px-4 py-2 border border-${color}-300 dark:border-slate-600 text-center bg-${color}-200 dark:bg-slate-700 text-${color}-800 dark:text-${color}-200 whitespace-nowrap">本数</th>
+//         </tr>`;
 
-    // D-Lock (Gray)
-    if (specialBolts.dLock) {
-      tablesHtml += renderTableHtml(
-        "D-Lock",
-        specialBolts.dLock,
-        "gray",
-        simpleHeader("gray"),
-      );
-    }
-    // 中ボルト・ミリ (Blue)
-    if (specialBolts.naka) {
-      tablesHtml += renderTableHtml(
-        "中ボルト(ミリ)",
-        specialBolts.naka,
-        "blue",
-        simpleHeader("blue"),
-      );
-    }
-    // 中ボルト・Mネジ (Teal)
-    if (specialBolts.nakaM) {
-      tablesHtml += renderTableHtml(
-        "中ボルト(Mネジ)",
-        specialBolts.nakaM,
-        "teal",
-        simpleHeader("teal"),
-      );
-    }
-  }
+//     // D-Lock (Gray)
+//     if (specialBolts.dLock) {
+//       tablesHtml += renderTableHtml(
+//         "D-Lock",
+//         specialBolts.dLock,
+//         "gray",
+//         simpleHeader("gray"),
+//       );
+//     }
+//     // 中ボルト・ミリ (Blue)
+//     if (specialBolts.naka) {
+//       tablesHtml += renderTableHtml(
+//         "中ボルト(ミリ)",
+//         specialBolts.naka,
+//         "blue",
+//         simpleHeader("blue"),
+//       );
+//     }
+//     // 中ボルト・Mネジ (Teal)
+//     if (specialBolts.nakaM) {
+//       tablesHtml += renderTableHtml(
+//         "中ボルト(Mネジ)",
+//         specialBolts.nakaM,
+//         "teal",
+//         simpleHeader("teal"),
+//       );
+//     }
+//   }
 
-  if (tablesHtml === "") {
-    container.innerHTML =
-      '<p class="text-gray-500 w-full p-4">データがありません</p>';
-  } else {
-    container.innerHTML = tablesHtml;
-  }
-}
+//   if (tablesHtml === "") {
+//     container.innerHTML =
+//       '<p class="text-gray-500 w-full p-4">データがありません</p>';
+//   } else {
+//     container.innerHTML = tablesHtml;
+//   }
+// }
 
 document.addEventListener("DOMContentLoaded", () => {
   // --- DOM Elements ---
@@ -1906,9 +1908,8 @@ document.addEventListener("DOMContentLoaded", () => {
       const input = document.createElement("input");
       input.type = "text";
       input.className = `custom-input w-full bg-white border border-gray-400 text-gray-900 rounded-md p-2 focus:ring-yellow-500 focus:border-yellow-500`;
-      input.placeholder = `${prefix.includes("level") ? "階層" : "エリア"} ${
-        i + 1
-      }`;
+      input.placeholder = `${prefix.includes("level") ? "階層" : "エリア"} ${i + 1
+        }`;
       input.id = `${prefix}-${i}`;
       input.value = values[i] || "";
       container.appendChild(input);
@@ -2284,9 +2285,8 @@ document.addEventListener("DOMContentLoaded", () => {
         let description =
           p.mode === "advanced"
             ? `${p.customLevels.length}階層 / ${p.customAreas.length}エリア`
-            : `${p.floors}階建て (+R階${p.hasPH ? ", +PH階" : ""}) / ${
-                p.sections
-              }工区`;
+            : `${p.floors}階建て (+R階${p.hasPH ? ", +PH階" : ""}) / ${p.sections
+            }工区`;
 
         // ▼▼▼ 修正: カード内を縦並びにし、ボタンをグリッド配置で整列 ▼▼▼
         html += `
@@ -2321,9 +2321,8 @@ document.addEventListener("DOMContentLoaded", () => {
         let description =
           p.mode === "advanced"
             ? `${p.customLevels.length}階層 / ${p.customAreas.length}エリア`
-            : `${p.floors}階建て (+R階${p.hasPH ? ", +PH階" : ""}) / ${
-                p.sections
-              }工区`;
+            : `${p.floors}階建て (+R階${p.hasPH ? ", +PH階" : ""}) / ${p.sections
+            }工区`;
 
         html += `
                 <div class="project-card cursor-pointer hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-4 rounded-lg flex flex-col justify-between gap-3 h-full shadow-sm" data-id="${p.id}">
@@ -2437,20 +2436,16 @@ document.addEventListener("DOMContentLoaded", () => {
           } else {
             const singleBoltTypes = ["column", "wall_girt", "roof_purlin"];
             if (singleBoltTypes.includes(joint.type)) {
-              boltInfo = `<td class="px-4 py-3 border-b border-r border-slate-400 dark:border-slate-600">${
-                joint.flangeSize || "-"
-              } / ${joint.flangeCount}本</td>`;
+              boltInfo = `<td class="px-4 py-3 border-b border-r border-slate-400 dark:border-slate-600">${joint.flangeSize || "-"
+                } / ${joint.flangeCount}本</td>`;
             } else if (isPin) {
-              boltInfo = `<td class="px-4 py-3 border-b border-r border-slate-400 dark:border-slate-600">${
-                joint.webSize || "-"
-              } / ${joint.webCount}本</td>`;
+              boltInfo = `<td class="px-4 py-3 border-b border-r border-slate-400 dark:border-slate-600">${joint.webSize || "-"
+                } / ${joint.webCount}本</td>`;
             } else {
-              boltInfo = `<td class="px-4 py-3 border-b border-r border-slate-400 dark:border-slate-600">${
-                joint.flangeSize || "-"
-              } / ${joint.flangeCount}本</td>
-                                        <td class="px-4 py-3 border-b border-r border-slate-400 dark:border-slate-600">${
-                                          joint.webSize || "-"
-                                        } / ${joint.webCount}本</td>`;
+              boltInfo = `<td class="px-4 py-3 border-b border-r border-slate-400 dark:border-slate-600">${joint.flangeSize || "-"
+                } / ${joint.flangeCount}本</td>
+                                        <td class="px-4 py-3 border-b border-r border-slate-400 dark:border-slate-600">${joint.webSize || "-"
+                } / ${joint.webCount}本</td>`;
             }
           }
 
@@ -2671,9 +2666,8 @@ document.addEventListener("DOMContentLoaded", () => {
       if (filteredJoints.length > 0) {
         filteredJoints.forEach((j) => renderedJointIds.add(j.id));
 
-        const tbodyId = `joints-list-${section.type}${
-          section.isPin ? "-pin" : ""
-        }`;
+        const tbodyId = `joints-list-${section.type}${section.isPin ? "-pin" : ""
+          }`;
         let finalCols = section.cols;
         if (filteredJoints.some((j) => j.isComplexSpl)) {
           if (section.isPin) {
@@ -2687,9 +2681,8 @@ document.addEventListener("DOMContentLoaded", () => {
           }
         }
 
-        const sectionId = `joint-${section.type}-${
-          section.isPin ? "pin" : "rigid"
-        }`;
+        const sectionId = `joint-${section.type}-${section.isPin ? "pin" : "rigid"
+          }`;
         const sortState = state.sort[sectionId];
 
         if (sortState && sortState.key) {
@@ -2783,9 +2776,8 @@ document.addEventListener("DOMContentLoaded", () => {
           })
           .join("");
 
-        const anchorId = `anchor-joint-${section.type}-${
-          section.isPin ? "pin" : "rigid"
-        }`;
+        const anchorId = `anchor-joint-${section.type}-${section.isPin ? "pin" : "rigid"
+          }`;
 
         html += `
                         <div id="${anchorId}" class="rounded-lg border border-slate-400 dark:border-slate-600 scroll-mt-24" data-section-title="継手：${section.title}" data-section-color="${section.color}" data-section-id="${sectionId}">
@@ -2929,11 +2921,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // 1. 階層タブ生成
     const levels = getProjectLevels(project);
-    let tabsHtml = `<button class="level-tab-btn px-3 py-1 rounded-full text-sm font-bold transition-colors border ${
-      state.activeMemberLevel === "all"
-        ? "bg-blue-600 text-white border-blue-600"
-        : "bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-300 dark:border-slate-600 hover:bg-slate-100"
-    }" data-level="all">全て</button>`;
+    let tabsHtml = `<button class="level-tab-btn px-3 py-1 rounded-full text-sm font-bold transition-colors border ${state.activeMemberLevel === "all"
+      ? "bg-blue-600 text-white border-blue-600"
+      : "bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-300 dark:border-slate-600 hover:bg-slate-100"
+      }" data-level="all">全て</button>`;
     levels.forEach((lvl) => {
       const isActive = state.activeMemberLevel === lvl.id;
       const activeClass = isActive
@@ -2998,20 +2989,16 @@ document.addEventListener("DOMContentLoaded", () => {
           } else {
             const singleBoltTypes = ["column", "wall_girt", "roof_purlin"];
             if (singleBoltTypes.includes(joint.type)) {
-              boltInfo = `<td class="px-4 py-3 border-b border-r ${borderColor} ${darkBorderColor}">${
-                joint.flangeSize || "-"
-              } / ${joint.flangeCount}本</td>`;
+              boltInfo = `<td class="px-4 py-3 border-b border-r ${borderColor} ${darkBorderColor}">${joint.flangeSize || "-"
+                } / ${joint.flangeCount}本</td>`;
             } else if (isPin) {
-              boltInfo = `<td class="px-4 py-3 border-b border-r ${borderColor} ${darkBorderColor}">${
-                joint.webSize || "-"
-              } / ${joint.webCount}本</td>`;
+              boltInfo = `<td class="px-4 py-3 border-b border-r ${borderColor} ${darkBorderColor}">${joint.webSize || "-"
+                } / ${joint.webCount}本</td>`;
             } else {
-              boltInfo = `<td class="px-4 py-3 border-b border-r ${borderColor} ${darkBorderColor}">${
-                joint.flangeSize || "-"
-              } / ${joint.flangeCount}本</td>
-                                <td class="px-4 py-3 border-b border-r ${borderColor} ${darkBorderColor}">${
-                                  joint.webSize || "-"
-                                } / ${joint.webCount}本</td>`;
+              boltInfo = `<td class="px-4 py-3 border-b border-r ${borderColor} ${darkBorderColor}">${joint.flangeSize || "-"
+                } / ${joint.flangeCount}本</td>
+                                <td class="px-4 py-3 border-b border-r ${borderColor} ${darkBorderColor}">${joint.webSize || "-"
+                } / ${joint.webCount}本</td>`;
             }
           }
 
@@ -3061,13 +3048,13 @@ document.addEventListener("DOMContentLoaded", () => {
                 member.targetLevels.length > 3
                   ? `${member.targetLevels.length}フロア`
                   : member.targetLevels
-                      .map((l) => {
-                        const lvlObj = levels.find((x) => x.id === l);
-                        return lvlObj
-                          ? lvlObj.label.replace("階", "").replace("F", "")
-                          : l;
-                      })
-                      .join(",");
+                    .map((l) => {
+                      const lvlObj = levels.find((x) => x.id === l);
+                      return lvlObj
+                        ? lvlObj.label.replace("階", "").replace("F", "")
+                        : l;
+                    })
+                    .join(",");
               floorBadge = `<span class="text-xs bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 px-1 rounded ml-2">${displayLevels}</span>`;
             }
           } else {
@@ -3254,9 +3241,8 @@ document.addEventListener("DOMContentLoaded", () => {
           (m.joint.isPinJoint || false) === section.isPin,
       );
       if (filteredMembers.length > 0) {
-        const sectionId = `member-${section.type}-${
-          section.isPin ? "pin" : "rigid"
-        }`;
+        const sectionId = `member-${section.type}-${section.isPin ? "pin" : "rigid"
+          }`;
         const sortState = state.sort[sectionId];
 
         if (sortState && sortState.key) {
@@ -3345,9 +3331,8 @@ document.addEventListener("DOMContentLoaded", () => {
           });
         }
 
-        const tbodyId = `members-list-${section.type}${
-          section.isPin ? "-pin" : ""
-        }`;
+        const tbodyId = `members-list-${section.type}${section.isPin ? "-pin" : ""
+          }`;
         let finalCols = section.cols;
         const hasComplexSpl = filteredMembers.some((m) => m.joint.isComplexSpl);
         if (hasComplexSpl && section.isPin) {
@@ -3377,9 +3362,8 @@ document.addEventListener("DOMContentLoaded", () => {
           })
           .join("");
 
-        const anchorId = `anchor-member-${section.type}-${
-          section.isPin ? "pin" : "rigid"
-        }`;
+        const anchorId = `anchor-member-${section.type}-${section.isPin ? "pin" : "rigid"
+          }`;
 
         html += `
                         <div id="${anchorId}" class="rounded-lg border border-slate-400 dark:border-slate-600 scroll-mt-24" data-section-title="部材：${section.title}" data-section-color="${section.color}" data-section-id="${sectionId}">
@@ -3414,11 +3398,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // 1. 階層タブの生成
     const levels = getProjectLevels(project);
-    let tabsHtml = `<button class="tally-tab-btn px-3 py-1 rounded-full text-sm font-bold transition-colors border ${
-      state.activeTallyLevel === "all"
-        ? "bg-blue-600 text-white border-blue-600"
-        : "bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-300 dark:border-slate-600 hover:bg-slate-100"
-    }" data-level="all">全表示</button>`;
+    let tabsHtml = `<button class="tally-tab-btn px-3 py-1 rounded-full text-sm font-bold transition-colors border ${state.activeTallyLevel === "all"
+      ? "bg-blue-600 text-white border-blue-600"
+      : "bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-300 dark:border-slate-600 hover:bg-slate-100"
+      }" data-level="all">全表示</button>`;
 
     levels.forEach((lvl) => {
       const isActive = state.activeTallyLevel === lvl.id;
@@ -3549,12 +3532,10 @@ document.addEventListener("DOMContentLoaded", () => {
           colorClass =
             "bg-amber-200 text-amber-800 border-amber-300 dark:bg-amber-900/50 dark:text-amber-200 dark:border-amber-700";
 
-        return `<td class="px-2 py-1 text-center border ${colorClass} ${lockedClass}" data-column-id="${
-          item.id
-        }">
-                            <input type="checkbox" class="tally-lock-checkbox h-4 w-4 rounded border-gray-300 text-blue-800 focus:ring-yellow-500" data-id="${
-                              item.id
-                            }" ${isLocked ? "checked" : ""}>
+        return `<td class="px-2 py-1 text-center border ${colorClass} ${lockedClass}" data-column-id="${item.id
+          }">
+                            <input type="checkbox" class="tally-lock-checkbox h-4 w-4 rounded border-gray-300 text-blue-800 focus:ring-yellow-500" data-id="${item.id
+          }" ${isLocked ? "checked" : ""}>
                         </td>`;
       })
       .join("");
@@ -3670,25 +3651,21 @@ document.addEventListener("DOMContentLoaded", () => {
                         <label class="font-bold">${loc.label}</label>
                     </td>
                     ${tallyList
-                      .map((item) => {
-                        const dbValue = project.tally?.[loc.id]?.[item.id];
-                        const value = dbValue === 0 ? 0 : dbValue || "";
-                        const isLocked = locks[item.id] || false;
-                        const lockedClass = isLocked ? "locked-column" : "";
-                        return `
-<td class="p-0 border border-slate-200 dark:border-slate-700 ${lockedClass}" data-column-id="${
-                          item.id
-                        }">
-    <input type="text" inputmode="numeric" pattern="\\d*" data-location="${
-      loc.id
-    }" data-id="${
-      item.id
-    }" class="tally-input w-full bg-transparent dark:bg-slate-800/50 border-transparent text-slate-900 dark:text-slate-100 rounded-md py-3 px-2 text-center focus:outline-none focus:ring-2 focus:ring-yellow-500" value="${value}" ${
-      isLocked ? "disabled" : ""
-    }>
+            .map((item) => {
+              const dbValue = project.tally?.[loc.id]?.[item.id];
+              const value = dbValue === 0 ? 0 : dbValue || "";
+              const isLocked = locks[item.id] || false;
+              const lockedClass = isLocked ? "locked-column" : "";
+              return `
+<td class="p-0 border border-slate-200 dark:border-slate-700 ${lockedClass}" data-column-id="${item.id
+                }">
+    <input type="text" inputmode="numeric" pattern="\\d*" data-location="${loc.id
+                }" data-id="${item.id
+                }" class="tally-input w-full bg-transparent dark:bg-slate-800/50 border-transparent text-slate-900 dark:text-slate-100 rounded-md py-3 px-2 text-center focus:outline-none focus:ring-2 focus:ring-yellow-500" value="${value}" ${isLocked ? "disabled" : ""
+                }>
 </td>`;
-                      })
-                      .join("")}
+            })
+            .join("")}
                     <td class="row-total px-2 py-2 text-center font-bold text-blue-800 dark:text-blue-300 align-middle sticky right-0 border border-slate-200 dark:border-slate-700 table-sticky-color"></td>
                 </tr>`,
       )
@@ -3995,9 +3972,8 @@ document.addEventListener("DOMContentLoaded", () => {
         const totalColClass = col.isTotal
           ? "font-bold bg-blue-50 dark:bg-blue-900/40"
           : "";
-        rowHtml += `<td class="px-2 py-2 text-center border border-slate-200 dark:border-slate-700 ${totalColClass} ${detailsClass}" title="${tooltipText}" ${dataAttribute}>${
-          cellValue > 0 ? cellValue.toLocaleString() : "-"
-        }</td>`;
+        rowHtml += `<td class="px-2 py-2 text-center border border-slate-200 dark:border-slate-700 ${totalColClass} ${detailsClass}" title="${tooltipText}" ${dataAttribute}>${cellValue > 0 ? cellValue.toLocaleString() : "-"
+          }</td>`;
       });
 
       const grandTotalTooltip = Object.entries(rowTotalJoints)
@@ -4012,9 +3988,8 @@ document.addEventListener("DOMContentLoaded", () => {
         Object.keys(rowTotalJoints).length > 0
           ? `data-details='${JSON.stringify(rowTotalJoints)}'`
           : "";
-      rowHtml += `<td class="px-2 py-2 text-center font-bold sticky right-0 bg-yellow-100 dark:bg-yellow-900/50 border border-yellow-200 dark:border-yellow-800 ${grandTotalDetailsClass}" title="${grandTotalTooltip}" ${grandTotalDataAttribute}>${
-        rowTotal > 0 ? rowTotal.toLocaleString() : "-"
-      }</td></tr>`;
+      rowHtml += `<td class="px-2 py-2 text-center font-bold sticky right-0 bg-yellow-100 dark:bg-yellow-900/50 border border-yellow-200 dark:border-yellow-800 ${grandTotalDetailsClass}" title="${grandTotalTooltip}" ${grandTotalDataAttribute}>${rowTotal > 0 ? rowTotal.toLocaleString() : "-"
+        }</td></tr>`;
       floorTable += rowHtml;
     });
     floorTable += `</tbody></table></div>`;
@@ -4082,9 +4057,8 @@ document.addEventListener("DOMContentLoaded", () => {
     let sectionTable = `
         <div id="anchor-result-area" data-section-title="集計：工区/エリア別" data-section-color="orange" class="scroll-mt-24">
             <div class="flex items-center gap-4 mt-8 mb-4 border-b-2 border-yellow-400 pb-2">
-            <h2 class="text-2xl font-bold text-slate-900 dark:text-slate-100">ボルト本数(${
-              project.mode === "advanced" ? "エリア別" : "工区別"
-            })</h2>
+            <h2 class="text-2xl font-bold text-slate-900 dark:text-slate-100">ボルト本数(${project.mode === "advanced" ? "エリア別" : "工区別"
+      })</h2>
             <span class="font-bold text-red-600 dark:text-red-400 text-lg">(総本数: ${grandTotalBolts.toLocaleString()}本)</span>
         </div>
         <div class="overflow-x-auto custom-scrollbar">
@@ -4120,9 +4094,8 @@ document.addEventListener("DOMContentLoaded", () => {
           dataAttribute = `data-details='${JSON.stringify(cellData.joints)}'`;
         }
         rowTotal += cellValue;
-        rowHtml += `<td class="px-2 py-2 text-center border border-slate-200 dark:border-slate-700 ${detailsClass}" title="${tooltipText}" ${dataAttribute}>${
-          cellValue > 0 ? cellValue.toLocaleString() : "-"
-        }</td>`;
+        rowHtml += `<td class="px-2 py-2 text-center border border-slate-200 dark:border-slate-700 ${detailsClass}" title="${tooltipText}" ${dataAttribute}>${cellValue > 0 ? cellValue.toLocaleString() : "-"
+          }</td>`;
       });
 
       const grandTotalTooltip = Object.entries(rowTotalJoints)
@@ -4137,9 +4110,8 @@ document.addEventListener("DOMContentLoaded", () => {
         Object.keys(rowTotalJoints).length > 0
           ? `data-details='${JSON.stringify(rowTotalJoints)}'`
           : "";
-      rowHtml += `<td class="px-2 py-2 text-center font-bold sticky right-0 bg-yellow-100 dark:bg-yellow-900/50 border border-yellow-200 dark:border-yellow-800 ${grandTotalDetailsClass}" title="${grandTotalTooltip}" ${grandTotalDataAttribute}>${
-        rowTotal > 0 ? rowTotal.toLocaleString() : "-"
-      }</td></tr>`;
+      rowHtml += `<td class="px-2 py-2 text-center font-bold sticky right-0 bg-yellow-100 dark:bg-yellow-900/50 border border-yellow-200 dark:border-yellow-800 ${grandTotalDetailsClass}" title="${grandTotalTooltip}" ${grandTotalDataAttribute}>${rowTotal > 0 ? rowTotal.toLocaleString() : "-"
+        }</td></tr>`;
       sectionTable += rowHtml;
     });
     sectionTable += `</tbody></table></div>`;
@@ -4266,11 +4238,11 @@ document.addEventListener("DOMContentLoaded", () => {
                             <thead class="bg-slate-200 dark:bg-slate-700 text-xs text-slate-700 dark:text-slate-300"><tr>
                                 <th class="px-2 py-3 sticky left-0 bg-slate-200 dark:bg-slate-700 z-10 border border-slate-300 dark:border-slate-600">仮ボルトサイズ</th>
                                 ${locations
-                                  .map(
-                                    (loc) =>
-                                      `<th class="px-2 py-3 text-center border border-slate-300 dark:border-slate-600">${loc.label}</th>`,
-                                  )
-                                  .join("")}
+        .map(
+          (loc) =>
+            `<th class="px-2 py-3 text-center border border-slate-300 dark:border-slate-600">${loc.label}</th>`,
+        )
+        .join("")}
                                 <th class="px-2 py-3 text-center sticky right-0 bg-yellow-300 dark:bg-yellow-800/50 text-yellow-800 dark:text-yellow-200 border border-yellow-400 dark:border-yellow-700">総合計</th>
                             </tr></thead><tbody>`;
 
@@ -4299,9 +4271,8 @@ document.addEventListener("DOMContentLoaded", () => {
         }
 
         grandTotal += cellValue;
-        rowHtml += `<td class="px-2 py-2 text-center border border-slate-200 dark:border-slate-700 ${detailsClass}" title="${tooltipText}" ${dataAttribute}>${
-          cellValue > 0 ? cellValue.toLocaleString() : "-"
-        }</td>`;
+        rowHtml += `<td class="px-2 py-2 text-center border border-slate-200 dark:border-slate-700 ${detailsClass}" title="${tooltipText}" ${dataAttribute}>${cellValue > 0 ? cellValue.toLocaleString() : "-"
+          }</td>`;
       });
 
       const grandTotalTooltip = Object.entries(grandTotalJoints)
@@ -4317,9 +4288,8 @@ document.addEventListener("DOMContentLoaded", () => {
           ? `data-details='${JSON.stringify(grandTotalJoints)}'`
           : "";
 
-      rowHtml += `<td class="px-2 py-2 text-center font-bold sticky right-0 bg-yellow-100 dark:bg-yellow-900/50 border border-yellow-200 dark:border-yellow-800 ${grandTotalDetailsClass}" title="${grandTotalTooltip}" ${grandTotalDataAttribute}>${
-        grandTotal > 0 ? grandTotal.toLocaleString() : "-"
-      }</td></tr>`;
+      rowHtml += `<td class="px-2 py-2 text-center font-bold sticky right-0 bg-yellow-100 dark:bg-yellow-900/50 border border-yellow-200 dark:border-yellow-800 ${grandTotalDetailsClass}" title="${grandTotalTooltip}" ${grandTotalDataAttribute}>${grandTotal > 0 ? grandTotal.toLocaleString() : "-"
+        }</td></tr>`;
       floorTable += rowHtml;
     });
     floorTable += `</tbody></table></div>`;
@@ -4393,24 +4363,21 @@ document.addEventListener("DOMContentLoaded", () => {
       settingsHtml = `
                 <div class="flex items-center gap-3 bg-white dark:bg-slate-700 px-3 py-2 rounded-md border border-slate-300 dark:border-slate-600 shadow-sm">
                     <label class="flex items-center gap-2 cursor-pointer text-sm font-medium text-slate-700 dark:text-slate-300">
-                        <input type="checkbox" id="temp-order-group-all-checkbox" class="h-4 w-4 rounded border-gray-300 text-green-600 focus:ring-green-500" ${
-                          isGroupAll ? "checked" : ""
-                        }>
+                        <input type="checkbox" id="temp-order-group-all-checkbox" class="h-4 w-4 rounded border-gray-300 text-green-600 focus:ring-green-500" ${isGroupAll ? "checked" : ""
+        }>
                         <span>工区まとめ (全工区合算)</span>
                     </label>
                     <div class="h-4 w-px bg-slate-300 dark:bg-slate-500 mx-1"></div>
                     <div class="flex items-center gap-2 text-sm ${disabledClass}" id="temp-order-group-key-container">
                         <span class="text-slate-600 dark:text-slate-400 font-normal">グループ化:</span>
                         <label class="inline-flex items-center cursor-pointer">
-                            <input type="radio" name="temp-order-group-key" value="section" class="text-green-600 focus:ring-green-500" ${
-                              groupKey === "section" ? "checked" : ""
-                            }>
+                            <input type="radio" name="temp-order-group-key" value="section" class="text-green-600 focus:ring-green-500" ${groupKey === "section" ? "checked" : ""
+        }>
                             <span class="ml-1 text-slate-700 dark:text-slate-300">工区ごと</span>
                         </label>
                         <label class="inline-flex items-center cursor-pointer">
-                            <input type="radio" name="temp-order-group-key" value="floor" class="text-green-600 focus:ring-green-500" ${
-                              groupKey === "floor" ? "checked" : ""
-                            }>
+                            <input type="radio" name="temp-order-group-key" value="floor" class="text-green-600 focus:ring-green-500" ${groupKey === "floor" ? "checked" : ""
+        }>
                             <span class="ml-1 text-slate-700 dark:text-slate-300">フロアごと</span>
                         </label>
                     </div>
@@ -5417,8 +5384,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
       if (isDuplicate) {
         throw new Error(
-          `物件「${
-            sourceProject.propertyName || "(未設定)"
+          `物件「${sourceProject.propertyName || "(未設定)"
           }」内に、工事名「${newName}」は既に存在します。\n別の名前を指定してください。`,
         );
       }
@@ -8052,8 +8018,8 @@ document.addEventListener("DOMContentLoaded", () => {
           : currentLevels.length > 3
             ? `${currentLevels.length}フロア`
             : currentLevels
-                .map((id) => levels.find((l) => l.id === id)?.label || id)
-                .join(", ");
+              .map((id) => levels.find((l) => l.id === id)?.label || id)
+              .join(", ");
 
       // ▼▼▼ 修正: ここで既存の値（currentValues[i]）を取得し、inputタグにセットする ▼▼▼
       const savedName = currentValues[i] || "";
@@ -8175,9 +8141,8 @@ document.addEventListener("DOMContentLoaded", () => {
       allLevelLabel.className =
         "flex items-center gap-2 text-sm font-bold text-slate-800 dark:text-slate-200 cursor-pointer border-b pb-2";
       const isAllChecked = currentSelection.length === 0;
-      allLevelLabel.innerHTML = `<input type="checkbox" id="bulk-level-select-all" class="h-4 w-4 rounded border-gray-300 text-blue-800 focus:ring-yellow-500" ${
-        isAllChecked ? "checked" : ""
-      }> 全階層を対象にする`;
+      allLevelLabel.innerHTML = `<input type="checkbox" id="bulk-level-select-all" class="h-4 w-4 rounded border-gray-300 text-blue-800 focus:ring-yellow-500" ${isAllChecked ? "checked" : ""
+        }> 全階層を対象にする`;
       bulkLevelOptionsContainer.appendChild(allLevelLabel);
 
       // 個別階層チェックボックス
@@ -8185,11 +8150,9 @@ document.addEventListener("DOMContentLoaded", () => {
         const isChecked = currentSelection.includes(lvl.id) || isAllChecked;
         const label = document.createElement("label");
         label.className = "flex items-center gap-2 text-sm cursor-pointer ml-3";
-        label.innerHTML = `<input type="checkbox" value="${
-          lvl.id
-        }" class="bulk-level-checkbox-option h-4 w-4 rounded border-gray-300 text-blue-800 focus:ring-yellow-500" ${
-          isChecked ? "checked" : ""
-        } ${isAllChecked ? "disabled" : ""}> ${lvl.label}`;
+        label.innerHTML = `<input type="checkbox" value="${lvl.id
+          }" class="bulk-level-checkbox-option h-4 w-4 rounded border-gray-300 text-blue-800 focus:ring-yellow-500" ${isChecked ? "checked" : ""
+          } ${isAllChecked ? "disabled" : ""}> ${lvl.label}`;
         bulkLevelOptionsContainer.appendChild(label);
       });
 
@@ -8384,84 +8347,84 @@ document.addEventListener("DOMContentLoaded", () => {
   // 一番確実なのは、switchTab関数の最後に追加することです。
   // ▲▲▲ 追加ここまで ▲▲▲
   // ▼▼▼ 追加：グローバルボルトサイズ選択モーダルの生成 ▼▼▼
-  const populateGlobalBoltSelectorModal = () => {
-    const container = document.getElementById("bolt-options-container");
-    if (!container) return;
-    container.innerHTML = "";
+  // const populateGlobalBoltSelectorModal = () => {
+  //   const container = document.getElementById("bolt-options-container");
+  //   if (!container) return;
+  //   container.innerHTML = "";
 
-    const bolts = state.globalBoltSizes || [];
+  //   const bolts = state.globalBoltSizes || [];
 
-    // 種類ごとにグループ化
-    const grouped = {};
-    const typeOrderList = [
-      "M16",
-      "M16めっき",
-      "M20",
-      "M20めっき",
-      "M22",
-      "M22めっき",
-      "中ボ(Mネジ) M16",
-      "中ボ(Mネジ) M20",
-      "中ボ(Mネジ) M22",
-      "Dドブ12",
-      "Dユニ12",
-      "Dドブ16",
-      "Dユニ16",
-    ];
+  //   // 種類ごとにグループ化
+  //   const grouped = {};
+  //   const typeOrderList = [
+  //     "M16",
+  //     "M16めっき",
+  //     "M20",
+  //     "M20めっき",
+  //     "M22",
+  //     "M22めっき",
+  //     "中ボ(Mネジ) M16",
+  //     "中ボ(Mネジ) M20",
+  //     "中ボ(Mネジ) M22",
+  //     "Dドブ12",
+  //     "Dユニ12",
+  //     "Dドブ16",
+  //     "Dユニ16",
+  //   ];
 
-    // ソート順の確保
-    bolts.forEach((b) => {
-      const type = b.type;
-      if (!grouped[type]) grouped[type] = [];
-      grouped[type].push(b);
-    });
+  //   // ソート順の確保
+  //   bolts.forEach((b) => {
+  //     const type = b.type;
+  //     if (!grouped[type]) grouped[type] = [];
+  //     grouped[type].push(b);
+  //   });
 
-    // 定義順に出力
-    const sortedTypes = Object.keys(grouped).sort((a, b) => {
-      const idxA = typeOrderList.indexOf(a);
-      const idxB = typeOrderList.indexOf(b);
-      if (idxA !== -1 && idxB !== -1) return idxA - idxB;
-      if (idxA !== -1) return -1;
-      if (idxB !== -1) return 1;
-      return a.localeCompare(b);
-    });
+  //   // 定義順に出力
+  //   const sortedTypes = Object.keys(grouped).sort((a, b) => {
+  //     const idxA = typeOrderList.indexOf(a);
+  //     const idxB = typeOrderList.indexOf(b);
+  //     if (idxA !== -1 && idxB !== -1) return idxA - idxB;
+  //     if (idxA !== -1) return -1;
+  //     if (idxB !== -1) return 1;
+  //     return a.localeCompare(b);
+  //   });
 
-    sortedTypes.forEach((type) => {
-      const list = grouped[type];
-      // ヘッダー
-      const header = document.createElement("h4");
-      header.className =
-        "font-bold text-slate-700 dark:text-slate-200 mb-2 mt-4 border-b border-gray-200 dark:border-slate-700 pb-1";
-      header.textContent = type;
-      container.appendChild(header);
+  //   sortedTypes.forEach((type) => {
+  //     const list = grouped[type];
+  //     // ヘッダー
+  //     const header = document.createElement("h4");
+  //     header.className =
+  //       "font-bold text-slate-700 dark:text-slate-200 mb-2 mt-4 border-b border-gray-200 dark:border-slate-700 pb-1";
+  //     header.textContent = type;
+  //     container.appendChild(header);
 
-      const grid = document.createElement("div");
-      grid.className = "grid grid-cols-3 gap-2";
+  //     const grid = document.createElement("div");
+  //     grid.className = "grid grid-cols-3 gap-2";
 
-      list.forEach((bolt) => {
-        const btn = document.createElement("button");
-        // bolt-option-btn クラスを使用
-        btn.className =
-          "bolt-option-btn text-sm p-2 hover:bg-yellow-200 border border-blue-200 rounded-md transition-transform duration-150 hover:scale-105 dark:border-slate-600 dark:hover:bg-yellow-600 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-200";
-        btn.textContent = bolt.label;
-        btn.dataset.value = bolt.id;
+  //     list.forEach((bolt) => {
+  //       const btn = document.createElement("button");
+  //       // bolt-option-btn クラスを使用
+  //       btn.className =
+  //         "bolt-option-btn text-sm p-2 hover:bg-yellow-200 border border-blue-200 rounded-md transition-transform duration-150 hover:scale-105 dark:border-slate-600 dark:hover:bg-yellow-600 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-200";
+  //       btn.textContent = bolt.label;
+  //       btn.dataset.value = bolt.id;
 
-        btn.addEventListener("click", () => {
-          if (state.activeBoltTarget) {
-            state.activeBoltTarget.value = bolt.id;
-            state.activeBoltTarget.dispatchEvent(
-              new Event("change", { bubbles: true }),
-            );
-            state.activeBoltTarget = null;
-            const modal = document.getElementById("bolt-selector-modal");
-            if (modal) closeModal(modal);
-          }
-        });
-        grid.appendChild(btn);
-      });
-      container.appendChild(grid);
-    });
-  };
+  //       btn.addEventListener("click", () => {
+  //         if (state.activeBoltTarget) {
+  //           state.activeBoltTarget.value = bolt.id;
+  //           state.activeBoltTarget.dispatchEvent(
+  //             new Event("change", { bubbles: true }),
+  //           );
+  //           state.activeBoltTarget = null;
+  //           const modal = document.getElementById("bolt-selector-modal");
+  //           if (modal) closeModal(modal);
+  //         }
+  //       });
+  //       grid.appendChild(btn);
+  //     });
+  //     container.appendChild(grid);
+  //   });
+  // };
   // ▲▲▲ 追加ここまで ▲▲▲
 
   // populateBoltSelectorModal(); // ← 廃止
@@ -8481,14 +8444,19 @@ document.addEventListener("DOMContentLoaded", () => {
   loadGlobalSettings().then(() => {
     populateGlobalBoltSelectorModal();
   });
-  // ▼▼▼ 追加：モーダルをドラッグ可能にする ▼▼▼
-  makeDraggable(document.getElementById("edit-joint-modal"));
-  makeDraggable(document.getElementById("edit-member-modal"));
-  makeDraggable(document.getElementById("temp-bolt-mapping-modal")); // 追加
-  // ▲▲▲ 追加ここまで ▲▲▲
-  // ▼▼▼ 追加：一括登録モーダルもドラッグ可能にする ▼▼▼
-  makeDraggable(document.getElementById("bulk-add-member-modal"));
-  // ▲▲▲ 追加ここまで ▲▲▲
+
+  // モーダル要素を取得してドラッグ可能にする
+  const modals = [
+    document.getElementById("edit-joint-modal"),
+    document.getElementById("edit-member-modal"),
+    document.getElementById("bulk-add-member-modal"),
+    document.getElementById("temp-bolt-mapping-modal")];
+
+  modals.forEach(modal => {
+    if (modal) {
+      makeDraggable(modal);
+    }
+  });
   if ("serviceWorker" in navigator) {
     window.addEventListener("load", () => {
       navigator.serviceWorker
