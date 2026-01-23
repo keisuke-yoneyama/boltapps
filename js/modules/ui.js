@@ -1,12 +1,27 @@
 import { PRESET_COLORS, HUG_BOLT_SIZES } from "./config.js";
 import { state } from "./state.js";
-import { getProjectLevels, getMasterOrderedKeys, getBoltWeight, boltSort } from "./calculator.js";
+import {
+  getProjectLevels,
+  getMasterOrderedKeys,
+  getBoltWeight,
+  boltSort,
+} from "./calculator.js";
 
 // 並び順の定義（定数として外に出しました）
 const BOLT_TYPE_ORDER = [
-  "M16", "M16めっき", "M20", "M20めっき", "M22", "M22めっき",
-  "中ボ(Mネジ) M16", "中ボ(Mネジ) M20", "中ボ(Mネジ) M22",
-  "Dドブ12", "Dユニ12", "Dドブ16", "Dユニ16",
+  "M16",
+  "M16めっき",
+  "M20",
+  "M20めっき",
+  "M22",
+  "M22めっき",
+  "中ボ(Mネジ) M16",
+  "中ボ(Mネジ) M20",
+  "中ボ(Mネジ) M22",
+  "Dドブ12",
+  "Dユニ12",
+  "Dドブ16",
+  "Dユニ16",
 ];
 
 let isFabOpen = false;
@@ -873,7 +888,8 @@ export const populateTempBoltMappingModal = (project) => {
       const hugBoltOptions = availableHugBolts
         .map(
           (size) =>
-            `<option value="${size}" ${size === savedHugBolt ? "selected" : ""
+            `<option value="${size}" ${
+              size === savedHugBolt ? "selected" : ""
             }>${size}</option>`,
         )
         .join("");
@@ -991,7 +1007,12 @@ export function resetCurrentGroupingState() {
 /**
  * 工区まとめ設定UIを描画する関数
  */
-export function renderGroupingControls(container, originalResults, project, onUpdate) {
+export function renderGroupingControls(
+  container,
+  originalResults,
+  project,
+  onUpdate,
+) {
   // 安全対策
   if (!container) return;
 
@@ -1130,7 +1151,7 @@ export function renderGroupingControls(container, originalResults, project, onUp
  * @param {Object} specialBolts     [特殊用] { dLock: {...}, naka: {...}, column: {...} }
  * @param {boolean} onlySpecial     trueなら本ボルト(aggregatedCounts)の描画をスキップする
  */
-function renderAggregatedTables(
+export function renderAggregatedTables(
   container,
   aggregatedCounts,
   sortedKeys,
@@ -1196,8 +1217,8 @@ function renderAggregatedTables(
     const totalWeightDisplay =
       !customHeader && tableTotalWeight > 0
         ? `<span class="ml-auto text-sm font-bold text-red-600 dark:text-red-400">合計: ${tableTotalWeight.toFixed(
-          1,
-        )} kg</span>`
+            1,
+          )} kg</span>`
         : "";
 
     return `
@@ -1351,21 +1372,27 @@ export const makeDraggable = (modalElement) => {
   document.addEventListener("mouseup", endDrag);
 
   // --- タッチイベントの設定 ---
-  header.addEventListener("touchstart", (e) => {
-    if (e.touches.length === 1) {
-      const touch = e.touches[0];
-      startDrag(touch.clientX, touch.clientY);
-    }
-  }, { passive: false }
+  header.addEventListener(
+    "touchstart",
+    (e) => {
+      if (e.touches.length === 1) {
+        const touch = e.touches[0];
+        startDrag(touch.clientX, touch.clientY);
+      }
+    },
+    { passive: false },
   );
 
-  document.addEventListener("touchmove", (e) => {
-    if (isDragging && e.touches.length === 1) {
-      e.preventDefault();
-      const touch = e.touches[0];
-      moveDrag(touch.clientX, touch.clientY);
-    }
-  }, { passive: false }
+  document.addEventListener(
+    "touchmove",
+    (e) => {
+      if (isDragging && e.touches.length === 1) {
+        e.preventDefault();
+        const touch = e.touches[0];
+        moveDrag(touch.clientX, touch.clientY);
+      }
+    },
+    { passive: false },
   );
 
   document.addEventListener("touchend", endDrag);
@@ -1407,7 +1434,8 @@ export const populateGlobalBoltSelectorModal = () => {
 
     // ヘッダー
     const header = document.createElement("h4");
-    header.className = "font-bold text-slate-700 dark:text-slate-200 mb-2 mt-4 border-b border-gray-200 dark:border-slate-700 pb-1";
+    header.className =
+      "font-bold text-slate-700 dark:text-slate-200 mb-2 mt-4 border-b border-gray-200 dark:border-slate-700 pb-1";
     header.textContent = type;
     container.appendChild(header);
 
@@ -1417,7 +1445,8 @@ export const populateGlobalBoltSelectorModal = () => {
 
     list.forEach((bolt) => {
       const btn = document.createElement("button");
-      btn.className = "bolt-option-btn text-sm p-2 hover:bg-yellow-200 border border-blue-200 rounded-md transition-transform duration-150 hover:scale-105 dark:border-slate-600 dark:hover:bg-yellow-600 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-200";
+      btn.className =
+        "bolt-option-btn text-sm p-2 hover:bg-yellow-200 border border-blue-200 rounded-md transition-transform duration-150 hover:scale-105 dark:border-slate-600 dark:hover:bg-yellow-600 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-200";
       btn.textContent = bolt.label;
       btn.dataset.value = bolt.id;
 
@@ -1436,7 +1465,7 @@ export const populateGlobalBoltSelectorModal = () => {
           state.activeBoltTarget = null;
 
           const modal = document.getElementById("bolt-selector-modal"); // ID確認
-          if (modal && typeof closeModal === 'function') {
+          if (modal && typeof closeModal === "function") {
             closeModal(modal);
           }
         }
