@@ -4573,69 +4573,111 @@ export const renderResults = (project) => {
 
 /**
  * 詳細画面内のタブ切り替え (Joints <-> Tally)
+ * デバッグログ強化版
  */
 export const switchTab = (tabName) => {
-  const jointsSection = document.getElementById("joints-section");
-  const tallySection = document.getElementById("tally-section");
-  const navTabJoints = document.getElementById("nav-tab-joints");
-  const navTabTally = document.getElementById("nav-tab-tally");
-  const mobileNavTabJoints = document.getElementById("mobile-nav-tab-joints");
-  const mobileNavTabTally = document.getElementById("mobile-nav-tab-tally");
+  console.group(`[DEBUG] switchTab called with: "${tabName}"`);
 
-  // 内部セクションも明示的に取得
-  const settingsCard = document.getElementById("settings-card");
-  const memberCard = document.getElementById("member-registration-card");
+  // 1. 要素の取得と確認
+  const elements = {
+    jointsSection: document.getElementById("joints-section"),
+    tallySection: document.getElementById("tally-section"),
+    navTabJoints: document.getElementById("nav-tab-joints"),
+    navTabTally: document.getElementById("nav-tab-tally"),
+    mobileNavTabJoints: document.getElementById("mobile-nav-tab-joints"),
+    mobileNavTabTally: document.getElementById("mobile-nav-tab-tally"),
+    settingsCard: document.getElementById("settings-card"),
+    memberCard: document.getElementById("member-registration-card"),
+  };
 
-  // 現在のスクロール位置を保存
-  const currentScrollY = window.scrollY;
-  if (state.activeTab) {
-    state.scrollPositions[state.activeTab] = currentScrollY;
+  // 見つからない要素があれば警告を出す
+  Object.entries(elements).forEach(([key, element]) => {
+    if (!element) {
+      console.warn(
+        `⚠️ Warning: Element '${key}' not found in HTML (ID might be wrong)`,
+      );
+    }
+  });
+
+  // 2. スクロール位置の保存
+  try {
+    const currentScrollY = window.scrollY;
+    if (state.activeTab) {
+      if (!state.scrollPositions) state.scrollPositions = {}; // 安全策
+      state.scrollPositions[state.activeTab] = currentScrollY;
+      console.log(
+        `   - Saved scroll position for ${state.activeTab}: ${currentScrollY}`,
+      );
+    }
+    state.activeTab = tabName;
+  } catch (err) {
+    console.error("❌ Error saving scroll position:", err);
   }
-  state.activeTab = tabName;
 
-  // タブのアクティブ状態リセット
-  [navTabJoints, navTabTally, mobileNavTabJoints, mobileNavTabTally].forEach(
-    (tab) => {
-      if (tab) tab.classList.remove("active");
-    },
-  );
+  // 3. タブのアクティブ状態リセット
+  [
+    elements.navTabJoints,
+    elements.navTabTally,
+    elements.mobileNavTabJoints,
+    elements.mobileNavTabTally,
+  ].forEach((tab) => {
+    if (tab) tab.classList.remove("active");
+  });
 
+  // 4. 表示切り替えロジック
   if (tabName === "joints") {
-    if (jointsSection) jointsSection.classList.remove("hidden");
+    console.log("   - Switching to JOINTS tab");
 
-    // 内部セクションも表示
-    if (settingsCard) settingsCard.classList.remove("hidden");
-    if (memberCard) memberCard.classList.remove("hidden");
+    if (elements.jointsSection) {
+      elements.jointsSection.classList.remove("hidden");
+    } else {
+      console.error("❌ CRITICAL: 'joints-section' container missing!");
+    }
 
-    if (tallySection) tallySection.classList.add("hidden");
+    // 内部セクション表示
+    if (elements.settingsCard) elements.settingsCard.classList.remove("hidden");
+    if (elements.memberCard) elements.memberCard.classList.remove("hidden");
 
-    // タブの見た目をアクティブに
-    if (navTabJoints) navTabJoints.classList.add("active");
-    if (mobileNavTabJoints) mobileNavTabJoints.classList.add("active");
+    // 集計表を隠す
+    if (elements.tallySection) elements.tallySection.classList.add("hidden");
+
+    // タブのアクティブ化
+    if (elements.navTabJoints) elements.navTabJoints.classList.add("active");
+    if (elements.mobileNavTabJoints)
+      elements.mobileNavTabJoints.classList.add("active");
   } else if (tabName === "tally") {
-    if (jointsSection) jointsSection.classList.add("hidden");
+    console.log("   - Switching to TALLY tab");
 
-    // 内部セクションも非表示
-    if (settingsCard) settingsCard.classList.add("hidden");
-    if (memberCard) memberCard.classList.add("hidden");
+    if (elements.jointsSection) elements.jointsSection.classList.add("hidden");
 
-    if (tallySection) tallySection.classList.remove("hidden");
+    if (elements.settingsCard) elements.settingsCard.classList.add("hidden");
+    if (elements.memberCard) elements.memberCard.classList.add("hidden");
 
-    // タブの見た目をアクティブに
-    if (navTabTally) navTabTally.classList.add("active");
-    if (mobileNavTabTally) mobileNavTabTally.classList.add("active");
+    if (elements.tallySection) {
+      elements.tallySection.classList.remove("hidden");
+    } else {
+      console.error("❌ CRITICAL: 'tally-section' container missing!");
+    }
+
+    if (elements.navTabTally) elements.navTabTally.classList.add("active");
+    if (elements.mobileNavTabTally)
+      elements.mobileNavTabTally.classList.add("active");
   }
 
-  // スクロール位置の復元
-  const newScrollY = state.scrollPositions[tabName] || 0;
+  // 5. スクロール位置の復元
+  const newScrollY =
+    (state.scrollPositions && state.scrollPositions[tabName]) || 0;
   setTimeout(() => {
     window.scrollTo(0, newScrollY);
   }, 0);
 
-  // FABの表示状態更新 (ui.js内の関数)
+  // 6. FABの更新
   if (typeof updateQuickNavVisibility === "function") {
     updateQuickNavVisibility();
   }
+
+  console.log("[DEBUG] switchTab finished.");
+  console.groupEnd();
 };
 
 /**
