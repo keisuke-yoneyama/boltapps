@@ -4640,14 +4640,35 @@ export const switchTab = (tabName) => {
 
 /**
  * 画面表示を切り替える (一覧画面 <-> 詳細画面)
- * ナビゲーションバーやFABの表示制御もここで行う
+ * デバッグログ付き
  */
 export const switchView = (viewName) => {
+  console.group(`[DEBUG] switchView called with: "${viewName}"`); // グループ化して見やすく
+
+  // 1. メインコンテナの取得確認
   const viewList = document.getElementById("view-project-list");
   const viewDetail = document.getElementById("view-project-detail");
 
-  // ナビゲーション関連の要素
-  const fixedNav = document.getElementById("fixed-nav"); // IDを確認してください
+  // 要素の状態をログ出力
+  console.log("DOM Elements Check:", {
+    "view-project-list": viewList,
+    "view-project-detail": viewDetail,
+  });
+
+  // 致命的なエラーチェック
+  if (!viewList) {
+    console.error(
+      "❌ CRITICAL: 'view-project-list' element NOT found in HTML!",
+    );
+  }
+  if (!viewDetail) {
+    console.error(
+      "❌ CRITICAL: 'view-project-detail' element NOT found in HTML!",
+    );
+  }
+
+  // ナビゲーション関連の要素取得
+  const fixedNav = document.getElementById("fixed-nav");
   const navListContext = document.getElementById("nav-list-context");
   const navDetailContext = document.getElementById("nav-detail-context");
   const navDetailButtons = document.getElementById("nav-detail-buttons");
@@ -4656,11 +4677,21 @@ export const switchView = (viewName) => {
   );
   const navProjectTitle = document.getElementById("nav-project-title");
 
-  // 1. メイン画面の切り替え
-  // ----------------------------------------------------
+  // スクロールリセット
+  window.scrollTo(0, 0);
+
+  // 画面切り替えロジック
   if (viewName === "detail") {
-    if (viewList) viewList.classList.add("hidden");
-    if (viewDetail) viewDetail.classList.remove("hidden");
+    console.log("➡️ Action: Switching to DETAIL view");
+
+    if (viewList) {
+      viewList.classList.add("hidden");
+      console.log("   - Added 'hidden' to viewList");
+    }
+    if (viewDetail) {
+      viewDetail.classList.remove("hidden");
+      console.log("   - Removed 'hidden' from viewDetail");
+    }
 
     // ナビゲーション制御
     if (fixedNav) fixedNav.classList.remove("hidden");
@@ -4676,11 +4707,18 @@ export const switchView = (viewName) => {
 
     // タイトル更新
     const project = state.projects.find((p) => p.id === state.currentProjectId);
-    if (project && navProjectTitle) {
-      navProjectTitle.textContent = project.name;
+    if (project) {
+      console.log(`   - Project found: ${project.name}`);
+      if (navProjectTitle) navProjectTitle.textContent = project.name;
+    } else {
+      console.warn(
+        "   ⚠️ Project data not found for currentProjectId:",
+        state.currentProjectId,
+      );
     }
 
-    // デフォルトで「継手タブ」を開く
+    // デフォルトタブ切り替え
+    console.log("   - Calling switchTab('joints')...");
     switchTab("joints");
 
     // FAB表示更新
@@ -4688,9 +4726,16 @@ export const switchView = (viewName) => {
       updateQuickNavVisibility();
     }
   } else {
-    // === List View ===
-    if (viewList) viewList.classList.remove("hidden");
-    if (viewDetail) viewDetail.classList.add("hidden");
+    console.log("⬅️ Action: Switching to LIST view");
+
+    if (viewList) {
+      viewList.classList.remove("hidden");
+      console.log("   - Removed 'hidden' from viewList");
+    }
+    if (viewDetail) {
+      viewDetail.classList.add("hidden");
+      console.log("   - Added 'hidden' to viewDetail");
+    }
 
     // ナビゲーション制御
     if (navListContext) navListContext.classList.remove("hidden");
@@ -4702,15 +4747,13 @@ export const switchView = (viewName) => {
     }
     if (mobileNavDetailButtons) mobileNavDetailButtons.classList.add("hidden");
 
-    // ▼▼▼ 一覧画面に戻ったらナビとFABを隠し、状態をリセット ▼▼▼
+    // ナビとFABを隠し、状態をリセット
     const quickNav = document.getElementById("quick-nav-container");
     if (quickNav) quickNav.classList.add("hidden");
 
     const fabContainer = document.getElementById("fab-container");
     if (fabContainer) fabContainer.classList.add("hidden");
 
-    // メニューが開いたまま戻った場合、閉じた状態にリセットする
-    // (isFabOpen は ui.js 内のトップレベル変数として定義されている前提)
     if (
       typeof isFabOpen !== "undefined" &&
       isFabOpen &&
@@ -4722,8 +4765,7 @@ export const switchView = (viewName) => {
     state.currentProjectId = null;
   }
 
-  // スクロールリセット
-  window.scrollTo(0, 0);
+  console.groupEnd(); // ロググループ終了
 };
 
 /**
