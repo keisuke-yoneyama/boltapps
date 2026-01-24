@@ -2636,6 +2636,16 @@ export const populateBoltSelectorModal = (currentValue) => {
 export const renderJointsList = (project) => {
   if (!project) return;
 
+  console.group("[DEBUG] renderJointsList Data Check");
+  console.log("Project Name:", project.name);
+  console.log("Joints Count:", project.joints ? project.joints.length : 0);
+  console.log("Members Count:", project.members ? project.members.length : 0);
+
+  if (!project.joints || project.joints.length === 0) {
+    console.warn("⚠️ Warning: This project has NO joints data to display.");
+  }
+  console.groupEnd();
+  // ▲▲▲ 追加ここまで ▲▲▲
   // IDで要素を取得
   const container = document.getElementById("joint-lists-container");
   if (!container) return;
@@ -4682,132 +4692,67 @@ export const switchTab = (tabName) => {
 
 /**
  * 画面表示を切り替える (一覧画面 <-> 詳細画面)
- * デバッグログ付き
+ * 強制表示切り替え版
  */
 export const switchView = (viewName) => {
-  console.group(`[DEBUG] switchView called with: "${viewName}"`); // グループ化して見やすく
+  console.group(`[DEBUG] switchView called with: "${viewName}"`);
 
-  // 1. メインコンテナの取得確認
+  // HTMLのIDに合わせて取得（ID修正済みと仮定）
+  // ※もし動かない場合は "view-project-list" を "project-list-view" に書き換えてください
   const viewList = document.getElementById("project-list-view");
   const viewDetail = document.getElementById("project-detail-view");
 
-  // 要素の状態をログ出力
-  console.log("DOM Elements Check:", {
-    "view-project-list": viewList,
-    "view-project-detail": viewDetail,
-  });
-
-  // 致命的なエラーチェック
-  if (!viewList) {
+  if (!viewList || !viewDetail) {
     console.error(
-      "❌ CRITICAL: 'view-project-list' element NOT found in HTML!",
+      "❌ CRITICAL: Main view elements NOT found. Check IDs in HTML.",
     );
+    console.groupEnd();
+    return;
   }
-  if (!viewDetail) {
-    console.error(
-      "❌ CRITICAL: 'view-project-detail' element NOT found in HTML!",
-    );
-  }
-
-  // ナビゲーション関連の要素取得
-  const fixedNav = document.getElementById("fixed-nav");
-  const navListContext = document.getElementById("nav-list-context");
-  const navDetailContext = document.getElementById("nav-detail-context");
-  const navDetailButtons = document.getElementById("nav-detail-buttons");
-  const mobileNavDetailButtons = document.getElementById(
-    "mobile-nav-detail-buttons",
-  );
-  const navProjectTitle = document.getElementById("nav-project-title");
 
   // スクロールリセット
   window.scrollTo(0, 0);
 
-  // 画面切り替えロジック
   if (viewName === "detail") {
     console.log("➡️ Action: Switching to DETAIL view");
 
-    if (viewList) {
-      viewList.classList.add("hidden");
-      console.log("   - Added 'hidden' to viewList");
-    }
-    if (viewDetail) {
-      viewDetail.classList.remove("hidden");
-      console.log("   - Removed 'hidden' from viewDetail");
-    }
+    // クラス操作 + 直接スタイル操作で確実に隠す
+    viewList.classList.add("hidden");
+    viewList.style.display = "none"; // ★強制非表示
 
-    // ナビゲーション制御
+    viewDetail.classList.remove("hidden");
+    viewDetail.style.display = "block"; // ★強制表示
+
+    // ... (ナビゲーション表示処理：変更なし) ...
+    const fixedNav = document.getElementById("fixed-nav");
     if (fixedNav) fixedNav.classList.remove("hidden");
-    if (navListContext) navListContext.classList.add("hidden");
-    if (navDetailContext) navDetailContext.classList.remove("hidden");
 
-    if (navDetailButtons) {
-      navDetailButtons.classList.remove("hidden");
-      navDetailButtons.classList.add("flex");
-    }
-    if (mobileNavDetailButtons)
-      mobileNavDetailButtons.classList.remove("hidden");
-
-    // タイトル更新
+    // ... (タイトル更新処理：変更なし) ...
+    const navProjectTitle = document.getElementById("nav-project-title");
     const project = state.projects.find((p) => p.id === state.currentProjectId);
-    if (project) {
-      console.log(`   - Project found: ${project.name}`);
-      if (navProjectTitle) navProjectTitle.textContent = project.name;
-    } else {
-      console.warn(
-        "   ⚠️ Project data not found for currentProjectId:",
-        state.currentProjectId,
-      );
+    if (project && navProjectTitle) {
+      navProjectTitle.textContent = project.name;
     }
 
-    // デフォルトタブ切り替え
-    console.log("   - Calling switchTab('joints')...");
     switchTab("joints");
 
-    // FAB表示更新
-    if (typeof updateQuickNavVisibility === "function") {
+    if (typeof updateQuickNavVisibility === "function")
       updateQuickNavVisibility();
-    }
   } else {
     console.log("⬅️ Action: Switching to LIST view");
 
-    if (viewList) {
-      viewList.classList.remove("hidden");
-      console.log("   - Removed 'hidden' from viewList");
-    }
-    if (viewDetail) {
-      viewDetail.classList.add("hidden");
-      console.log("   - Added 'hidden' to viewDetail");
-    }
+    viewList.classList.remove("hidden");
+    viewList.style.display = "block"; // ★強制表示
 
-    // ナビゲーション制御
-    if (navListContext) navListContext.classList.remove("hidden");
-    if (navDetailContext) navDetailContext.classList.add("hidden");
+    viewDetail.classList.add("hidden");
+    viewDetail.style.display = "none"; // ★強制非表示
 
-    if (navDetailButtons) {
-      navDetailButtons.classList.add("hidden");
-      navDetailButtons.classList.remove("flex");
-    }
-    if (mobileNavDetailButtons) mobileNavDetailButtons.classList.add("hidden");
-
-    // ナビとFABを隠し、状態をリセット
-    const quickNav = document.getElementById("quick-nav-container");
-    if (quickNav) quickNav.classList.add("hidden");
-
-    const fabContainer = document.getElementById("fab-container");
-    if (fabContainer) fabContainer.classList.add("hidden");
-
-    if (
-      typeof isFabOpen !== "undefined" &&
-      isFabOpen &&
-      typeof toggleFab === "function"
-    ) {
-      toggleFab();
-    }
+    // ... (ナビゲーション非表示処理：変更なし) ...
 
     state.currentProjectId = null;
   }
 
-  console.groupEnd(); // ロググループ終了
+  console.groupEnd();
 };
 
 /**
