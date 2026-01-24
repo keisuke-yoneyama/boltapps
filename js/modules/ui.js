@@ -4570,26 +4570,47 @@ export const renderResults = (project) => {
 
   resultsCard.classList.remove("hidden");
 };
+
 /**
  * 画面表示を切り替える (リスト表示 <-> 詳細表示)
  */
 export const switchView = (viewName) => {
+  console.log(`[DEBUG] switchView called with: ${viewName}`); // ★ログ
+
   const viewList = document.getElementById("view-project-list");
   const viewDetail = document.getElementById("view-project-detail");
+
+  // 要素が見つかったか確認
+  if (!viewList)
+    console.error("[DEBUG] Error: Element 'view-project-list' not found!");
+  if (!viewDetail)
+    console.error("[DEBUG] Error: Element 'view-project-detail' not found!");
 
   // スクロールをトップに戻す
   window.scrollTo(0, 0);
 
   if (viewName === "list") {
-    if (viewList) viewList.classList.remove("hidden");
-    if (viewDetail) viewDetail.classList.add("hidden");
-    state.currentProjectId = null; // リストに戻るなら選択解除
+    if (viewList) {
+      viewList.classList.remove("hidden");
+      console.log("[DEBUG] Removed 'hidden' from viewList");
+    }
+    if (viewDetail) {
+      viewDetail.classList.add("hidden");
+      console.log("[DEBUG] Added 'hidden' to viewDetail");
+    }
+    state.currentProjectId = null;
   } else {
-    if (viewList) viewList.classList.add("hidden");
-    if (viewDetail) viewDetail.classList.remove("hidden");
+    if (viewList) {
+      viewList.classList.add("hidden");
+      console.log("[DEBUG] Added 'hidden' to viewList");
+    }
+    if (viewDetail) {
+      viewDetail.classList.remove("hidden");
+      console.log("[DEBUG] Removed 'hidden' from viewDetail");
+    }
   }
 
-  // ナビゲーション等の表示更新 (ui.js内の関数)
+  // ナビゲーション等の表示更新
   if (typeof updateQuickNavVisibility === "function") {
     updateQuickNavVisibility();
   }
@@ -4599,43 +4620,62 @@ export const switchView = (viewName) => {
  * 詳細画面全体を描画する
  */
 export const renderDetailView = () => {
+  console.log(
+    `[DEBUG] renderDetailView called. currentProjectId: ${state.currentProjectId}`,
+  ); // ★ログ
+
+  // プロジェクト検索の確認
   const project = state.projects.find((p) => p.id === state.currentProjectId);
 
-  // プロジェクトが見つからない場合はリストに戻る
   if (!project) {
+    console.error(
+      "[DEBUG] Project NOT found in ui.js state! Calling switchView('list').",
+    ); // ★重要ログ
+    console.log(
+      "[DEBUG] Available projects in ui.js state:",
+      state.projects.map((p) => p.id),
+    );
     switchView("list");
     return;
   }
+
+  console.log(`[DEBUG] Project found in ui.js: ${project.name}`); // ★ログ
 
   // タイトル更新
   const navProjectTitle = document.getElementById("nav-project-title");
   if (navProjectTitle) navProjectTitle.textContent = project.name;
 
-  // リストの描画 (ui.js内の関数)
-  renderJointsList(project);
-  renderMemberLists(project);
+  try {
+    console.log("[DEBUG] Rendering Joints List...");
+    renderJointsList(project);
 
-  // 常設フォームの階層チェックボックスを生成
-  const staticLevelsContainer = document.getElementById(
-    "add-member-levels-container",
-  );
-  if (staticLevelsContainer) {
-    staticLevelsContainer.innerHTML = "";
+    console.log("[DEBUG] Rendering Member Lists...");
+    renderMemberLists(project);
 
-    // calculator.js から import した関数
-    const levels = getProjectLevels(project);
+    console.log("[DEBUG] Setting up static levels...");
+    const staticLevelsContainer = document.getElementById(
+      "add-member-levels-container",
+    );
+    if (staticLevelsContainer) {
+      staticLevelsContainer.innerHTML = "";
+      const levels = getProjectLevels(project);
+      levels.forEach((lvl) => {
+        const label = document.createElement("label");
+        label.className =
+          "flex items-center gap-2 text-sm cursor-pointer text-slate-700 dark:text-slate-300";
+        label.innerHTML = `<input type="checkbox" value="${lvl.id}" class="static-level-checkbox h-4 w-4 text-blue-600 rounded border-gray-300 focus:ring-yellow-500"> ${lvl.label}`;
+        staticLevelsContainer.appendChild(label);
+      });
+    }
 
-    levels.forEach((lvl) => {
-      const label = document.createElement("label");
-      label.className =
-        "flex items-center gap-2 text-sm cursor-pointer text-slate-700 dark:text-slate-300";
-      // クラス名 'static-level-checkbox' を付与して識別
-      label.innerHTML = `<input type="checkbox" value="${lvl.id}" class="static-level-checkbox h-4 w-4 text-blue-600 rounded border-gray-300 focus:ring-yellow-500"> ${lvl.label}`;
-      staticLevelsContainer.appendChild(label);
-    });
+    console.log("[DEBUG] Rendering Tally Sheet...");
+    renderTallySheet(project);
+
+    console.log("[DEBUG] Rendering Results...");
+    renderResults(project);
+
+    console.log("[DEBUG] renderDetailView finished successfully.");
+  } catch (err) {
+    console.error("[DEBUG] Error inside renderDetailView:", err);
   }
-
-  // 集計表と結果の描画 (ui.js内の関数)
-  renderTallySheet(project);
-  renderResults(project);
 };
