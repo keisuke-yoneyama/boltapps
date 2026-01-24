@@ -4646,8 +4646,8 @@ export const switchView = (viewName) => {
   console.group(`[DEBUG] switchView called with: "${viewName}"`); // グループ化して見やすく
 
   // 1. メインコンテナの取得確認
-  const viewList = document.getElementById("view-project-list");
-  const viewDetail = document.getElementById("view-project-detail");
+  const viewList = document.getElementById("project-list-view");
+  const viewDetail = document.getElementById("project-detail-view");
 
   // 要素の状態をログ出力
   console.log("DOM Elements Check:", {
