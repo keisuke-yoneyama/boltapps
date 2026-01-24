@@ -3104,3 +3104,50 @@ export const renderJointsList = (project) => {
     }
   });
 };
+/**
+ * 部材編集モーダルを開く（階層チェックボックス生成付き）
+ * @param {string} memberId - 編集対象の部材ID
+ */
+export const openEditMemberModal = (memberId) => {
+  const project = state.projects.find((p) => p.id === state.currentProjectId);
+  if (!project) return;
+
+  const member = (project.members || []).find((m) => m.id === memberId);
+  if (!member) return;
+
+  // 1. 各入力欄への値セット (変数は使えないのでgetElementByIdを使用)
+  const idInput = document.getElementById("edit-member-id");
+  const nameInput = document.getElementById("edit-member-name");
+  const jointSelect = document.getElementById("edit-member-joint-select");
+
+  if (idInput) idInput.value = member.id;
+  if (nameInput) nameInput.value = member.name;
+
+  // ドロップダウン生成 (ui.js内の関数)
+  populateJointDropdownForEdit(jointSelect, member.jointId);
+
+  // 2. 階層チェックボックスの生成と初期値セット
+  const levelsContainer = document.getElementById(
+    "edit-member-levels-container",
+  );
+
+  if (levelsContainer) {
+    levelsContainer.innerHTML = "";
+
+    // getProjectLevels は calculator.js から import されている前提
+    const levels = getProjectLevels(project);
+    const targetLevels = member.targetLevels || []; // 未設定なら空
+
+    levels.forEach((lvl) => {
+      const isChecked = targetLevels.includes(lvl.id);
+      const label = document.createElement("label");
+      label.className = "flex items-center gap-2 text-sm cursor-pointer";
+      label.innerHTML = `<input type="checkbox" value="${lvl.id}" class="level-checkbox h-4 w-4 text-blue-600 rounded border-gray-300" ${isChecked ? "checked" : ""}> ${lvl.label}`;
+      levelsContainer.appendChild(label);
+    });
+  }
+
+  // 3. モーダル表示
+  const modal = document.getElementById("edit-member-modal");
+  openModal(modal);
+};

@@ -66,6 +66,7 @@ import {
   openBoltSelectorModal,
   openConfirmDeleteModal,
   renderJointsList,
+  openEditMemberModal,
 } from "./modules/ui.js";
 
 import {
