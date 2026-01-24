@@ -59,6 +59,7 @@ import {
   populateGlobalBoltSelectorModal,
   renderOrderDetails,
   renderTempOrderDetails,
+  renderTempBoltResults,
 } from "./modules/ui.js";
 
 import {
@@ -4184,154 +4185,154 @@ document.addEventListener("DOMContentLoaded", () => {
     if (resultsCard) resultsCard.classList.remove("hidden");
   };
 
-  // ★ 修正版：renderTempBoltResults（ボルトサイズの絞り込み対応・完全版）
-  const renderTempBoltResults = (project) => {
-    // 1. まず全データを計算
-    const { resultsByLocation } = calculateTempBoltResults(project);
+  // // ★ 修正版：renderTempBoltResults（ボルトサイズの絞り込み対応・完全版）
+  // const renderTempBoltResults = (project) => {
+  //   // 1. まず全データを計算
+  //   const { resultsByLocation } = calculateTempBoltResults(project);
 
-    // 2. 表示対象のロケーションIDを特定
-    const targetLocationIds = new Set();
-    let locations = []; // 表示用の配列
+  //   // 2. 表示対象のロケーションIDを特定
+  //   const targetLocationIds = new Set();
+  //   let locations = []; // 表示用の配列
 
-    if (project.mode === "advanced") {
-      project.customLevels.forEach((level) => {
-        if (
-          state.activeTallyLevel !== "all" &&
-          state.activeTallyLevel !== level
-        )
-          return;
-        project.customAreas.forEach((area) => {
-          const id = `${level}-${area}`;
-          locations.push({ id, label: `${level} - ${area}` });
-          targetLocationIds.add(id);
-        });
-      });
-    } else {
-      for (let f = 2; f <= project.floors; f++) {
-        const lvlStr = f.toString();
-        if (
-          state.activeTallyLevel !== "all" &&
-          state.activeTallyLevel !== lvlStr
-        )
-          continue;
-        for (let s = 1; s <= project.sections; s++) {
-          const id = `${f}-${s}`;
-          locations.push({ id, label: `${f}階 ${s}工区` });
-          targetLocationIds.add(id);
-        }
-      }
+  //   if (project.mode === "advanced") {
+  //     project.customLevels.forEach((level) => {
+  //       if (
+  //         state.activeTallyLevel !== "all" &&
+  //         state.activeTallyLevel !== level
+  //       )
+  //         return;
+  //       project.customAreas.forEach((area) => {
+  //         const id = `${level}-${area}`;
+  //         locations.push({ id, label: `${level} - ${area}` });
+  //         targetLocationIds.add(id);
+  //       });
+  //     });
+  //   } else {
+  //     for (let f = 2; f <= project.floors; f++) {
+  //       const lvlStr = f.toString();
+  //       if (
+  //         state.activeTallyLevel !== "all" &&
+  //         state.activeTallyLevel !== lvlStr
+  //       )
+  //         continue;
+  //       for (let s = 1; s <= project.sections; s++) {
+  //         const id = `${f}-${s}`;
+  //         locations.push({ id, label: `${f}階 ${s}工区` });
+  //         targetLocationIds.add(id);
+  //       }
+  //     }
 
-      if (state.activeTallyLevel === "all" || state.activeTallyLevel === "R") {
-        for (let s = 1; s <= project.sections; s++) {
-          const id = `R-${s}`;
-          locations.push({ id, label: `R階 ${s}工区` });
-          targetLocationIds.add(id);
-        }
-      }
+  //     if (state.activeTallyLevel === "all" || state.activeTallyLevel === "R") {
+  //       for (let s = 1; s <= project.sections; s++) {
+  //         const id = `R-${s}`;
+  //         locations.push({ id, label: `R階 ${s}工区` });
+  //         targetLocationIds.add(id);
+  //       }
+  //     }
 
-      if (project.hasPH) {
-        if (
-          state.activeTallyLevel === "all" ||
-          state.activeTallyLevel === "PH"
-        ) {
-          for (let s = 1; s <= project.sections; s++) {
-            const id = `PH-${s}`;
-            locations.push({ id, label: `PH階 ${s}工区` });
-            targetLocationIds.add(id);
-          }
-        }
-      }
-    }
+  //     if (project.hasPH) {
+  //       if (
+  //         state.activeTallyLevel === "all" ||
+  //         state.activeTallyLevel === "PH"
+  //       ) {
+  //         for (let s = 1; s <= project.sections; s++) {
+  //           const id = `PH-${s}`;
+  //           locations.push({ id, label: `PH階 ${s}工区` });
+  //           targetLocationIds.add(id);
+  //         }
+  //       }
+  //     }
+  //   }
 
-    // ▼▼▼ 表示対象のロケーションで「実際に使われているボルトサイズ」だけを抽出 ▼▼▼
-    const filteredBoltSizes = new Set();
+  //   // ▼▼▼ 表示対象のロケーションで「実際に使われているボルトサイズ」だけを抽出 ▼▼▼
+  //   const filteredBoltSizes = new Set();
 
-    for (const locId in resultsByLocation) {
-      if (!targetLocationIds.has(locId)) continue;
+  //   for (const locId in resultsByLocation) {
+  //     if (!targetLocationIds.has(locId)) continue;
 
-      const dataBySize = resultsByLocation[locId];
-      for (const size in dataBySize) {
-        if (dataBySize[size].total > 0) {
-          filteredBoltSizes.add(size);
-        }
-      }
-    }
+  //     const dataBySize = resultsByLocation[locId];
+  //     for (const size in dataBySize) {
+  //       if (dataBySize[size].total > 0) {
+  //         filteredBoltSizes.add(size);
+  //       }
+  //     }
+  //   }
 
-    if (filteredBoltSizes.size === 0) {
-      return "";
-    }
+  //   if (filteredBoltSizes.size === 0) {
+  //     return "";
+  //   }
 
-    const sortedSizes = Array.from(filteredBoltSizes).sort(boltSort);
+  //   const sortedSizes = Array.from(filteredBoltSizes).sort(boltSort);
 
-    let floorTable = `<div id="anchor-temp-bolt" data-section-title="仮ボルト集計" data-section-color="green" class="scroll-mt-24">
-                    <h2 class="text-2xl font-bold mt-8 mb-4 border-b-2 border-green-400 pb-2 text-slate-900 dark:text-slate-100">仮ボルト本数集計</h2>
-                      <h3 class="text-xl font-semibold text-slate-800 dark:text-slate-200 mb-2">フロア工区別</h3>
-                      <div class="overflow-x-auto custom-scrollbar">
-                        <table class="w-auto text-sm border-collapse">
-                            <thead class="bg-slate-200 dark:bg-slate-700 text-xs text-slate-700 dark:text-slate-300"><tr>
-                                <th class="px-2 py-3 sticky left-0 bg-slate-200 dark:bg-slate-700 z-10 border border-slate-300 dark:border-slate-600">仮ボルトサイズ</th>
-                                ${locations
-                                  .map(
-                                    (loc) =>
-                                      `<th class="px-2 py-3 text-center border border-slate-300 dark:border-slate-600">${loc.label}</th>`,
-                                  )
-                                  .join("")}
-                                <th class="px-2 py-3 text-center sticky right-0 bg-yellow-300 dark:bg-yellow-800/50 text-yellow-800 dark:text-yellow-200 border border-yellow-400 dark:border-yellow-700">総合計</th>
-                            </tr></thead><tbody>`;
+  //   let floorTable = `<div id="anchor-temp-bolt" data-section-title="仮ボルト集計" data-section-color="green" class="scroll-mt-24">
+  //                   <h2 class="text-2xl font-bold mt-8 mb-4 border-b-2 border-green-400 pb-2 text-slate-900 dark:text-slate-100">仮ボルト本数集計</h2>
+  //                     <h3 class="text-xl font-semibold text-slate-800 dark:text-slate-200 mb-2">フロア工区別</h3>
+  //                     <div class="overflow-x-auto custom-scrollbar">
+  //                       <table class="w-auto text-sm border-collapse">
+  //                           <thead class="bg-slate-200 dark:bg-slate-700 text-xs text-slate-700 dark:text-slate-300"><tr>
+  //                               <th class="px-2 py-3 sticky left-0 bg-slate-200 dark:bg-slate-700 z-10 border border-slate-300 dark:border-slate-600">仮ボルトサイズ</th>
+  //                               ${locations
+  //                                 .map(
+  //                                   (loc) =>
+  //                                     `<th class="px-2 py-3 text-center border border-slate-300 dark:border-slate-600">${loc.label}</th>`,
+  //                                 )
+  //                                 .join("")}
+  //                               <th class="px-2 py-3 text-center sticky right-0 bg-yellow-300 dark:bg-yellow-800/50 text-yellow-800 dark:text-yellow-200 border border-yellow-400 dark:border-yellow-700">総合計</th>
+  //                           </tr></thead><tbody>`;
 
-    sortedSizes.forEach((size) => {
-      let grandTotal = 0;
-      const grandTotalJoints = {};
-      let rowHtml = `<tr class="hover:bg-slate-50 dark:hover:bg-slate-700/50"><td class="px-2 py-2 font-bold text-gray-900 dark:text-gray-100 sticky left-0 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700">${size}</td>`;
+  //   sortedSizes.forEach((size) => {
+  //     let grandTotal = 0;
+  //     const grandTotalJoints = {};
+  //     let rowHtml = `<tr class="hover:bg-slate-50 dark:hover:bg-slate-700/50"><td class="px-2 py-2 font-bold text-gray-900 dark:text-gray-100 sticky left-0 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700">${size}</td>`;
 
-      locations.forEach((loc) => {
-        const cellData = resultsByLocation[loc.id]?.[size];
-        const cellValue = cellData?.total || 0;
-        let tooltipText = "",
-          detailsClass = "",
-          dataAttribute = "";
+  //     locations.forEach((loc) => {
+  //       const cellData = resultsByLocation[loc.id]?.[size];
+  //       const cellValue = cellData?.total || 0;
+  //       let tooltipText = "",
+  //         detailsClass = "",
+  //         dataAttribute = "";
 
-        if (cellData?.joints && Object.keys(cellData.joints).length > 0) {
-          tooltipText = Object.entries(cellData.joints)
-            .map(([name, count]) => `${name}: ${count.toLocaleString()}本`)
-            .join("\n");
-          detailsClass =
-            "has-details cursor-pointer hover:bg-yellow-100 dark:hover:bg-yellow-800/50 transition-colors";
-          dataAttribute = `data-details='${JSON.stringify(cellData.joints)}'`;
-          for (const [name, count] of Object.entries(cellData.joints)) {
-            grandTotalJoints[name] = (grandTotalJoints[name] || 0) + count;
-          }
-        }
+  //       if (cellData?.joints && Object.keys(cellData.joints).length > 0) {
+  //         tooltipText = Object.entries(cellData.joints)
+  //           .map(([name, count]) => `${name}: ${count.toLocaleString()}本`)
+  //           .join("\n");
+  //         detailsClass =
+  //           "has-details cursor-pointer hover:bg-yellow-100 dark:hover:bg-yellow-800/50 transition-colors";
+  //         dataAttribute = `data-details='${JSON.stringify(cellData.joints)}'`;
+  //         for (const [name, count] of Object.entries(cellData.joints)) {
+  //           grandTotalJoints[name] = (grandTotalJoints[name] || 0) + count;
+  //         }
+  //       }
 
-        grandTotal += cellValue;
-        rowHtml += `<td class="px-2 py-2 text-center border border-slate-200 dark:border-slate-700 ${detailsClass}" title="${tooltipText}" ${dataAttribute}>${
-          cellValue > 0 ? cellValue.toLocaleString() : "-"
-        }</td>`;
-      });
+  //       grandTotal += cellValue;
+  //       rowHtml += `<td class="px-2 py-2 text-center border border-slate-200 dark:border-slate-700 ${detailsClass}" title="${tooltipText}" ${dataAttribute}>${
+  //         cellValue > 0 ? cellValue.toLocaleString() : "-"
+  //       }</td>`;
+  //     });
 
-      const grandTotalTooltip = Object.entries(grandTotalJoints)
-        .sort((a, b) => a[0].localeCompare(b[0]))
-        .map(([name, count]) => `${name}: ${count.toLocaleString()}本`)
-        .join("\n");
-      const grandTotalDetailsClass =
-        Object.keys(grandTotalJoints).length > 0
-          ? "has-details cursor-pointer hover:bg-yellow-200 dark:hover:bg-yellow-700/50 transition-colors"
-          : "";
-      const grandTotalDataAttribute =
-        Object.keys(grandTotalJoints).length > 0
-          ? `data-details='${JSON.stringify(grandTotalJoints)}'`
-          : "";
+  //     const grandTotalTooltip = Object.entries(grandTotalJoints)
+  //       .sort((a, b) => a[0].localeCompare(b[0]))
+  //       .map(([name, count]) => `${name}: ${count.toLocaleString()}本`)
+  //       .join("\n");
+  //     const grandTotalDetailsClass =
+  //       Object.keys(grandTotalJoints).length > 0
+  //         ? "has-details cursor-pointer hover:bg-yellow-200 dark:hover:bg-yellow-700/50 transition-colors"
+  //         : "";
+  //     const grandTotalDataAttribute =
+  //       Object.keys(grandTotalJoints).length > 0
+  //         ? `data-details='${JSON.stringify(grandTotalJoints)}'`
+  //         : "";
 
-      rowHtml += `<td class="px-2 py-2 text-center font-bold sticky right-0 bg-yellow-100 dark:bg-yellow-900/50 border border-yellow-200 dark:border-yellow-800 ${grandTotalDetailsClass}" title="${grandTotalTooltip}" ${grandTotalDataAttribute}>${
-        grandTotal > 0 ? grandTotal.toLocaleString() : "-"
-      }</td></tr>`;
-      floorTable += rowHtml;
-    });
-    floorTable += `</tbody></table></div>`;
-    floorTable += `</div>`;
+  //     rowHtml += `<td class="px-2 py-2 text-center font-bold sticky right-0 bg-yellow-100 dark:bg-yellow-900/50 border border-yellow-200 dark:border-yellow-800 ${grandTotalDetailsClass}" title="${grandTotalTooltip}" ${grandTotalDataAttribute}>${
+  //       grandTotal > 0 ? grandTotal.toLocaleString() : "-"
+  //     }</td></tr>`;
+  //     floorTable += rowHtml;
+  //   });
+  //   floorTable += `</tbody></table></div>`;
+  //   floorTable += `</div>`;
 
-    return floorTable;
-  };
+  //   return floorTable;
+  // };
   const renderShopTempBoltResults = (project) => {
     const totals = calculateShopTempBoltResults(project);
 
