@@ -56,6 +56,7 @@ import {
   populateJointDropdownForEdit,
   renderAggregatedTables,
   makeDraggable,
+  populateGlobalBoltSelectorModal,
 } from "./modules/ui.js";
 
 import {
@@ -1908,8 +1909,9 @@ document.addEventListener("DOMContentLoaded", () => {
       const input = document.createElement("input");
       input.type = "text";
       input.className = `custom-input w-full bg-white border border-gray-400 text-gray-900 rounded-md p-2 focus:ring-yellow-500 focus:border-yellow-500`;
-      input.placeholder = `${prefix.includes("level") ? "階層" : "エリア"} ${i + 1
-        }`;
+      input.placeholder = `${prefix.includes("level") ? "階層" : "エリア"} ${
+        i + 1
+      }`;
       input.id = `${prefix}-${i}`;
       input.value = values[i] || "";
       container.appendChild(input);
@@ -2285,8 +2287,9 @@ document.addEventListener("DOMContentLoaded", () => {
         let description =
           p.mode === "advanced"
             ? `${p.customLevels.length}階層 / ${p.customAreas.length}エリア`
-            : `${p.floors}階建て (+R階${p.hasPH ? ", +PH階" : ""}) / ${p.sections
-            }工区`;
+            : `${p.floors}階建て (+R階${p.hasPH ? ", +PH階" : ""}) / ${
+                p.sections
+              }工区`;
 
         // ▼▼▼ 修正: カード内を縦並びにし、ボタンをグリッド配置で整列 ▼▼▼
         html += `
@@ -2321,8 +2324,9 @@ document.addEventListener("DOMContentLoaded", () => {
         let description =
           p.mode === "advanced"
             ? `${p.customLevels.length}階層 / ${p.customAreas.length}エリア`
-            : `${p.floors}階建て (+R階${p.hasPH ? ", +PH階" : ""}) / ${p.sections
-            }工区`;
+            : `${p.floors}階建て (+R階${p.hasPH ? ", +PH階" : ""}) / ${
+                p.sections
+              }工区`;
 
         html += `
                 <div class="project-card cursor-pointer hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-4 rounded-lg flex flex-col justify-between gap-3 h-full shadow-sm" data-id="${p.id}">
@@ -2436,16 +2440,20 @@ document.addEventListener("DOMContentLoaded", () => {
           } else {
             const singleBoltTypes = ["column", "wall_girt", "roof_purlin"];
             if (singleBoltTypes.includes(joint.type)) {
-              boltInfo = `<td class="px-4 py-3 border-b border-r border-slate-400 dark:border-slate-600">${joint.flangeSize || "-"
-                } / ${joint.flangeCount}本</td>`;
+              boltInfo = `<td class="px-4 py-3 border-b border-r border-slate-400 dark:border-slate-600">${
+                joint.flangeSize || "-"
+              } / ${joint.flangeCount}本</td>`;
             } else if (isPin) {
-              boltInfo = `<td class="px-4 py-3 border-b border-r border-slate-400 dark:border-slate-600">${joint.webSize || "-"
-                } / ${joint.webCount}本</td>`;
+              boltInfo = `<td class="px-4 py-3 border-b border-r border-slate-400 dark:border-slate-600">${
+                joint.webSize || "-"
+              } / ${joint.webCount}本</td>`;
             } else {
-              boltInfo = `<td class="px-4 py-3 border-b border-r border-slate-400 dark:border-slate-600">${joint.flangeSize || "-"
-                } / ${joint.flangeCount}本</td>
-                                        <td class="px-4 py-3 border-b border-r border-slate-400 dark:border-slate-600">${joint.webSize || "-"
-                } / ${joint.webCount}本</td>`;
+              boltInfo = `<td class="px-4 py-3 border-b border-r border-slate-400 dark:border-slate-600">${
+                joint.flangeSize || "-"
+              } / ${joint.flangeCount}本</td>
+                                        <td class="px-4 py-3 border-b border-r border-slate-400 dark:border-slate-600">${
+                                          joint.webSize || "-"
+                                        } / ${joint.webCount}本</td>`;
             }
           }
 
@@ -2666,8 +2674,9 @@ document.addEventListener("DOMContentLoaded", () => {
       if (filteredJoints.length > 0) {
         filteredJoints.forEach((j) => renderedJointIds.add(j.id));
 
-        const tbodyId = `joints-list-${section.type}${section.isPin ? "-pin" : ""
-          }`;
+        const tbodyId = `joints-list-${section.type}${
+          section.isPin ? "-pin" : ""
+        }`;
         let finalCols = section.cols;
         if (filteredJoints.some((j) => j.isComplexSpl)) {
           if (section.isPin) {
@@ -2681,8 +2690,9 @@ document.addEventListener("DOMContentLoaded", () => {
           }
         }
 
-        const sectionId = `joint-${section.type}-${section.isPin ? "pin" : "rigid"
-          }`;
+        const sectionId = `joint-${section.type}-${
+          section.isPin ? "pin" : "rigid"
+        }`;
         const sortState = state.sort[sectionId];
 
         if (sortState && sortState.key) {
@@ -2776,8 +2786,9 @@ document.addEventListener("DOMContentLoaded", () => {
           })
           .join("");
 
-        const anchorId = `anchor-joint-${section.type}-${section.isPin ? "pin" : "rigid"
-          }`;
+        const anchorId = `anchor-joint-${section.type}-${
+          section.isPin ? "pin" : "rigid"
+        }`;
 
         html += `
                         <div id="${anchorId}" class="rounded-lg border border-slate-400 dark:border-slate-600 scroll-mt-24" data-section-title="継手：${section.title}" data-section-color="${section.color}" data-section-id="${sectionId}">
@@ -2921,10 +2932,11 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // 1. 階層タブ生成
     const levels = getProjectLevels(project);
-    let tabsHtml = `<button class="level-tab-btn px-3 py-1 rounded-full text-sm font-bold transition-colors border ${state.activeMemberLevel === "all"
-      ? "bg-blue-600 text-white border-blue-600"
-      : "bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-300 dark:border-slate-600 hover:bg-slate-100"
-      }" data-level="all">全て</button>`;
+    let tabsHtml = `<button class="level-tab-btn px-3 py-1 rounded-full text-sm font-bold transition-colors border ${
+      state.activeMemberLevel === "all"
+        ? "bg-blue-600 text-white border-blue-600"
+        : "bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-300 dark:border-slate-600 hover:bg-slate-100"
+    }" data-level="all">全て</button>`;
     levels.forEach((lvl) => {
       const isActive = state.activeMemberLevel === lvl.id;
       const activeClass = isActive
@@ -2989,16 +3001,20 @@ document.addEventListener("DOMContentLoaded", () => {
           } else {
             const singleBoltTypes = ["column", "wall_girt", "roof_purlin"];
             if (singleBoltTypes.includes(joint.type)) {
-              boltInfo = `<td class="px-4 py-3 border-b border-r ${borderColor} ${darkBorderColor}">${joint.flangeSize || "-"
-                } / ${joint.flangeCount}本</td>`;
+              boltInfo = `<td class="px-4 py-3 border-b border-r ${borderColor} ${darkBorderColor}">${
+                joint.flangeSize || "-"
+              } / ${joint.flangeCount}本</td>`;
             } else if (isPin) {
-              boltInfo = `<td class="px-4 py-3 border-b border-r ${borderColor} ${darkBorderColor}">${joint.webSize || "-"
-                } / ${joint.webCount}本</td>`;
+              boltInfo = `<td class="px-4 py-3 border-b border-r ${borderColor} ${darkBorderColor}">${
+                joint.webSize || "-"
+              } / ${joint.webCount}本</td>`;
             } else {
-              boltInfo = `<td class="px-4 py-3 border-b border-r ${borderColor} ${darkBorderColor}">${joint.flangeSize || "-"
-                } / ${joint.flangeCount}本</td>
-                                <td class="px-4 py-3 border-b border-r ${borderColor} ${darkBorderColor}">${joint.webSize || "-"
-                } / ${joint.webCount}本</td>`;
+              boltInfo = `<td class="px-4 py-3 border-b border-r ${borderColor} ${darkBorderColor}">${
+                joint.flangeSize || "-"
+              } / ${joint.flangeCount}本</td>
+                                <td class="px-4 py-3 border-b border-r ${borderColor} ${darkBorderColor}">${
+                                  joint.webSize || "-"
+                                } / ${joint.webCount}本</td>`;
             }
           }
 
@@ -3048,13 +3064,13 @@ document.addEventListener("DOMContentLoaded", () => {
                 member.targetLevels.length > 3
                   ? `${member.targetLevels.length}フロア`
                   : member.targetLevels
-                    .map((l) => {
-                      const lvlObj = levels.find((x) => x.id === l);
-                      return lvlObj
-                        ? lvlObj.label.replace("階", "").replace("F", "")
-                        : l;
-                    })
-                    .join(",");
+                      .map((l) => {
+                        const lvlObj = levels.find((x) => x.id === l);
+                        return lvlObj
+                          ? lvlObj.label.replace("階", "").replace("F", "")
+                          : l;
+                      })
+                      .join(",");
               floorBadge = `<span class="text-xs bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 px-1 rounded ml-2">${displayLevels}</span>`;
             }
           } else {
@@ -3241,8 +3257,9 @@ document.addEventListener("DOMContentLoaded", () => {
           (m.joint.isPinJoint || false) === section.isPin,
       );
       if (filteredMembers.length > 0) {
-        const sectionId = `member-${section.type}-${section.isPin ? "pin" : "rigid"
-          }`;
+        const sectionId = `member-${section.type}-${
+          section.isPin ? "pin" : "rigid"
+        }`;
         const sortState = state.sort[sectionId];
 
         if (sortState && sortState.key) {
@@ -3331,8 +3348,9 @@ document.addEventListener("DOMContentLoaded", () => {
           });
         }
 
-        const tbodyId = `members-list-${section.type}${section.isPin ? "-pin" : ""
-          }`;
+        const tbodyId = `members-list-${section.type}${
+          section.isPin ? "-pin" : ""
+        }`;
         let finalCols = section.cols;
         const hasComplexSpl = filteredMembers.some((m) => m.joint.isComplexSpl);
         if (hasComplexSpl && section.isPin) {
@@ -3362,8 +3380,9 @@ document.addEventListener("DOMContentLoaded", () => {
           })
           .join("");
 
-        const anchorId = `anchor-member-${section.type}-${section.isPin ? "pin" : "rigid"
-          }`;
+        const anchorId = `anchor-member-${section.type}-${
+          section.isPin ? "pin" : "rigid"
+        }`;
 
         html += `
                         <div id="${anchorId}" class="rounded-lg border border-slate-400 dark:border-slate-600 scroll-mt-24" data-section-title="部材：${section.title}" data-section-color="${section.color}" data-section-id="${sectionId}">
@@ -3398,10 +3417,11 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // 1. 階層タブの生成
     const levels = getProjectLevels(project);
-    let tabsHtml = `<button class="tally-tab-btn px-3 py-1 rounded-full text-sm font-bold transition-colors border ${state.activeTallyLevel === "all"
-      ? "bg-blue-600 text-white border-blue-600"
-      : "bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-300 dark:border-slate-600 hover:bg-slate-100"
-      }" data-level="all">全表示</button>`;
+    let tabsHtml = `<button class="tally-tab-btn px-3 py-1 rounded-full text-sm font-bold transition-colors border ${
+      state.activeTallyLevel === "all"
+        ? "bg-blue-600 text-white border-blue-600"
+        : "bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-300 dark:border-slate-600 hover:bg-slate-100"
+    }" data-level="all">全表示</button>`;
 
     levels.forEach((lvl) => {
       const isActive = state.activeTallyLevel === lvl.id;
@@ -3532,10 +3552,12 @@ document.addEventListener("DOMContentLoaded", () => {
           colorClass =
             "bg-amber-200 text-amber-800 border-amber-300 dark:bg-amber-900/50 dark:text-amber-200 dark:border-amber-700";
 
-        return `<td class="px-2 py-1 text-center border ${colorClass} ${lockedClass}" data-column-id="${item.id
-          }">
-                            <input type="checkbox" class="tally-lock-checkbox h-4 w-4 rounded border-gray-300 text-blue-800 focus:ring-yellow-500" data-id="${item.id
-          }" ${isLocked ? "checked" : ""}>
+        return `<td class="px-2 py-1 text-center border ${colorClass} ${lockedClass}" data-column-id="${
+          item.id
+        }">
+                            <input type="checkbox" class="tally-lock-checkbox h-4 w-4 rounded border-gray-300 text-blue-800 focus:ring-yellow-500" data-id="${
+                              item.id
+                            }" ${isLocked ? "checked" : ""}>
                         </td>`;
       })
       .join("");
@@ -3651,21 +3673,25 @@ document.addEventListener("DOMContentLoaded", () => {
                         <label class="font-bold">${loc.label}</label>
                     </td>
                     ${tallyList
-            .map((item) => {
-              const dbValue = project.tally?.[loc.id]?.[item.id];
-              const value = dbValue === 0 ? 0 : dbValue || "";
-              const isLocked = locks[item.id] || false;
-              const lockedClass = isLocked ? "locked-column" : "";
-              return `
-<td class="p-0 border border-slate-200 dark:border-slate-700 ${lockedClass}" data-column-id="${item.id
-                }">
-    <input type="text" inputmode="numeric" pattern="\\d*" data-location="${loc.id
-                }" data-id="${item.id
-                }" class="tally-input w-full bg-transparent dark:bg-slate-800/50 border-transparent text-slate-900 dark:text-slate-100 rounded-md py-3 px-2 text-center focus:outline-none focus:ring-2 focus:ring-yellow-500" value="${value}" ${isLocked ? "disabled" : ""
-                }>
+                      .map((item) => {
+                        const dbValue = project.tally?.[loc.id]?.[item.id];
+                        const value = dbValue === 0 ? 0 : dbValue || "";
+                        const isLocked = locks[item.id] || false;
+                        const lockedClass = isLocked ? "locked-column" : "";
+                        return `
+<td class="p-0 border border-slate-200 dark:border-slate-700 ${lockedClass}" data-column-id="${
+                          item.id
+                        }">
+    <input type="text" inputmode="numeric" pattern="\\d*" data-location="${
+      loc.id
+    }" data-id="${
+      item.id
+    }" class="tally-input w-full bg-transparent dark:bg-slate-800/50 border-transparent text-slate-900 dark:text-slate-100 rounded-md py-3 px-2 text-center focus:outline-none focus:ring-2 focus:ring-yellow-500" value="${value}" ${
+      isLocked ? "disabled" : ""
+    }>
 </td>`;
-            })
-            .join("")}
+                      })
+                      .join("")}
                     <td class="row-total px-2 py-2 text-center font-bold text-blue-800 dark:text-blue-300 align-middle sticky right-0 border border-slate-200 dark:border-slate-700 table-sticky-color"></td>
                 </tr>`,
       )
@@ -3972,8 +3998,9 @@ document.addEventListener("DOMContentLoaded", () => {
         const totalColClass = col.isTotal
           ? "font-bold bg-blue-50 dark:bg-blue-900/40"
           : "";
-        rowHtml += `<td class="px-2 py-2 text-center border border-slate-200 dark:border-slate-700 ${totalColClass} ${detailsClass}" title="${tooltipText}" ${dataAttribute}>${cellValue > 0 ? cellValue.toLocaleString() : "-"
-          }</td>`;
+        rowHtml += `<td class="px-2 py-2 text-center border border-slate-200 dark:border-slate-700 ${totalColClass} ${detailsClass}" title="${tooltipText}" ${dataAttribute}>${
+          cellValue > 0 ? cellValue.toLocaleString() : "-"
+        }</td>`;
       });
 
       const grandTotalTooltip = Object.entries(rowTotalJoints)
@@ -3988,8 +4015,9 @@ document.addEventListener("DOMContentLoaded", () => {
         Object.keys(rowTotalJoints).length > 0
           ? `data-details='${JSON.stringify(rowTotalJoints)}'`
           : "";
-      rowHtml += `<td class="px-2 py-2 text-center font-bold sticky right-0 bg-yellow-100 dark:bg-yellow-900/50 border border-yellow-200 dark:border-yellow-800 ${grandTotalDetailsClass}" title="${grandTotalTooltip}" ${grandTotalDataAttribute}>${rowTotal > 0 ? rowTotal.toLocaleString() : "-"
-        }</td></tr>`;
+      rowHtml += `<td class="px-2 py-2 text-center font-bold sticky right-0 bg-yellow-100 dark:bg-yellow-900/50 border border-yellow-200 dark:border-yellow-800 ${grandTotalDetailsClass}" title="${grandTotalTooltip}" ${grandTotalDataAttribute}>${
+        rowTotal > 0 ? rowTotal.toLocaleString() : "-"
+      }</td></tr>`;
       floorTable += rowHtml;
     });
     floorTable += `</tbody></table></div>`;
@@ -4057,8 +4085,9 @@ document.addEventListener("DOMContentLoaded", () => {
     let sectionTable = `
         <div id="anchor-result-area" data-section-title="集計：工区/エリア別" data-section-color="orange" class="scroll-mt-24">
             <div class="flex items-center gap-4 mt-8 mb-4 border-b-2 border-yellow-400 pb-2">
-            <h2 class="text-2xl font-bold text-slate-900 dark:text-slate-100">ボルト本数(${project.mode === "advanced" ? "エリア別" : "工区別"
-      })</h2>
+            <h2 class="text-2xl font-bold text-slate-900 dark:text-slate-100">ボルト本数(${
+              project.mode === "advanced" ? "エリア別" : "工区別"
+            })</h2>
             <span class="font-bold text-red-600 dark:text-red-400 text-lg">(総本数: ${grandTotalBolts.toLocaleString()}本)</span>
         </div>
         <div class="overflow-x-auto custom-scrollbar">
@@ -4094,8 +4123,9 @@ document.addEventListener("DOMContentLoaded", () => {
           dataAttribute = `data-details='${JSON.stringify(cellData.joints)}'`;
         }
         rowTotal += cellValue;
-        rowHtml += `<td class="px-2 py-2 text-center border border-slate-200 dark:border-slate-700 ${detailsClass}" title="${tooltipText}" ${dataAttribute}>${cellValue > 0 ? cellValue.toLocaleString() : "-"
-          }</td>`;
+        rowHtml += `<td class="px-2 py-2 text-center border border-slate-200 dark:border-slate-700 ${detailsClass}" title="${tooltipText}" ${dataAttribute}>${
+          cellValue > 0 ? cellValue.toLocaleString() : "-"
+        }</td>`;
       });
 
       const grandTotalTooltip = Object.entries(rowTotalJoints)
@@ -4110,8 +4140,9 @@ document.addEventListener("DOMContentLoaded", () => {
         Object.keys(rowTotalJoints).length > 0
           ? `data-details='${JSON.stringify(rowTotalJoints)}'`
           : "";
-      rowHtml += `<td class="px-2 py-2 text-center font-bold sticky right-0 bg-yellow-100 dark:bg-yellow-900/50 border border-yellow-200 dark:border-yellow-800 ${grandTotalDetailsClass}" title="${grandTotalTooltip}" ${grandTotalDataAttribute}>${rowTotal > 0 ? rowTotal.toLocaleString() : "-"
-        }</td></tr>`;
+      rowHtml += `<td class="px-2 py-2 text-center font-bold sticky right-0 bg-yellow-100 dark:bg-yellow-900/50 border border-yellow-200 dark:border-yellow-800 ${grandTotalDetailsClass}" title="${grandTotalTooltip}" ${grandTotalDataAttribute}>${
+        rowTotal > 0 ? rowTotal.toLocaleString() : "-"
+      }</td></tr>`;
       sectionTable += rowHtml;
     });
     sectionTable += `</tbody></table></div>`;
@@ -4238,11 +4269,11 @@ document.addEventListener("DOMContentLoaded", () => {
                             <thead class="bg-slate-200 dark:bg-slate-700 text-xs text-slate-700 dark:text-slate-300"><tr>
                                 <th class="px-2 py-3 sticky left-0 bg-slate-200 dark:bg-slate-700 z-10 border border-slate-300 dark:border-slate-600">仮ボルトサイズ</th>
                                 ${locations
-        .map(
-          (loc) =>
-            `<th class="px-2 py-3 text-center border border-slate-300 dark:border-slate-600">${loc.label}</th>`,
-        )
-        .join("")}
+                                  .map(
+                                    (loc) =>
+                                      `<th class="px-2 py-3 text-center border border-slate-300 dark:border-slate-600">${loc.label}</th>`,
+                                  )
+                                  .join("")}
                                 <th class="px-2 py-3 text-center sticky right-0 bg-yellow-300 dark:bg-yellow-800/50 text-yellow-800 dark:text-yellow-200 border border-yellow-400 dark:border-yellow-700">総合計</th>
                             </tr></thead><tbody>`;
 
@@ -4271,8 +4302,9 @@ document.addEventListener("DOMContentLoaded", () => {
         }
 
         grandTotal += cellValue;
-        rowHtml += `<td class="px-2 py-2 text-center border border-slate-200 dark:border-slate-700 ${detailsClass}" title="${tooltipText}" ${dataAttribute}>${cellValue > 0 ? cellValue.toLocaleString() : "-"
-          }</td>`;
+        rowHtml += `<td class="px-2 py-2 text-center border border-slate-200 dark:border-slate-700 ${detailsClass}" title="${tooltipText}" ${dataAttribute}>${
+          cellValue > 0 ? cellValue.toLocaleString() : "-"
+        }</td>`;
       });
 
       const grandTotalTooltip = Object.entries(grandTotalJoints)
@@ -4288,8 +4320,9 @@ document.addEventListener("DOMContentLoaded", () => {
           ? `data-details='${JSON.stringify(grandTotalJoints)}'`
           : "";
 
-      rowHtml += `<td class="px-2 py-2 text-center font-bold sticky right-0 bg-yellow-100 dark:bg-yellow-900/50 border border-yellow-200 dark:border-yellow-800 ${grandTotalDetailsClass}" title="${grandTotalTooltip}" ${grandTotalDataAttribute}>${grandTotal > 0 ? grandTotal.toLocaleString() : "-"
-        }</td></tr>`;
+      rowHtml += `<td class="px-2 py-2 text-center font-bold sticky right-0 bg-yellow-100 dark:bg-yellow-900/50 border border-yellow-200 dark:border-yellow-800 ${grandTotalDetailsClass}" title="${grandTotalTooltip}" ${grandTotalDataAttribute}>${
+        grandTotal > 0 ? grandTotal.toLocaleString() : "-"
+      }</td></tr>`;
       floorTable += rowHtml;
     });
     floorTable += `</tbody></table></div>`;
@@ -4363,21 +4396,24 @@ document.addEventListener("DOMContentLoaded", () => {
       settingsHtml = `
                 <div class="flex items-center gap-3 bg-white dark:bg-slate-700 px-3 py-2 rounded-md border border-slate-300 dark:border-slate-600 shadow-sm">
                     <label class="flex items-center gap-2 cursor-pointer text-sm font-medium text-slate-700 dark:text-slate-300">
-                        <input type="checkbox" id="temp-order-group-all-checkbox" class="h-4 w-4 rounded border-gray-300 text-green-600 focus:ring-green-500" ${isGroupAll ? "checked" : ""
-        }>
+                        <input type="checkbox" id="temp-order-group-all-checkbox" class="h-4 w-4 rounded border-gray-300 text-green-600 focus:ring-green-500" ${
+                          isGroupAll ? "checked" : ""
+                        }>
                         <span>工区まとめ (全工区合算)</span>
                     </label>
                     <div class="h-4 w-px bg-slate-300 dark:bg-slate-500 mx-1"></div>
                     <div class="flex items-center gap-2 text-sm ${disabledClass}" id="temp-order-group-key-container">
                         <span class="text-slate-600 dark:text-slate-400 font-normal">グループ化:</span>
                         <label class="inline-flex items-center cursor-pointer">
-                            <input type="radio" name="temp-order-group-key" value="section" class="text-green-600 focus:ring-green-500" ${groupKey === "section" ? "checked" : ""
-        }>
+                            <input type="radio" name="temp-order-group-key" value="section" class="text-green-600 focus:ring-green-500" ${
+                              groupKey === "section" ? "checked" : ""
+                            }>
                             <span class="ml-1 text-slate-700 dark:text-slate-300">工区ごと</span>
                         </label>
                         <label class="inline-flex items-center cursor-pointer">
-                            <input type="radio" name="temp-order-group-key" value="floor" class="text-green-600 focus:ring-green-500" ${groupKey === "floor" ? "checked" : ""
-        }>
+                            <input type="radio" name="temp-order-group-key" value="floor" class="text-green-600 focus:ring-green-500" ${
+                              groupKey === "floor" ? "checked" : ""
+                            }>
                             <span class="ml-1 text-slate-700 dark:text-slate-300">フロアごと</span>
                         </label>
                     </div>
@@ -5384,7 +5420,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
       if (isDuplicate) {
         throw new Error(
-          `物件「${sourceProject.propertyName || "(未設定)"
+          `物件「${
+            sourceProject.propertyName || "(未設定)"
           }」内に、工事名「${newName}」は既に存在します。\n別の名前を指定してください。`,
         );
       }
@@ -8018,8 +8055,8 @@ document.addEventListener("DOMContentLoaded", () => {
           : currentLevels.length > 3
             ? `${currentLevels.length}フロア`
             : currentLevels
-              .map((id) => levels.find((l) => l.id === id)?.label || id)
-              .join(", ");
+                .map((id) => levels.find((l) => l.id === id)?.label || id)
+                .join(", ");
 
       // ▼▼▼ 修正: ここで既存の値（currentValues[i]）を取得し、inputタグにセットする ▼▼▼
       const savedName = currentValues[i] || "";
@@ -8141,8 +8178,9 @@ document.addEventListener("DOMContentLoaded", () => {
       allLevelLabel.className =
         "flex items-center gap-2 text-sm font-bold text-slate-800 dark:text-slate-200 cursor-pointer border-b pb-2";
       const isAllChecked = currentSelection.length === 0;
-      allLevelLabel.innerHTML = `<input type="checkbox" id="bulk-level-select-all" class="h-4 w-4 rounded border-gray-300 text-blue-800 focus:ring-yellow-500" ${isAllChecked ? "checked" : ""
-        }> 全階層を対象にする`;
+      allLevelLabel.innerHTML = `<input type="checkbox" id="bulk-level-select-all" class="h-4 w-4 rounded border-gray-300 text-blue-800 focus:ring-yellow-500" ${
+        isAllChecked ? "checked" : ""
+      }> 全階層を対象にする`;
       bulkLevelOptionsContainer.appendChild(allLevelLabel);
 
       // 個別階層チェックボックス
@@ -8150,9 +8188,11 @@ document.addEventListener("DOMContentLoaded", () => {
         const isChecked = currentSelection.includes(lvl.id) || isAllChecked;
         const label = document.createElement("label");
         label.className = "flex items-center gap-2 text-sm cursor-pointer ml-3";
-        label.innerHTML = `<input type="checkbox" value="${lvl.id
-          }" class="bulk-level-checkbox-option h-4 w-4 rounded border-gray-300 text-blue-800 focus:ring-yellow-500" ${isChecked ? "checked" : ""
-          } ${isAllChecked ? "disabled" : ""}> ${lvl.label}`;
+        label.innerHTML = `<input type="checkbox" value="${
+          lvl.id
+        }" class="bulk-level-checkbox-option h-4 w-4 rounded border-gray-300 text-blue-800 focus:ring-yellow-500" ${
+          isChecked ? "checked" : ""
+        } ${isAllChecked ? "disabled" : ""}> ${lvl.label}`;
         bulkLevelOptionsContainer.appendChild(label);
       });
 
@@ -8450,9 +8490,10 @@ document.addEventListener("DOMContentLoaded", () => {
     document.getElementById("edit-joint-modal"),
     document.getElementById("edit-member-modal"),
     document.getElementById("bulk-add-member-modal"),
-    document.getElementById("temp-bolt-mapping-modal")];
+    document.getElementById("temp-bolt-mapping-modal"),
+  ];
 
-  modals.forEach(modal => {
+  modals.forEach((modal) => {
     if (modal) {
       makeDraggable(modal);
     }
