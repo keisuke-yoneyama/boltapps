@@ -7,6 +7,7 @@ import {
   F8T_WEIGHTS_G,
 } from "./config.js";
 
+import { updateProjectData } from "./db.js";
 export const getBoltWeight = (boltSize) => {
   // Mから始まらないボルト（D-Lock, 中ボルトなど）は重量計算の対象外
   if (!boltSize.startsWith("M")) {
@@ -842,4 +843,156 @@ export const calculateAggregatedResults = (projectsInGroup) => {
     }
   });
   return aggregated;
+};
+
+/**
+ * 【決定版・改2】ボルトサイズ整合性チェック (表記統一機能付き)
+ */
+export const ensureProjectBoltSizes = async (project) => {
+  // 1. ヘルパー関数: ID文字列から情報を解析
+  const parseBoltId = (idString) => {
+    // IDの表記揺れ統一 (半角x -> 全角×)
+    const cleanId = idString.trim().replace(/x/g, "×");
+    const separator = "×";
+
+    const isMekki = cleanId.endsWith("■");
+    const processingId = isMekki ? cleanId.replace("■", "") : cleanId;
+
+    const parts = processingId.split(separator);
+    let type = "Unknown";
+    let length = 0;
+
+    if (parts.length >= 2) {
+      const lenStr = parts.pop();
+      length = parseInt(lenStr) || 0;
+      let rawType = parts.join(separator);
+
+      if (rawType.startsWith("中ボ")) {
+        const sizePart = rawType.replace("中ボ", "");
+        // ▼▼▼ 修正: 表記を「中ボ(Mネジ)」に統一 ▼▼▼
+        type = `中ボ(Mネジ) ${sizePart}`;
+      } else if (isMekki) {
+        type = `${rawType}めっき`;
+      } else {
+        type = rawType;
+      }
+    } else {
+      type = cleanId;
+    }
+
+    return { id: cleanId, label: cleanId, type, length };
+  };
+
+  // 2. リスト初期化
+  if (!project.boltSizes || !Array.isArray(project.boltSizes)) {
+    project.boltSizes = [];
+  }
+
+  // 空ならレガシーリスト適用
+  if (project.boltSizes.length === 0) {
+    project.boltSizes = LEGACY_DEFAULT_BOLT_SIZES.map((label) =>
+      parseBoltId(label),
+    );
+  }
+
+  // ▼▼▼ 3. 既存データの名称・表記の強制アップデート ▼▼▼
+  const uniqueMap = new Map();
+  let updatedCount = 0; // 変更があった件数
+
+  project.boltSizes.forEach((bolt) => {
+    // IDから最新の情報を再解析（これで type が「中ボ(Mネジ)...」に更新される）
+    const newInfo = parseBoltId(bolt.id);
+
+    // 既存のプロパティ（restoredフラグなど）を維持しつつ、type等を上書き
+    const updatedBolt = { ...bolt, ...newInfo };
+
+    // 変更検知（表記が変わる場合）
+    if (bolt.type !== newInfo.type || bolt.id !== newInfo.id) {
+      updatedCount++;
+    }
+
+    if (!uniqueMap.has(updatedBolt.id)) {
+      uniqueMap.set(updatedBolt.id, updatedBolt);
+    }
+  });
+
+  // リストを更新
+  project.boltSizes = Array.from(uniqueMap.values());
+  // ▲▲▲ アップデート処理ここまで ▲▲▲
+
+  // 4. 隠れデータの復元スキャン
+  const existingIds = new Set(project.boltSizes.map((b) => b.id));
+  let restoredCount = 0;
+
+  if (project.joints && Array.isArray(project.joints)) {
+    project.joints.forEach((j) => {
+      const sizesToCheck = [j.flangeSize, j.webSize];
+      sizesToCheck.forEach((val) => {
+        if (!val || val.trim() === "") return;
+
+        // 比較用IDも統一してチェック
+        const unifiedVal = val.trim().replace(/x/g, "×");
+
+        if (existingIds.has(unifiedVal)) return;
+
+        const boltInfo = parseBoltId(unifiedVal);
+        boltInfo.restored = true;
+
+        project.boltSizes.push(boltInfo);
+        existingIds.add(unifiedVal);
+        restoredCount++;
+      });
+    });
+  }
+
+  // 5. ソート (定義も新しい名前に合わせる)
+  const typeOrderList = [
+    "M16",
+    "M16めっき",
+    "M20",
+    "M20めっき",
+    "M22",
+    "M22めっき",
+    // ▼▼▼ 修正: ソート順定義も「中ボ(Mネジ)」に変更 ▼▼▼
+    "中ボ(Mネジ) M16",
+    "中ボ(Mネジ) M20",
+    "中ボ(Mネジ) M22",
+    "Dドブ12",
+    "Dユニ12",
+    "Dドブ16",
+    "Dユニ16",
+  ];
+  const typeOrder = {};
+  typeOrderList.forEach((t, i) => (typeOrder[t] = i));
+
+  project.boltSizes.sort((a, b) => {
+    let orderA = typeOrder[a.type] !== undefined ? typeOrder[a.type] : 999;
+    let orderB = typeOrder[b.type] !== undefined ? typeOrder[b.type] : 999;
+
+    if (orderA !== orderB) return orderA - orderB;
+    if (a.type !== b.type) return a.type.localeCompare(b.type);
+    return a.length - b.length;
+  });
+
+  // 6. 自動保存 (復元、または名称変更があった場合)
+  if (restoredCount > 0 || updatedCount > 0) {
+    console.log(
+      `✅ データの統一(名称変更:${updatedCount}件)と復元(${restoredCount}件)を行いました`,
+    );
+    // データベースを更新
+    if (project.id) {
+      try {
+        await updateProjectData(project.id, {
+          boltSizes: project.boltSizes,
+        });
+        console.log("ボルトサイズ設定をDBに保存しました。");
+      } catch (err) {
+        console.error("ボルトサイズ設定の保存に失敗しました:", err);
+      }
+    } else {
+      console.warn("プロジェクトIDが不明なため、DB保存をスキップしました。");
+    }
+  }
+
+  return project;
 };

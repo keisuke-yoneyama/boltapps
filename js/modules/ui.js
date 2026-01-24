@@ -8,6 +8,7 @@ import {
   aggregateByFloor,
   calculateAggregatedData,
   calculateTempBoltResults,
+  ensureProjectBoltSizes,
 } from "./calculator.js";
 
 // 並び順の定義（定数として外に出しました）
@@ -2437,4 +2438,157 @@ export const openEditProjectModal = (project) => {
 
   const modal = document.getElementById("edit-project-modal");
   openModal(modal);
+};
+
+/**
+ * 削除確認モーダルを開く
+ */
+export const openConfirmDeleteModal = (id, type) => {
+  const confirmDeleteModal = document.getElementById("confirm-delete-modal");
+  if (!confirmDeleteModal) return;
+
+  // 変数を getElementById に置き換え
+  const deleteIdInput = document.getElementById("delete-id");
+  const deleteTypeInput = document.getElementById("delete-type");
+  const confirmDeleteMessage = document.getElementById(
+    "confirm-delete-message",
+  );
+
+  if (deleteIdInput) deleteIdInput.value = id;
+  if (deleteTypeInput) deleteTypeInput.value = type;
+
+  if (confirmDeleteMessage) {
+    const typeName =
+      type === "joint" ? "継手" : type === "member" ? "部材" : "工事";
+    confirmDeleteMessage.textContent = `この${typeName}を削除しますか？\nデータは復元できません。`;
+  }
+
+  openModal(confirmDeleteModal);
+};
+/**
+ * ボルト選択モーダルを開く（ターゲットを指定）
+ */
+export const openBoltSelectorModal = (targetInputId) => {
+  // ID文字列から要素を取得して state に保存
+  state.activeBoltTarget = document.getElementById(targetInputId);
+
+  if (state.activeBoltTarget) {
+    const currentValue = state.activeBoltTarget.value;
+
+    // 下で定義する関数を呼び出す
+    populateBoltSelectorModal(currentValue);
+
+    const modal = document.getElementById("bolt-selector-modal");
+    openModal(modal);
+  }
+};
+
+/**
+ * ボルト選択モーダルの中身（ボタン一覧）を生成する
+ */
+export const populateBoltSelectorModal = (currentValue) => {
+  // 1. 要素取得
+  const container = document.getElementById("bolt-options-container");
+  if (!container) return;
+
+  // 2. プロジェクトデータの取得
+  const project = state.projects.find((p) => p.id === state.currentProjectId);
+  if (!project) return;
+
+  // 安全装置（calculator.jsからインポートした関数を使用）
+  if (typeof ensureProjectBoltSizes === "function") {
+    ensureProjectBoltSizes(project);
+  }
+
+  // 3. groupedBolts の生成ロジック
+  const groupedBolts = project.boltSizes.reduce((acc, bolt) => {
+    const groupKey = bolt.type;
+    if (!acc[groupKey]) {
+      acc[groupKey] = [];
+    }
+    acc[groupKey].push(bolt.id);
+    return acc;
+  }, {});
+
+  // 4. ソートロジック
+  const groupOrder = Object.keys(groupedBolts).sort((a, b) => {
+    const aIsD = a.startsWith("D"),
+      bIsD = b.startsWith("D");
+    const aIsNaka = a.startsWith("中"),
+      bIsNaka = b.startsWith("中");
+
+    if (aIsD && !bIsD) return 1;
+    if (!aIsD && bIsD) return -1;
+    if (aIsNaka && !(bIsD || bIsNaka)) return 1;
+    if (!aIsNaka && (bIsD || bIsNaka)) return -1;
+
+    const aMatch = a.match(/(\D+)(\d+)/),
+      bMatch = b.match(/(\D+)(\d+)/);
+    if (aMatch && bMatch) {
+      if (aMatch[1] !== bMatch[1]) return aMatch[1].localeCompare(bMatch[1]);
+      const numA = parseInt(aMatch[2]),
+        numB = parseInt(bMatch[2]);
+      if (numA !== numB) return numA - numB;
+    }
+    return a.localeCompare(b);
+  });
+
+  // 5. HTML生成
+  container.innerHTML = groupOrder
+    .map((group) => {
+      const buttonsHtml = groupedBolts[group]
+        .map((size) => {
+          let displayText = size;
+          if (size.startsWith("中ボ")) {
+            displayText = size.substring(2);
+          } else if (size.startsWith("中")) {
+            displayText = size.substring(1);
+          }
+
+          // 現在選択中の値と一致すればハイライト
+          const isSelected = size === currentValue;
+          const selectedClass = isSelected
+            ? "bg-yellow-400 dark:bg-yellow-600 font-bold"
+            : "bg-blue-50 dark:bg-slate-700";
+
+          return `
+                <button data-size="${size}" class="bolt-option-btn text-sm p-2 border border-blue-200 rounded-md transition-transform duration-150 hover:scale-105 ${selectedClass}">
+                    ${displayText}
+                </button>`;
+        })
+        .join("");
+
+      return `
+            <div class="mb-4">
+                <h4 class="font-bold text-blue-800 dark:text-blue-300 border-b border-blue-200 dark:border-slate-600 pb-1 mb-2">${group}</h4>
+                <div class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2">
+                    ${buttonsHtml}
+                </div>
+            </div>`;
+    })
+    .join("");
+
+  // ※ボタンのクリックイベントは、populateGlobalBoltSelectorModal の時と同様に
+  //   events.js 側で「イベント委譲」を使って一括設定するか、
+  //   ここで addEventListener する必要があります。
+  //   今回は「HTML文字列」で作っているので、生成後にイベントを設定します。
+
+  container.querySelectorAll(".bolt-option-btn").forEach((btn) => {
+    btn.addEventListener("click", (e) => {
+      if (state.activeBoltTarget) {
+        // 値をセット
+        state.activeBoltTarget.value = btn.dataset.size;
+
+        // changeイベント発火
+        state.activeBoltTarget.dispatchEvent(
+          new Event("change", { bubbles: true }),
+        );
+
+        // 後始末
+        state.activeBoltTarget = null;
+        const modal = document.getElementById("bolt-selector-modal");
+        if (modal) closeModal(modal);
+      }
+    });
+  });
 };

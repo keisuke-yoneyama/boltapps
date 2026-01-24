@@ -27,6 +27,7 @@ import {
   calculateTempBoltResults,
   calculateShopTempBoltResults,
   calculateAggregatedResults,
+  ensureProjectBoltSizes,
 } from "./modules/calculator.js";
 
 import {
@@ -1612,27 +1613,27 @@ document.addEventListener("DOMContentLoaded", () => {
   //   openModal(editMemberModal);
   // };
 
-  const openConfirmDeleteModal = (id, type) => {
-    const confirmDeleteModal = document.getElementById("confirm-delete-modal");
+  // const openConfirmDeleteModal = (id, type) => {
+  //   const confirmDeleteModal = document.getElementById("confirm-delete-modal");
 
-    // 安全対策
-    if (!confirmDeleteModal) return;
+  //   // 安全対策
+  //   if (!confirmDeleteModal) return;
 
-    deleteIdInput.value = id;
-    deleteTypeInput.value = type;
-    const typeName =
-      type === "joint" ? "継手" : type === "member" ? "部材" : "工事";
-    confirmDeleteMessage.textContent = `この${typeName}を削除しますか？\nデータは復元できません。`;
-    openModal(confirmDeleteModal);
-  };
+  //   deleteIdInput.value = id;
+  //   deleteTypeInput.value = type;
+  //   const typeName =
+  //     type === "joint" ? "継手" : type === "member" ? "部材" : "工事";
+  //   confirmDeleteMessage.textContent = `この${typeName}を削除しますか？\nデータは復元できません。`;
+  //   openModal(confirmDeleteModal);
+  // };
 
-  const openBoltSelectorModal = (targetInputId) => {
-    state.activeBoltTarget = document.getElementById(targetInputId);
-    // 現在の入力値を取得して、モーダル生成関数に渡す
-    const currentValue = state.activeBoltTarget.value;
-    populateBoltSelectorModal(currentValue);
-    openModal(boltSelectorModal);
-  };
+  // const openBoltSelectorModal = (targetInputId) => {
+  //   state.activeBoltTarget = document.getElementById(targetInputId);
+  //   // 現在の入力値を取得して、モーダル生成関数に渡す
+  //   const currentValue = state.activeBoltTarget.value;
+  //   populateBoltSelectorModal(currentValue);
+  //   openModal(boltSelectorModal);
+  // };
 
   // const openEditProjectModal = (project) => {
   //   editProjectIdInput.value = project.id;
@@ -2106,89 +2107,89 @@ document.addEventListener("DOMContentLoaded", () => {
   //     );
   //   }
   // };
-  const populateBoltSelectorModal = (currentValue) => {
-    // currentValue引数を追加
-    // ▼▼▼ 1. プロジェクトデータの取得を追加 ▼▼▼
-    const project = state.projects.find((p) => p.id === state.currentProjectId);
-    if (!project) return;
+  // const populateBoltSelectorModal = (currentValue) => {
+  //   // currentValue引数を追加
+  //   // ▼▼▼ 1. プロジェクトデータの取得を追加 ▼▼▼
+  //   const project = state.projects.find((p) => p.id === state.currentProjectId);
+  //   if (!project) return;
 
-    // 安全装置（リストが無ければ復元）
-    ensureProjectBoltSizes(project);
-    // ▲▲▲ 追加ここまで ▲▲▲
+  //   // 安全装置（リストが無ければ復元）
+  //   ensureProjectBoltSizes(project);
+  //   // ▲▲▲ 追加ここまで ▲▲▲
 
-    // ▼▼▼ 2. groupedBolts の生成ロジックを書き換え ▼▼▼
-    const groupedBolts = project.boltSizes.reduce((acc, bolt) => {
-      // データ自体に 'M16' や 'M16めっき' などの情報(type)を持たせているので、それを使うだけ！
-      const groupKey = bolt.type;
+  //   // ▼▼▼ 2. groupedBolts の生成ロジックを書き換え ▼▼▼
+  //   const groupedBolts = project.boltSizes.reduce((acc, bolt) => {
+  //     // データ自体に 'M16' や 'M16めっき' などの情報(type)を持たせているので、それを使うだけ！
+  //     const groupKey = bolt.type;
 
-      if (!acc[groupKey]) {
-        acc[groupKey] = [];
-      }
+  //     if (!acc[groupKey]) {
+  //       acc[groupKey] = [];
+  //     }
 
-      // 従来のUI描画コードが文字列の配列を期待しているため、ID(名前)を入れる
-      acc[groupKey].push(bolt.id);
+  //     // 従来のUI描画コードが文字列の配列を期待しているため、ID(名前)を入れる
+  //     acc[groupKey].push(bolt.id);
 
-      return acc;
-    }, {});
+  //     return acc;
+  //   }, {});
 
-    const groupOrder = Object.keys(groupedBolts).sort((a, b) => {
-      const aIsD = a.startsWith("D"),
-        bIsD = b.startsWith("D");
-      const aIsNaka = a.startsWith("中"),
-        bIsNaka = b.startsWith("中");
+  //   const groupOrder = Object.keys(groupedBolts).sort((a, b) => {
+  //     const aIsD = a.startsWith("D"),
+  //       bIsD = b.startsWith("D");
+  //     const aIsNaka = a.startsWith("中"),
+  //       bIsNaka = b.startsWith("中");
 
-      if (aIsD && !bIsD) return 1;
-      if (!aIsD && bIsD) return -1;
-      if (aIsNaka && !(bIsD || bIsNaka)) return 1;
-      if (!aIsNaka && (bIsD || bIsNaka)) return -1;
+  //     if (aIsD && !bIsD) return 1;
+  //     if (!aIsD && bIsD) return -1;
+  //     if (aIsNaka && !(bIsD || bIsNaka)) return 1;
+  //     if (!aIsNaka && (bIsD || bIsNaka)) return -1;
 
-      const aMatch = a.match(/(\D+)(\d+)/),
-        bMatch = b.match(/(\D+)(\d+)/);
-      if (aMatch && bMatch) {
-        if (aMatch[1] !== bMatch[1]) return aMatch[1].localeCompare(bMatch[1]);
-        const numA = parseInt(aMatch[2]),
-          numB = parseInt(bMatch[2]);
-        if (numA !== numB) return numA - numB;
-      }
-      return a.localeCompare(b);
-    });
+  //     const aMatch = a.match(/(\D+)(\d+)/),
+  //       bMatch = b.match(/(\D+)(\d+)/);
+  //     if (aMatch && bMatch) {
+  //       if (aMatch[1] !== bMatch[1]) return aMatch[1].localeCompare(bMatch[1]);
+  //       const numA = parseInt(aMatch[2]),
+  //         numB = parseInt(bMatch[2]);
+  //       if (numA !== numB) return numA - numB;
+  //     }
+  //     return a.localeCompare(b);
+  //   });
 
-    boltOptionsContainer.innerHTML = groupOrder
-      .map((group) => {
-        const buttonsHtml = groupedBolts[group]
-          .map((size) => {
-            let displayText = size;
-            if (size.startsWith("中ボ")) {
-              displayText = size.substring(2);
-            } else if (size.startsWith("中")) {
-              displayText = size.substring(1);
-            }
+  //   boltOptionsContainer.innerHTML = groupOrder
+  //     .map((group) => {
+  //       const buttonsHtml = groupedBolts[group]
+  //         .map((size) => {
+  //           let displayText = size;
+  //           if (size.startsWith("中ボ")) {
+  //             displayText = size.substring(2);
+  //           } else if (size.startsWith("中")) {
+  //             displayText = size.substring(1);
+  //           }
 
-            // ▼▼▼ 修正箇所 ▼▼▼
-            // 現在選択中の値と一致すればハイライト用のクラスを付与
-            const isSelected = size === currentValue;
-            const selectedClass = isSelected
-              ? "bg-yellow-400 dark:bg-yellow-600 font-bold"
-              : "bg-blue-50 dark:bg-slate-700";
+  //           // ▼▼▼ 修正箇所 ▼▼▼
+  //           // 現在選択中の値と一致すればハイライト用のクラスを付与
+  //           const isSelected = size === currentValue;
+  //           const selectedClass = isSelected
+  //             ? "bg-yellow-400 dark:bg-yellow-600 font-bold"
+  //             : "bg-blue-50 dark:bg-slate-700";
 
-            return `
-                <button data-size="${size}" class="bolt-option-btn text-sm p-2 border border-blue-200 rounded-md transition-transform duration-150 hover:scale-105 ${selectedClass}">
-                    ${displayText}
-                </button>`;
-            // ▲▲▲ 修正ここまで ▲▲▲
-          })
-          .join("");
+  //           return `
+  //               <button data-size="${size}" class="bolt-option-btn text-sm p-2 border border-blue-200 rounded-md transition-transform duration-150 hover:scale-105 ${selectedClass}">
+  //                   ${displayText}
+  //               </button>`;
+  //           // ▲▲▲ 修正ここまで ▲▲▲
+  //         })
+  //         .join("");
 
-        return `
-                    <div class="mb-4">
-                        <h4 class="font-bold text-blue-800 border-b border-blue-200 pb-1 mb-2">${group}</h4>
-                        <div class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2">
-                           ${buttonsHtml}
-                        </div>
-                    </div>`;
-      })
-      .join("");
-  };
+  //       return `
+  //                   <div class="mb-4">
+  //                       <h4 class="font-bold text-blue-800 border-b border-blue-200 pb-1 mb-2">${group}</h4>
+  //                       <div class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2">
+  //                          ${buttonsHtml}
+  //                       </div>
+  //                   </div>`;
+  //     })
+  //     .join("");
+  // };
   // --- History Management Functions ---
   const updateUndoRedoButtons = () => {
     const canUndo = history.currentIndex > 0;
@@ -4989,155 +4990,155 @@ document.addEventListener("DOMContentLoaded", () => {
 * ・「中ボルト(Mネジ)」を「中ボ(Mネジ)」に統一
 * ・半角xを全角×に統一
 */
-  const ensureProjectBoltSizes = async (project) => {
-    // 1. ヘルパー関数: ID文字列から情報を解析
-    const parseBoltId = (idString) => {
-      // IDの表記揺れ統一 (半角x -> 全角×)
-      const cleanId = idString.trim().replace(/x/g, "×");
-      const separator = "×";
+  // const ensureProjectBoltSizes = async (project) => {
+  //   // 1. ヘルパー関数: ID文字列から情報を解析
+  //   const parseBoltId = (idString) => {
+  //     // IDの表記揺れ統一 (半角x -> 全角×)
+  //     const cleanId = idString.trim().replace(/x/g, "×");
+  //     const separator = "×";
 
-      const isMekki = cleanId.endsWith("■");
-      const processingId = isMekki ? cleanId.replace("■", "") : cleanId;
+  //     const isMekki = cleanId.endsWith("■");
+  //     const processingId = isMekki ? cleanId.replace("■", "") : cleanId;
 
-      const parts = processingId.split(separator);
-      let type = "Unknown";
-      let length = 0;
+  //     const parts = processingId.split(separator);
+  //     let type = "Unknown";
+  //     let length = 0;
 
-      if (parts.length >= 2) {
-        const lenStr = parts.pop();
-        length = parseInt(lenStr) || 0;
-        let rawType = parts.join(separator);
+  //     if (parts.length >= 2) {
+  //       const lenStr = parts.pop();
+  //       length = parseInt(lenStr) || 0;
+  //       let rawType = parts.join(separator);
 
-        if (rawType.startsWith("中ボ")) {
-          const sizePart = rawType.replace("中ボ", "");
-          // ▼▼▼ 修正: 表記を「中ボ(Mネジ)」に統一 ▼▼▼
-          type = `中ボ(Mネジ) ${sizePart}`;
-        } else if (isMekki) {
-          type = `${rawType}めっき`;
-        } else {
-          type = rawType;
-        }
-      } else {
-        type = cleanId;
-      }
+  //       if (rawType.startsWith("中ボ")) {
+  //         const sizePart = rawType.replace("中ボ", "");
+  //         // ▼▼▼ 修正: 表記を「中ボ(Mネジ)」に統一 ▼▼▼
+  //         type = `中ボ(Mネジ) ${sizePart}`;
+  //       } else if (isMekki) {
+  //         type = `${rawType}めっき`;
+  //       } else {
+  //         type = rawType;
+  //       }
+  //     } else {
+  //       type = cleanId;
+  //     }
 
-      return { id: cleanId, label: cleanId, type, length };
-    };
+  //     return { id: cleanId, label: cleanId, type, length };
+  //   };
 
-    // 2. リスト初期化
-    if (!project.boltSizes || !Array.isArray(project.boltSizes)) {
-      project.boltSizes = [];
-    }
+  //   // 2. リスト初期化
+  //   if (!project.boltSizes || !Array.isArray(project.boltSizes)) {
+  //     project.boltSizes = [];
+  //   }
 
-    // 空ならレガシーリスト適用
-    if (project.boltSizes.length === 0) {
-      project.boltSizes = LEGACY_DEFAULT_BOLT_SIZES.map((label) =>
-        parseBoltId(label),
-      );
-    }
+  //   // 空ならレガシーリスト適用
+  //   if (project.boltSizes.length === 0) {
+  //     project.boltSizes = LEGACY_DEFAULT_BOLT_SIZES.map((label) =>
+  //       parseBoltId(label),
+  //     );
+  //   }
 
-    // ▼▼▼ 3. 既存データの名称・表記の強制アップデート ▼▼▼
-    const uniqueMap = new Map();
-    let updatedCount = 0; // 変更があった件数
+  //   // ▼▼▼ 3. 既存データの名称・表記の強制アップデート ▼▼▼
+  //   const uniqueMap = new Map();
+  //   let updatedCount = 0; // 変更があった件数
 
-    project.boltSizes.forEach((bolt) => {
-      // IDから最新の情報を再解析（これで type が「中ボ(Mネジ)...」に更新される）
-      const newInfo = parseBoltId(bolt.id);
+  //   project.boltSizes.forEach((bolt) => {
+  //     // IDから最新の情報を再解析（これで type が「中ボ(Mネジ)...」に更新される）
+  //     const newInfo = parseBoltId(bolt.id);
 
-      // 既存のプロパティ（restoredフラグなど）を維持しつつ、type等を上書き
-      const updatedBolt = { ...bolt, ...newInfo };
+  //     // 既存のプロパティ（restoredフラグなど）を維持しつつ、type等を上書き
+  //     const updatedBolt = { ...bolt, ...newInfo };
 
-      // 変更検知（表記が変わる場合）
-      if (bolt.type !== newInfo.type || bolt.id !== newInfo.id) {
-        updatedCount++;
-      }
+  //     // 変更検知（表記が変わる場合）
+  //     if (bolt.type !== newInfo.type || bolt.id !== newInfo.id) {
+  //       updatedCount++;
+  //     }
 
-      if (!uniqueMap.has(updatedBolt.id)) {
-        uniqueMap.set(updatedBolt.id, updatedBolt);
-      }
-    });
+  //     if (!uniqueMap.has(updatedBolt.id)) {
+  //       uniqueMap.set(updatedBolt.id, updatedBolt);
+  //     }
+  //   });
 
-    // リストを更新
-    project.boltSizes = Array.from(uniqueMap.values());
-    // ▲▲▲ アップデート処理ここまで ▲▲▲
+  //   // リストを更新
+  //   project.boltSizes = Array.from(uniqueMap.values());
+  //   // ▲▲▲ アップデート処理ここまで ▲▲▲
 
-    // 4. 隠れデータの復元スキャン
-    const existingIds = new Set(project.boltSizes.map((b) => b.id));
-    let restoredCount = 0;
+  //   // 4. 隠れデータの復元スキャン
+  //   const existingIds = new Set(project.boltSizes.map((b) => b.id));
+  //   let restoredCount = 0;
 
-    if (project.joints && Array.isArray(project.joints)) {
-      project.joints.forEach((j) => {
-        const sizesToCheck = [j.flangeSize, j.webSize];
-        sizesToCheck.forEach((val) => {
-          if (!val || val.trim() === "") return;
+  //   if (project.joints && Array.isArray(project.joints)) {
+  //     project.joints.forEach((j) => {
+  //       const sizesToCheck = [j.flangeSize, j.webSize];
+  //       sizesToCheck.forEach((val) => {
+  //         if (!val || val.trim() === "") return;
 
-          // 比較用IDも統一してチェック
-          const unifiedVal = val.trim().replace(/x/g, "×");
+  //         // 比較用IDも統一してチェック
+  //         const unifiedVal = val.trim().replace(/x/g, "×");
 
-          if (existingIds.has(unifiedVal)) return;
+  //         if (existingIds.has(unifiedVal)) return;
 
-          const boltInfo = parseBoltId(unifiedVal);
-          boltInfo.restored = true;
+  //         const boltInfo = parseBoltId(unifiedVal);
+  //         boltInfo.restored = true;
 
-          project.boltSizes.push(boltInfo);
-          existingIds.add(unifiedVal);
-          restoredCount++;
-        });
-      });
-    }
+  //         project.boltSizes.push(boltInfo);
+  //         existingIds.add(unifiedVal);
+  //         restoredCount++;
+  //       });
+  //     });
+  //   }
 
-    // 5. ソート (定義も新しい名前に合わせる)
-    const typeOrderList = [
-      "M16",
-      "M16めっき",
-      "M20",
-      "M20めっき",
-      "M22",
-      "M22めっき",
-      // ▼▼▼ 修正: ソート順定義も「中ボ(Mネジ)」に変更 ▼▼▼
-      "中ボ(Mネジ) M16",
-      "中ボ(Mネジ) M20",
-      "中ボ(Mネジ) M22",
-      "Dドブ12",
-      "Dユニ12",
-      "Dドブ16",
-      "Dユニ16",
-    ];
-    const typeOrder = {};
-    typeOrderList.forEach((t, i) => (typeOrder[t] = i));
+  //   // 5. ソート (定義も新しい名前に合わせる)
+  //   const typeOrderList = [
+  //     "M16",
+  //     "M16めっき",
+  //     "M20",
+  //     "M20めっき",
+  //     "M22",
+  //     "M22めっき",
+  //     // ▼▼▼ 修正: ソート順定義も「中ボ(Mネジ)」に変更 ▼▼▼
+  //     "中ボ(Mネジ) M16",
+  //     "中ボ(Mネジ) M20",
+  //     "中ボ(Mネジ) M22",
+  //     "Dドブ12",
+  //     "Dユニ12",
+  //     "Dドブ16",
+  //     "Dユニ16",
+  //   ];
+  //   const typeOrder = {};
+  //   typeOrderList.forEach((t, i) => (typeOrder[t] = i));
 
-    project.boltSizes.sort((a, b) => {
-      let orderA = typeOrder[a.type] !== undefined ? typeOrder[a.type] : 999;
-      let orderB = typeOrder[b.type] !== undefined ? typeOrder[b.type] : 999;
+  //   project.boltSizes.sort((a, b) => {
+  //     let orderA = typeOrder[a.type] !== undefined ? typeOrder[a.type] : 999;
+  //     let orderB = typeOrder[b.type] !== undefined ? typeOrder[b.type] : 999;
 
-      if (orderA !== orderB) return orderA - orderB;
-      if (a.type !== b.type) return a.type.localeCompare(b.type);
-      return a.length - b.length;
-    });
+  //     if (orderA !== orderB) return orderA - orderB;
+  //     if (a.type !== b.type) return a.type.localeCompare(b.type);
+  //     return a.length - b.length;
+  //   });
 
-    // 6. 自動保存 (復元、または名称変更があった場合)
-    if (restoredCount > 0 || updatedCount > 0) {
-      console.log(
-        `✅ データの統一(名称変更:${updatedCount}件)と復元(${restoredCount}件)を行いました`,
-      );
-      // データベースを更新
-      // ★ ここで state.currentProjectId ではなく project.id を使います
-      if (project.id) {
-        try {
-          await updateProjectData(project.id, {
-            boltSizes: project.boltSizes,
-          });
-          console.log("ボルトサイズ設定をDBに保存しました。");
-        } catch (err) {
-          console.error("ボルトサイズ設定の保存に失敗しました:", err);
-        }
-      } else {
-        console.warn("プロジェクトIDが不明なため、DB保存をスキップしました。");
-      }
-    }
+  //   // 6. 自動保存 (復元、または名称変更があった場合)
+  //   if (restoredCount > 0 || updatedCount > 0) {
+  //     console.log(
+  //       `✅ データの統一(名称変更:${updatedCount}件)と復元(${restoredCount}件)を行いました`,
+  //     );
+  //     // データベースを更新
+  //     // ★ ここで state.currentProjectId ではなく project.id を使います
+  //     if (project.id) {
+  //       try {
+  //         await updateProjectData(project.id, {
+  //           boltSizes: project.boltSizes,
+  //         });
+  //         console.log("ボルトサイズ設定をDBに保存しました。");
+  //       } catch (err) {
+  //         console.error("ボルトサイズ設定の保存に失敗しました:", err);
+  //       }
+  //     } else {
+  //       console.warn("プロジェクトIDが不明なため、DB保存をスキップしました。");
+  //     }
+  //   }
 
-    return project;
-  };
+  //   return project;
+  // };
 
   // ▼▼▼ ボルトサイズ設定のタブ管理と描画ロジック ▼▼▼
 
