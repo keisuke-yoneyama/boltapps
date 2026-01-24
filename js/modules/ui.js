@@ -4572,48 +4572,158 @@ export const renderResults = (project) => {
 };
 
 /**
- * 画面表示を切り替える (リスト表示 <-> 詳細表示)
+ * 詳細画面内のタブ切り替え (Joints <-> Tally)
  */
-export const switchView = (viewName) => {
-  console.log(`[DEBUG] switchView called with: ${viewName}`); // ★ログ
+export const switchTab = (tabName) => {
+  const jointsSection = document.getElementById("joints-section");
+  const tallySection = document.getElementById("tally-section");
+  const navTabJoints = document.getElementById("nav-tab-joints");
+  const navTabTally = document.getElementById("nav-tab-tally");
+  const mobileNavTabJoints = document.getElementById("mobile-nav-tab-joints");
+  const mobileNavTabTally = document.getElementById("mobile-nav-tab-tally");
 
-  const viewList = document.getElementById("view-project-list");
-  const viewDetail = document.getElementById("view-project-detail");
+  // 内部セクションも明示的に取得
+  const settingsCard = document.getElementById("settings-card");
+  const memberCard = document.getElementById("member-registration-card");
 
-  // 要素が見つかったか確認
-  if (!viewList)
-    console.error("[DEBUG] Error: Element 'view-project-list' not found!");
-  if (!viewDetail)
-    console.error("[DEBUG] Error: Element 'view-project-detail' not found!");
+  // 現在のスクロール位置を保存
+  const currentScrollY = window.scrollY;
+  if (state.activeTab) {
+    state.scrollPositions[state.activeTab] = currentScrollY;
+  }
+  state.activeTab = tabName;
 
-  // スクロールをトップに戻す
-  window.scrollTo(0, 0);
+  // タブのアクティブ状態リセット
+  [navTabJoints, navTabTally, mobileNavTabJoints, mobileNavTabTally].forEach(
+    (tab) => {
+      if (tab) tab.classList.remove("active");
+    },
+  );
 
-  if (viewName === "list") {
-    if (viewList) {
-      viewList.classList.remove("hidden");
-      console.log("[DEBUG] Removed 'hidden' from viewList");
-    }
-    if (viewDetail) {
-      viewDetail.classList.add("hidden");
-      console.log("[DEBUG] Added 'hidden' to viewDetail");
-    }
-    state.currentProjectId = null;
-  } else {
-    if (viewList) {
-      viewList.classList.add("hidden");
-      console.log("[DEBUG] Added 'hidden' to viewList");
-    }
-    if (viewDetail) {
-      viewDetail.classList.remove("hidden");
-      console.log("[DEBUG] Removed 'hidden' from viewDetail");
-    }
+  if (tabName === "joints") {
+    if (jointsSection) jointsSection.classList.remove("hidden");
+
+    // 内部セクションも表示
+    if (settingsCard) settingsCard.classList.remove("hidden");
+    if (memberCard) memberCard.classList.remove("hidden");
+
+    if (tallySection) tallySection.classList.add("hidden");
+
+    // タブの見た目をアクティブに
+    if (navTabJoints) navTabJoints.classList.add("active");
+    if (mobileNavTabJoints) mobileNavTabJoints.classList.add("active");
+  } else if (tabName === "tally") {
+    if (jointsSection) jointsSection.classList.add("hidden");
+
+    // 内部セクションも非表示
+    if (settingsCard) settingsCard.classList.add("hidden");
+    if (memberCard) memberCard.classList.add("hidden");
+
+    if (tallySection) tallySection.classList.remove("hidden");
+
+    // タブの見た目をアクティブに
+    if (navTabTally) navTabTally.classList.add("active");
+    if (mobileNavTabTally) mobileNavTabTally.classList.add("active");
   }
 
-  // ナビゲーション等の表示更新
+  // スクロール位置の復元
+  const newScrollY = state.scrollPositions[tabName] || 0;
+  setTimeout(() => {
+    window.scrollTo(0, newScrollY);
+  }, 0);
+
+  // FABの表示状態更新 (ui.js内の関数)
   if (typeof updateQuickNavVisibility === "function") {
     updateQuickNavVisibility();
   }
+};
+
+/**
+ * 画面表示を切り替える (一覧画面 <-> 詳細画面)
+ * ナビゲーションバーやFABの表示制御もここで行う
+ */
+export const switchView = (viewName) => {
+  const viewList = document.getElementById("view-project-list");
+  const viewDetail = document.getElementById("view-project-detail");
+
+  // ナビゲーション関連の要素
+  const fixedNav = document.getElementById("fixed-nav"); // IDを確認してください
+  const navListContext = document.getElementById("nav-list-context");
+  const navDetailContext = document.getElementById("nav-detail-context");
+  const navDetailButtons = document.getElementById("nav-detail-buttons");
+  const mobileNavDetailButtons = document.getElementById(
+    "mobile-nav-detail-buttons",
+  );
+  const navProjectTitle = document.getElementById("nav-project-title");
+
+  // 1. メイン画面の切り替え
+  // ----------------------------------------------------
+  if (viewName === "detail") {
+    if (viewList) viewList.classList.add("hidden");
+    if (viewDetail) viewDetail.classList.remove("hidden");
+
+    // ナビゲーション制御
+    if (fixedNav) fixedNav.classList.remove("hidden");
+    if (navListContext) navListContext.classList.add("hidden");
+    if (navDetailContext) navDetailContext.classList.remove("hidden");
+
+    if (navDetailButtons) {
+      navDetailButtons.classList.remove("hidden");
+      navDetailButtons.classList.add("flex");
+    }
+    if (mobileNavDetailButtons)
+      mobileNavDetailButtons.classList.remove("hidden");
+
+    // タイトル更新
+    const project = state.projects.find((p) => p.id === state.currentProjectId);
+    if (project && navProjectTitle) {
+      navProjectTitle.textContent = project.name;
+    }
+
+    // デフォルトで「継手タブ」を開く
+    switchTab("joints");
+
+    // FAB表示更新
+    if (typeof updateQuickNavVisibility === "function") {
+      updateQuickNavVisibility();
+    }
+  } else {
+    // === List View ===
+    if (viewList) viewList.classList.remove("hidden");
+    if (viewDetail) viewDetail.classList.add("hidden");
+
+    // ナビゲーション制御
+    if (navListContext) navListContext.classList.remove("hidden");
+    if (navDetailContext) navDetailContext.classList.add("hidden");
+
+    if (navDetailButtons) {
+      navDetailButtons.classList.add("hidden");
+      navDetailButtons.classList.remove("flex");
+    }
+    if (mobileNavDetailButtons) mobileNavDetailButtons.classList.add("hidden");
+
+    // ▼▼▼ 一覧画面に戻ったらナビとFABを隠し、状態をリセット ▼▼▼
+    const quickNav = document.getElementById("quick-nav-container");
+    if (quickNav) quickNav.classList.add("hidden");
+
+    const fabContainer = document.getElementById("fab-container");
+    if (fabContainer) fabContainer.classList.add("hidden");
+
+    // メニューが開いたまま戻った場合、閉じた状態にリセットする
+    // (isFabOpen は ui.js 内のトップレベル変数として定義されている前提)
+    if (
+      typeof isFabOpen !== "undefined" &&
+      isFabOpen &&
+      typeof toggleFab === "function"
+    ) {
+      toggleFab();
+    }
+
+    state.currentProjectId = null;
+  }
+
+  // スクロールリセット
+  window.scrollTo(0, 0);
 };
 
 /**

@@ -48,6 +48,7 @@ import {
   // newComplexSplCache,
   // resetEditComplexSplCache,
   // resetNewComplexSplCache,
+  switchTab,
   renderShopTempBoltResults,
   updateTallySheetCalculations,
   renderColorPalette,
@@ -1410,59 +1411,59 @@ document.addEventListener("DOMContentLoaded", () => {
   //     // ▲▲▲ 修正ここまで ▲▲▲
   //   }
   // };
-  const switchTab = (tabName) => {
-    const jointsSection = document.getElementById("joints-section");
-    const tallySection = document.getElementById("tally-section");
-    const navTabJoints = document.getElementById("nav-tab-joints");
-    const navTabTally = document.getElementById("nav-tab-tally");
-    const mobileNavTabJoints = document.getElementById("mobile-nav-tab-joints");
-    const mobileNavTabTally = document.getElementById("mobile-nav-tab-tally");
+  // const switchTab = (tabName) => {
+  //   const jointsSection = document.getElementById("joints-section");
+  //   const tallySection = document.getElementById("tally-section");
+  //   const navTabJoints = document.getElementById("nav-tab-joints");
+  //   const navTabTally = document.getElementById("nav-tab-tally");
+  //   const mobileNavTabJoints = document.getElementById("mobile-nav-tab-joints");
+  //   const mobileNavTabTally = document.getElementById("mobile-nav-tab-tally");
 
-    // ▼▼▼ 追加：内部セクションも明示的に取得 ▼▼▼
-    const settingsCard = document.getElementById("settings-card");
-    const memberCard = document.getElementById("member-registration-card");
-    // ▲▲▲ 追加ここまで ▲▲▲
+  //   // ▼▼▼ 追加：内部セクションも明示的に取得 ▼▼▼
+  //   const settingsCard = document.getElementById("settings-card");
+  //   const memberCard = document.getElementById("member-registration-card");
+  //   // ▲▲▲ 追加ここまで ▲▲▲
 
-    const currentScrollY = window.scrollY;
-    state.scrollPositions[state.activeTab] = currentScrollY;
-    state.activeTab = tabName;
+  //   const currentScrollY = window.scrollY;
+  //   state.scrollPositions[state.activeTab] = currentScrollY;
+  //   state.activeTab = tabName;
 
-    [navTabJoints, navTabTally, mobileNavTabJoints, mobileNavTabTally].forEach(
-      (tab) => {
-        if (tab) tab.classList.remove("active");
-      },
-    );
+  //   [navTabJoints, navTabTally, mobileNavTabJoints, mobileNavTabTally].forEach(
+  //     (tab) => {
+  //       if (tab) tab.classList.remove("active");
+  //     },
+  //   );
 
-    if (tabName === "joints") {
-      if (jointsSection) jointsSection.classList.remove("hidden");
-      // ▼▼▼ 追加：念のため内部セクションも表示 ▼▼▼
-      if (settingsCard) settingsCard.classList.remove("hidden");
-      if (memberCard) memberCard.classList.remove("hidden");
-      // ▲▲▲ 追加ここまで ▲▲▲
+  //   if (tabName === "joints") {
+  //     if (jointsSection) jointsSection.classList.remove("hidden");
+  //     // ▼▼▼ 追加：念のため内部セクションも表示 ▼▼▼
+  //     if (settingsCard) settingsCard.classList.remove("hidden");
+  //     if (memberCard) memberCard.classList.remove("hidden");
+  //     // ▲▲▲ 追加ここまで ▲▲▲
 
-      if (tallySection) tallySection.classList.add("hidden");
-      if (navTabJoints) navTabJoints.classList.add("active");
-      if (mobileNavTabJoints) mobileNavTabJoints.classList.add("active");
-    } else if (tabName === "tally") {
-      if (jointsSection) jointsSection.classList.add("hidden");
-      // ▼▼▼ 追加：念のため内部セクションも非表示 ▼▼▼
-      if (settingsCard) settingsCard.classList.add("hidden");
-      if (memberCard) memberCard.classList.add("hidden");
-      // ▲▲▲ 追加ここまで ▲▲▲
+  //     if (tallySection) tallySection.classList.add("hidden");
+  //     if (navTabJoints) navTabJoints.classList.add("active");
+  //     if (mobileNavTabJoints) mobileNavTabJoints.classList.add("active");
+  //   } else if (tabName === "tally") {
+  //     if (jointsSection) jointsSection.classList.add("hidden");
+  //     // ▼▼▼ 追加：念のため内部セクションも非表示 ▼▼▼
+  //     if (settingsCard) settingsCard.classList.add("hidden");
+  //     if (memberCard) memberCard.classList.add("hidden");
+  //     // ▲▲▲ 追加ここまで ▲▲▲
 
-      if (tallySection) tallySection.classList.remove("hidden");
-      if (navTabTally) navTabTally.classList.add("active");
-      if (mobileNavTabTally) mobileNavTabTally.classList.add("active");
-    }
+  //     if (tallySection) tallySection.classList.remove("hidden");
+  //     if (navTabTally) navTabTally.classList.add("active");
+  //     if (mobileNavTabTally) mobileNavTabTally.classList.add("active");
+  //   }
 
-    const newScrollY = state.scrollPositions[tabName] || 0;
-    setTimeout(() => {
-      window.scrollTo(0, newScrollY);
-    }, 0);
+  //   const newScrollY = state.scrollPositions[tabName] || 0;
+  //   setTimeout(() => {
+  //     window.scrollTo(0, newScrollY);
+  //   }, 0);
 
-    if (typeof updateQuickNavVisibility === "function")
-      updateQuickNavVisibility();
-  };
+  //   if (typeof updateQuickNavVisibility === "function")
+  //     updateQuickNavVisibility();
+  // };
 
   // const closeModal = (modalElement) => {
   //   modalElement.classList.add("opacity-0");
