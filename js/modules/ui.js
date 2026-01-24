@@ -2171,3 +2171,270 @@ export const renderTempBoltResults = (project) => {
 
   return floorTable;
 };
+
+//★末尾に記載する
+/**
+ * プロジェクトリストを描画し、イベントを設定する
+ * @param {Object} callbacks - 各ボタンのアクション { onSelect, onEdit, onDuplicate, onDelete, onGroupEdit, onGroupAggregate }
+ */
+export const renderProjectList = (callbacks = {}) => {
+  // 1. コンテナ取得 (IDで直接取得)
+  const container = document.getElementById("projects-container");
+  if (!container) return;
+
+  if (state.projects.length === 0) {
+    container.innerHTML =
+      '<p class="text-center text-gray-500 dark:text-gray-400 py-8">まだ工事が登録されていません。<br>右下の＋ボタンから追加してください。</p>';
+    return;
+  }
+
+  const groupedProjects = {};
+  const unGroupedProjects = [];
+
+  // 2. プロジェクトを物件名でグループ化
+  state.projects.forEach((p) => {
+    if (p.propertyName) {
+      if (!groupedProjects[p.propertyName]) {
+        groupedProjects[p.propertyName] = [];
+      }
+      groupedProjects[p.propertyName].push(p);
+    } else {
+      unGroupedProjects.push(p);
+    }
+  });
+
+  let html = "";
+
+  // 3. グループ化されたプロジェクトのHTML生成
+  for (const propertyName in groupedProjects) {
+    const projectsInGroup = groupedProjects[propertyName];
+    html += `
+            <section class="bg-white dark:bg-slate-800 p-4 rounded-xl shadow-lg border border-slate-200 dark:border-slate-700 mb-6">
+                <div class="flex flex-col sm:flex-row justify-between sm:items-center mb-4 border-b border-slate-300 dark:border-slate-600 pb-3 gap-2">
+                    <h3 class="text-xl font-bold text-slate-800 dark:text-slate-200 truncate" title="${propertyName}">
+                        <span class="text-sm font-normal text-slate-500">物件名：</span>${propertyName}
+                    </h3>
+                    <div class="flex items-center gap-2">
+                        <button data-property-name="${propertyName}" class="edit-group-btn btn btn-neutral text-sm">物件情報編集</button>
+                        <button data-property-name="${propertyName}" class="show-aggregated-results-btn btn btn-secondary text-sm">集計結果表示</button>
+                    </div>
+                </div>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+            `;
+    projectsInGroup.forEach((p) => {
+      let description =
+        p.mode === "advanced"
+          ? `${p.customLevels.length}階層 / ${p.customAreas.length}エリア`
+          : `${p.floors}階建て (+R階${p.hasPH ? ", +PH階" : ""}) / ${
+              p.sections
+            }工区`;
+
+      html += `
+                <div class="project-card cursor-pointer hover:bg-blue-50 dark:hover:bg-slate-600 transition-colors bg-slate-50 dark:bg-slate-700/50 border border-slate-200 dark:border-slate-600 p-3 rounded-lg flex flex-col justify-between gap-3 h-full" data-id="${p.id}">
+                    <div class="project-card-content" data-id="${p.id}">
+                        <h4 class="font-bold text-slate-900 dark:text-slate-100 mb-1">${p.name}</h4>
+                        <p class="text-sm text-slate-600 dark:text-slate-400">${description}</p>
+                    </div>
+                    <div class="grid grid-cols-4 gap-2 w-full">
+                        <button data-id="${p.id}" class="select-project-btn btn btn-primary text-xs px-1 py-2 flex justify-center items-center">選択</button>
+                        <button data-id="${p.id}" class="edit-project-btn btn btn-neutral text-xs px-1 py-2 flex justify-center items-center">編集</button>
+                        <button data-id="${p.id}" class="duplicate-project-btn btn btn-secondary text-xs px-1 py-2 flex justify-center items-center" title="複製">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                        </button>
+                        <button data-id="${p.id}" class="delete-project-btn btn btn-danger text-xs px-1 py-2 flex justify-center items-center">削除</button>
+                    </div>
+                </div>`;
+    });
+    html += `</div></section>`;
+  }
+
+  // 4. グループ化されていないプロジェクトのHTML生成
+  if (unGroupedProjects.length > 0) {
+    if (Object.keys(groupedProjects).length > 0) {
+      html += `<h3 class="text-lg font-semibold text-slate-700 dark:text-slate-300 my-4 border-t pt-4">物件名未設定の工事</h3>`;
+    }
+
+    html += `<div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">`;
+
+    unGroupedProjects.forEach((p) => {
+      let description =
+        p.mode === "advanced"
+          ? `${p.customLevels.length}階層 / ${p.customAreas.length}エリア`
+          : `${p.floors}階建て (+R階${p.hasPH ? ", +PH階" : ""}) / ${
+              p.sections
+            }工区`;
+
+      html += `
+                <div class="project-card cursor-pointer hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-4 rounded-lg flex flex-col justify-between gap-3 h-full shadow-sm" data-id="${p.id}">
+                    <div class="project-card-content" data-id="${p.id}">
+                        <h4 class="font-bold text-lg text-slate-900 dark:text-slate-100 mb-1">${p.name}</h4>
+                        <p class="text-sm text-slate-700 dark:text-slate-300">${description}</p>
+                    </div>
+                    <div class="grid grid-cols-4 gap-2 w-full">
+                        <button data-id="${p.id}" class="select-project-btn btn btn-primary text-xs px-1 py-2 flex justify-center items-center">選択</button>
+                        <button data-id="${p.id}" class="edit-project-btn btn btn-secondary text-xs px-1 py-2 flex justify-center items-center">編集</button>
+                        <button data-id="${p.id}" class="duplicate-project-btn btn btn-secondary text-xs px-1 py-2 flex justify-center items-center" title="複製">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                        </button>
+                        <button data-id="${p.id}" class="delete-project-btn btn btn-danger text-xs px-1 py-2 flex justify-center items-center">削除</button>
+                    </div>
+                </div>`;
+    });
+
+    html += `</div>`;
+  }
+
+  container.innerHTML = html;
+
+  // ▼▼▼ 5. イベントリスナーの設定 (描画後すぐに実行) ▼▼▼
+
+  // 各ボタンのイベント設定ヘルパー
+  const addListener = (selector, callback) => {
+    if (!callback) return;
+    container.querySelectorAll(selector).forEach((btn) => {
+      btn.addEventListener("click", (e) => {
+        e.stopPropagation(); // 親要素（カードクリック）への伝播を止める
+        const id = btn.dataset.id || btn.dataset.propertyName;
+        callback(id);
+      });
+    });
+  };
+
+  addListener(".select-project-btn", callbacks.onSelect);
+  addListener(".edit-project-btn", callbacks.onEdit);
+  addListener(".duplicate-project-btn", callbacks.onDuplicate);
+  addListener(".delete-project-btn", callbacks.onDelete);
+  addListener(".edit-group-btn", callbacks.onGroupEdit);
+  addListener(".show-aggregated-results-btn", callbacks.onGroupAggregate);
+
+  // カード自体のクリック（プロジェクト選択）
+  if (callbacks.onSelect) {
+    container.querySelectorAll(".project-card-content").forEach((div) => {
+      div.addEventListener("click", () => {
+        callbacks.onSelect(div.dataset.id);
+      });
+    });
+  }
+};
+
+/**
+ * カスタム入力フィールド（階層・エリア名）を動的に生成する
+ * ※ openEditProjectModal から呼ばれるヘルパー関数
+ */
+export function generateCustomInputFields(
+  count,
+  container,
+  baseId,
+  cacheArray,
+) {
+  if (!container) return;
+  container.innerHTML = "";
+
+  for (let i = 0; i < count; i++) {
+    const wrapper = document.createElement("div");
+    wrapper.className = "flex items-center gap-2 mb-2";
+
+    const label = document.createElement("span");
+    label.className = "text-sm text-slate-600 dark:text-slate-400 w-8";
+    label.textContent = `${i + 1}:`;
+
+    const input = document.createElement("input");
+    input.type = "text";
+    input.id = `${baseId}-${i}`;
+    input.className =
+      "input-field flex-1 px-3 py-2 bg-slate-50 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all text-slate-800 dark:text-slate-100";
+    input.placeholder = "名称を入力";
+
+    // キャッシュから値を復元
+    input.value = cacheArray[i] || "";
+
+    // 入力時にキャッシュを更新
+    input.addEventListener("input", (e) => {
+      cacheArray[i] = e.target.value;
+    });
+
+    wrapper.appendChild(label);
+    wrapper.appendChild(input);
+    container.appendChild(wrapper);
+  }
+}
+
+/**
+ * プロジェクト編集モーダルを開く
+ */
+export const openEditProjectModal = (project) => {
+  // 1. 各入力欄への値セット (getElementByIdを使用)
+  const setVal = (id, val) => {
+    const el = document.getElementById(id);
+    if (el) el.value = val;
+  };
+  const setCheck = (id, val) => {
+    const el = document.getElementById(id);
+    if (el) el.checked = val;
+  };
+
+  setVal("edit-project-id", project.id);
+  setVal("edit-project-name", project.name);
+  setVal("edit-property-name", project.propertyName || "");
+
+  const isAdvanced = project.mode === "advanced";
+
+  // 表示切り替え
+  const toggleWrapper = document.getElementById("edit-advanced-toggle-wrapper");
+  const simpleSettings = document.getElementById(
+    "edit-simple-project-settings",
+  );
+  const advancedSettings = document.getElementById(
+    "edit-advanced-project-settings",
+  );
+
+  if (toggleWrapper) toggleWrapper.classList.add("hidden"); // 編集時はモード切替不可
+  if (simpleSettings) simpleSettings.classList.toggle("hidden", isAdvanced);
+  if (advancedSettings)
+    advancedSettings.classList.toggle("hidden", !isAdvanced);
+
+  if (isAdvanced) {
+    // キャッシュの更新 (ui.js内の変数を直接更新)
+    // ※ levelNameCache, areaNameCache は ui.js 上部で let 定義されている前提
+    // もし const で再代入できない場合は、中身を入れ替える処理が必要ですが、
+    // let で定義されていれば以下のように配列ごと更新してもOK（ただしモジュール変数の書き換えに注意）
+
+    // 安全策：配列の中身を入れ替える
+    levelNameCache.length = 0;
+    levelNameCache.push(...project.customLevels);
+
+    areaNameCache.length = 0;
+    areaNameCache.push(...project.customAreas);
+
+    setVal("edit-custom-levels-count", project.customLevels.length);
+    setVal("edit-custom-areas-count", project.customAreas.length);
+
+    const levelsContainer = document.getElementById(
+      "edit-custom-levels-container",
+    );
+    const areasContainer = document.getElementById(
+      "edit-custom-areas-container",
+    );
+
+    generateCustomInputFields(
+      project.customLevels.length,
+      levelsContainer,
+      "edit-level",
+      levelNameCache,
+    );
+    generateCustomInputFields(
+      project.customAreas.length,
+      areasContainer,
+      "edit-area",
+      areaNameCache,
+    );
+  } else {
+    setVal("edit-project-floors", project.floors);
+    setVal("edit-project-sections", project.sections);
+    setCheck("edit-project-has-ph", project.hasPH);
+  }
+
+  const modal = document.getElementById("edit-project-modal");
+  openModal(modal);
+};
