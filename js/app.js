@@ -2373,6 +2373,16 @@ document.addEventListener("DOMContentLoaded", () => {
     renderProjectList({
       // --- 選択 ---
       onSelect: (id) => {
+        // ▼▼▼ 修正：IDの型合わせ ▼▼▼
+        // データ内のIDが数値か文字列か判定して合わせる
+        const originalProject = state.projects.find((p) => p.id == id); // ここは緩い比較(==)で探す
+        if (originalProject) {
+          state.currentProjectId = originalProject.id; // 正しい型のIDをセット
+        } else {
+          // 見つからない場合はそのまま（あるいはエラー処理）
+          state.currentProjectId = id;
+        }
+        // ▲▲▲ 修正ここまで ▲▲▲
         // プロジェクト選択時の処理
         resetMemberForm();
         state.sort = {}; // ソートリセット
