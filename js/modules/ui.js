@@ -2305,15 +2305,15 @@ export const renderProjectList = (callbacks = {}) => {
 
   container.innerHTML = html;
 
-  // ▼▼▼ 5. イベントリスナーの設定 (描画後すぐに実行) ▼▼▼
+  // ▼▼▼ 5. イベントリスナーの設定 (デバッグログ付き) ▼▼▼
 
-  // 各ボタンのイベント設定ヘルパー
   const addListener = (selector, callback) => {
     if (!callback) return;
     container.querySelectorAll(selector).forEach((btn) => {
       btn.addEventListener("click", (e) => {
-        e.stopPropagation(); // 親要素（カードクリック）への伝播を止める
+        e.stopPropagation();
         const id = btn.dataset.id || btn.dataset.propertyName;
+        console.log(`[DEBUG] Button clicked: ${selector}, ID: ${id}`); // ★ログ
         callback(id);
       });
     });
@@ -2328,14 +2328,34 @@ export const renderProjectList = (callbacks = {}) => {
 
   // カード自体のクリック（プロジェクト選択）
   if (callbacks.onSelect) {
-    container.querySelectorAll(".project-card-content").forEach((div) => {
-      div.addEventListener("click", () => {
-        callbacks.onSelect(div.dataset.id);
+    console.log("[DEBUG] Adding click listeners to cards..."); // ★ログ
+
+    const cards = container.querySelectorAll(".project-card");
+    console.log(`[DEBUG] Found ${cards.length} cards.`); // ★ログ
+
+    cards.forEach((card) => {
+      card.addEventListener("click", (e) => {
+        console.log("[DEBUG] Card clicked!", e.target); // ★ログ
+
+        // ボタンが押された場合は無視（念のため）
+        if (e.target.closest("button")) {
+          console.log("[DEBUG] Clicked on button, ignoring card click."); // ★ログ
+          return;
+        }
+
+        const id = card.dataset.id;
+        console.log(`[DEBUG] Card ID: ${id} (type: ${typeof id})`); // ★ログ
+
+        if (id) {
+          console.log("[DEBUG] Calling callbacks.onSelect..."); // ★ログ
+          callbacks.onSelect(id);
+        } else {
+          console.error("[DEBUG] Error: Card has no ID!"); // ★ログ
+        }
       });
     });
   }
 };
-
 /**
  * カスタム入力フィールド（階層・エリア名）を動的に生成する
  * ※ openEditProjectModal から呼ばれるヘルパー関数

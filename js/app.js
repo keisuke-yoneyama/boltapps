@@ -2373,21 +2373,35 @@ document.addEventListener("DOMContentLoaded", () => {
     renderProjectList({
       // --- 選択 ---
       onSelect: (id) => {
-        // ▼▼▼ 修正：IDの型合わせ ▼▼▼
-        // データ内のIDが数値か文字列か判定して合わせる
-        const originalProject = state.projects.find((p) => p.id == id); // ここは緩い比較(==)で探す
+        console.log(`[DEBUG] app.js: onSelect called with ID: ${id}`); // ★ログ
+
+        // プロジェクト一覧の状態を確認
+        console.log("[DEBUG] Current projects in state:", state.projects); // ★ログ
+
+        // IDの型合わせと検索
+        // id は文字列で来るので、数値と比較するために == (緩い比較) を使う
+        const originalProject = state.projects.find((p) => p.id == id);
+
         if (originalProject) {
-          state.currentProjectId = originalProject.id; // 正しい型のIDをセット
+          console.log("[DEBUG] Project found!", originalProject); // ★ログ
+          state.currentProjectId = originalProject.id;
         } else {
-          // 見つからない場合はそのまま（あるいはエラー処理）
+          console.warn(`[DEBUG] Project NOT found for ID: ${id}`); // ★ログ
+          // 見つからない場合でも、一旦セットしてみる（デバッグ用）
           state.currentProjectId = id;
         }
-        // ▲▲▲ 修正ここまで ▲▲▲
-        // プロジェクト選択時の処理
+
+        console.log(
+          `[DEBUG] Set currentProjectId to: ${state.currentProjectId}`,
+        ); // ★ログ
+
         resetMemberForm();
-        state.sort = {}; // ソートリセット
-        state.currentProjectId = id;
+        state.sort = {};
+
+        console.log("[DEBUG] Calling renderDetailView..."); // ★ログ
         renderDetailView();
+
+        console.log("[DEBUG] Calling switchView('detail')..."); // ★ログ
         switchView("detail");
       },
 
