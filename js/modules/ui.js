@@ -4583,12 +4583,8 @@ export const renderResults = (project) => {
 
 /**
  * 詳細画面内のタブ切り替え (Joints <-> Tally)
- * デバッグログ強化版
  */
 export const switchTab = (tabName) => {
-  console.group(`[DEBUG] switchTab called with: "${tabName}"`);
-
-  // 1. 要素の取得と確認
   const elements = {
     jointsSection: document.getElementById("joints-section"),
     tallySection: document.getElementById("tally-section"),
@@ -4600,31 +4596,15 @@ export const switchTab = (tabName) => {
     memberCard: document.getElementById("member-registration-card"),
   };
 
-  // 見つからない要素があれば警告を出す
-  Object.entries(elements).forEach(([key, element]) => {
-    if (!element) {
-      console.warn(
-        `⚠️ Warning: Element '${key}' not found in HTML (ID might be wrong)`,
-      );
-    }
-  });
-
-  // 2. スクロール位置の保存
-  try {
-    const currentScrollY = window.scrollY;
-    if (state.activeTab) {
-      if (!state.scrollPositions) state.scrollPositions = {}; // 安全策
-      state.scrollPositions[state.activeTab] = currentScrollY;
-      console.log(
-        `   - Saved scroll position for ${state.activeTab}: ${currentScrollY}`,
-      );
-    }
-    state.activeTab = tabName;
-  } catch (err) {
-    console.error("❌ Error saving scroll position:", err);
+  // スクロール位置保存
+  const currentScrollY = window.scrollY;
+  if (state.activeTab) {
+    if (!state.scrollPositions) state.scrollPositions = {};
+    state.scrollPositions[state.activeTab] = currentScrollY;
   }
+  state.activeTab = tabName;
 
-  // 3. タブのアクティブ状態リセット
+  // タブのアクティブ状態リセット
   [
     elements.navTabJoints,
     elements.navTabTally,
@@ -4634,70 +4614,43 @@ export const switchTab = (tabName) => {
     if (tab) tab.classList.remove("active");
   });
 
-  // 4. 表示切り替えロジック
   if (tabName === "joints") {
-    console.log("   - Switching to JOINTS tab");
-
-    if (elements.jointsSection) {
+    if (elements.jointsSection)
       elements.jointsSection.classList.remove("hidden");
-    } else {
-      console.error("❌ CRITICAL: 'joints-section' container missing!");
-    }
-
-    // 内部セクション表示
     if (elements.settingsCard) elements.settingsCard.classList.remove("hidden");
     if (elements.memberCard) elements.memberCard.classList.remove("hidden");
-
-    // 集計表を隠す
     if (elements.tallySection) elements.tallySection.classList.add("hidden");
 
-    // タブのアクティブ化
     if (elements.navTabJoints) elements.navTabJoints.classList.add("active");
     if (elements.mobileNavTabJoints)
       elements.mobileNavTabJoints.classList.add("active");
   } else if (tabName === "tally") {
-    console.log("   - Switching to TALLY tab");
-
     if (elements.jointsSection) elements.jointsSection.classList.add("hidden");
-
     if (elements.settingsCard) elements.settingsCard.classList.add("hidden");
     if (elements.memberCard) elements.memberCard.classList.add("hidden");
-
-    if (elements.tallySection) {
-      elements.tallySection.classList.remove("hidden");
-    } else {
-      console.error("❌ CRITICAL: 'tally-section' container missing!");
-    }
+    if (elements.tallySection) elements.tallySection.classList.remove("hidden");
 
     if (elements.navTabTally) elements.navTabTally.classList.add("active");
     if (elements.mobileNavTabTally)
       elements.mobileNavTabTally.classList.add("active");
   }
 
-  // 5. スクロール位置の復元
+  // スクロール位置復元
   const newScrollY =
     (state.scrollPositions && state.scrollPositions[tabName]) || 0;
   setTimeout(() => {
     window.scrollTo(0, newScrollY);
   }, 0);
 
-  // 6. FABの更新
   if (typeof updateQuickNavVisibility === "function") {
     updateQuickNavVisibility();
   }
-
-  console.log("[DEBUG] switchTab finished.");
-  console.groupEnd();
 };
 
 /**
  * 画面表示を切り替える (一覧画面 <-> 詳細画面)
- * ナビゲーション表示修正版
  */
 export const switchView = (viewName) => {
-  console.group(`[DEBUG] switchView called with: "${viewName}"`);
-
-  // 1. メイン画面の要素取得
   const viewList =
     document.getElementById("view-project-list") ||
     document.getElementById("project-list-view");
@@ -4705,66 +4658,44 @@ export const switchView = (viewName) => {
     document.getElementById("view-project-detail") ||
     document.getElementById("project-detail-view");
 
-  // 2. ナビゲーション関連の要素取得
-  const navElements = {
-    fixedNav: document.getElementById("fixed-nav"),
-    navListContext: document.getElementById("nav-list-context"),
-    navDetailContext: document.getElementById("nav-detail-context"),
-    navDetailButtons: document.getElementById("nav-detail-buttons"), // PC用タブ
-    mobileNavDetailButtons: document.getElementById(
-      "mobile-nav-detail-buttons",
-    ), // モバイル用タブ
-    navProjectTitle: document.getElementById("nav-project-title"),
-  };
-
-  // 要素の存在チェックログ
-  Object.entries(navElements).forEach(([key, el]) => {
-    if (!el) console.warn(`⚠️ Warning: Element '${key}' not found in HTML.`);
-  });
-
-  if (!viewList || !viewDetail) {
-    console.error("❌ CRITICAL: Main view elements NOT found.");
-    console.groupEnd();
-    return;
-  }
+  if (!viewList || !viewDetail) return;
 
   // スクロールリセット
   window.scrollTo(0, 0);
 
-  if (viewName === "detail") {
-    console.log("➡️ Action: Switching to DETAIL view");
+  // ナビゲーション要素
+  const navElements = {
+    fixedNav: document.getElementById("fixed-nav"),
+    navListContext: document.getElementById("nav-list-context"),
+    navDetailContext: document.getElementById("nav-detail-context"),
+    navDetailButtons: document.getElementById("nav-detail-buttons"),
+    mobileNavDetailButtons: document.getElementById(
+      "mobile-nav-detail-buttons",
+    ),
+    navProjectTitle: document.getElementById("nav-project-title"),
+  };
 
-    // メイン画面の切り替え
+  if (viewName === "detail") {
+    // リストを隠す
     viewList.classList.add("hidden");
     viewList.style.display = "none";
+    // 詳細を表示
     viewDetail.classList.remove("hidden");
     viewDetail.style.display = "block";
 
-    // --- ナビゲーションバーの制御 ---
-    console.log("   - Updating Navigation for Detail View...");
-
-    // 親ナビゲーションを表示
+    // ナビゲーション制御
     if (navElements.fixedNav) navElements.fixedNav.classList.remove("hidden");
-
-    // リスト用パーツを隠す
     if (navElements.navListContext)
       navElements.navListContext.classList.add("hidden");
-
-    // 詳細用パーツ(戻るボタン等)を表示
     if (navElements.navDetailContext)
       navElements.navDetailContext.classList.remove("hidden");
 
-    // PC用タブボタンを表示 (hiddenを消し、flexをつける)
     if (navElements.navDetailButtons) {
       navElements.navDetailButtons.classList.remove("hidden");
       navElements.navDetailButtons.classList.add("flex");
-      console.log("   - Showed PC Tabs (nav-detail-buttons)");
     }
-
-    // モバイル用タブボタンを表示
     if (navElements.mobileNavDetailButtons) {
       navElements.mobileNavDetailButtons.classList.remove("hidden");
-      console.log("   - Showed Mobile Tabs (mobile-nav-detail-buttons)");
     }
 
     // タイトル更新
@@ -4773,28 +4704,24 @@ export const switchView = (viewName) => {
       navElements.navProjectTitle.textContent = project.name;
     }
 
-    // デフォルトタブへ
     switchTab("joints");
 
-    // FAB表示更新
     if (typeof updateQuickNavVisibility === "function")
       updateQuickNavVisibility();
   } else {
-    console.log("⬅️ Action: Switching to LIST view");
-
-    // メイン画面の切り替え
+    // リストを表示
     viewList.classList.remove("hidden");
     viewList.style.display = "block";
+    // 詳細を隠す
     viewDetail.classList.add("hidden");
     viewDetail.style.display = "none";
 
-    // --- ナビゲーションバーの制御 ---
+    // ナビゲーション制御
     if (navElements.navListContext)
       navElements.navListContext.classList.remove("hidden");
     if (navElements.navDetailContext)
       navElements.navDetailContext.classList.add("hidden");
 
-    // タブボタンを隠す
     if (navElements.navDetailButtons) {
       navElements.navDetailButtons.classList.add("hidden");
       navElements.navDetailButtons.classList.remove("flex");
@@ -4803,76 +4730,47 @@ export const switchView = (viewName) => {
       navElements.mobileNavDetailButtons.classList.add("hidden");
     }
 
-    // FABリセットなど
+    // FAB等を隠す
     const quickNav = document.getElementById("quick-nav-container");
     if (quickNav) quickNav.classList.add("hidden");
 
     state.currentProjectId = null;
   }
-
-  console.groupEnd();
 };
 
 /**
  * 詳細画面全体を描画する
  */
 export const renderDetailView = () => {
-  console.log(
-    `[DEBUG] renderDetailView called. currentProjectId: ${state.currentProjectId}`,
-  ); // ★ログ
-
-  // プロジェクト検索の確認
   const project = state.projects.find((p) => p.id === state.currentProjectId);
 
   if (!project) {
-    console.error(
-      "[DEBUG] Project NOT found in ui.js state! Calling switchView('list').",
-    ); // ★重要ログ
-    console.log(
-      "[DEBUG] Available projects in ui.js state:",
-      state.projects.map((p) => p.id),
-    );
     switchView("list");
     return;
   }
 
-  console.log(`[DEBUG] Project found in ui.js: ${project.name}`); // ★ログ
-
-  // タイトル更新
   const navProjectTitle = document.getElementById("nav-project-title");
   if (navProjectTitle) navProjectTitle.textContent = project.name;
 
-  try {
-    console.log("[DEBUG] Rendering Joints List...");
-    renderJointsList(project);
+  renderJointsList(project);
+  renderMemberLists(project);
 
-    console.log("[DEBUG] Rendering Member Lists...");
-    renderMemberLists(project);
-
-    console.log("[DEBUG] Setting up static levels...");
-    const staticLevelsContainer = document.getElementById(
-      "add-member-levels-container",
-    );
-    if (staticLevelsContainer) {
-      staticLevelsContainer.innerHTML = "";
-      const levels = getProjectLevels(project);
-      levels.forEach((lvl) => {
-        const label = document.createElement("label");
-        label.className =
-          "flex items-center gap-2 text-sm cursor-pointer text-slate-700 dark:text-slate-300";
-        label.innerHTML = `<input type="checkbox" value="${lvl.id}" class="static-level-checkbox h-4 w-4 text-blue-600 rounded border-gray-300 focus:ring-yellow-500"> ${lvl.label}`;
-        staticLevelsContainer.appendChild(label);
-      });
-    }
-
-    console.log("[DEBUG] Rendering Tally Sheet...");
-    renderTallySheet(project);
-
-    console.log("[DEBUG] Rendering Results...");
-    renderResults(project);
-
-    console.log("[DEBUG] renderDetailView finished successfully.");
-  } catch (err) {
-    console.error("[DEBUG] Error inside renderDetailView:", err);
+  // 常設フォームの階層チェックボックス
+  const staticLevelsContainer = document.getElementById(
+    "add-member-levels-container",
+  );
+  if (staticLevelsContainer) {
+    staticLevelsContainer.innerHTML = "";
+    const levels = getProjectLevels(project);
+    levels.forEach((lvl) => {
+      const label = document.createElement("label");
+      label.className =
+        "flex items-center gap-2 text-sm cursor-pointer text-slate-700 dark:text-slate-300";
+      label.innerHTML = `<input type="checkbox" value="${lvl.id}" class="static-level-checkbox h-4 w-4 text-blue-600 rounded border-gray-300 focus:ring-yellow-500"> ${lvl.label}`;
+      staticLevelsContainer.appendChild(label);
+    });
   }
+
+  renderTallySheet(project);
+  renderResults(project);
 };
