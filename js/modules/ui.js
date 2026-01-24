@@ -7,6 +7,7 @@ import {
   boltSort,
   aggregateByFloor,
   calculateAggregatedData,
+  calculateTempBoltResults,
 } from "./calculator.js";
 
 // 並び順の定義（定数として外に出しました）
@@ -1750,4 +1751,278 @@ export const renderOrderDetails = (container, project, resultsByLocation) => {
     console.error("renderOrderDetailsエラー:", err);
     container.innerHTML = `<div class="p-4 bg-red-100 text-red-700">表示エラー: ${err.message}</div>`;
   }
+};
+
+/**
+ * 仮ボルト注文明細のレンダリング関数
+ */
+export const renderTempOrderDetails = (container, project) => {
+  if (!container || !project) return;
+
+  container.innerHTML = ""; // クリア
+
+  // stateはui.js内でimportされているので直接参照可能
+  const viewMode = state.tempOrderDetailsView || "section";
+  const toggleButtonText =
+    viewMode === "location"
+      ? "エリア・フロア別表示に切替"
+      : "フロア工区別表示に切替";
+
+  // ▼▼▼ 工区まとめ設定（チェックボックスとグループ化単位） ▼▼▼
+  let settingsHtml = "";
+  if (viewMode === "section") {
+    const isGroupAll = state.tempOrderDetailsGroupAll;
+    const groupKey = state.tempOrderDetailsGroupKey || "section"; // 'section' or 'floor'
+
+    const disabledClass = isGroupAll ? "opacity-50 pointer-events-none" : "";
+
+    settingsHtml = `
+                <div class="flex items-center gap-3 bg-white dark:bg-slate-700 px-3 py-2 rounded-md border border-slate-300 dark:border-slate-600 shadow-sm">
+                    <label class="flex items-center gap-2 cursor-pointer text-sm font-medium text-slate-700 dark:text-slate-300">
+                        <input type="checkbox" id="temp-order-group-all-checkbox" class="h-4 w-4 rounded border-gray-300 text-green-600 focus:ring-green-500" ${
+                          isGroupAll ? "checked" : ""
+                        }>
+                        <span>工区まとめ (全工区合算)</span>
+                    </label>
+                    <div class="h-4 w-px bg-slate-300 dark:bg-slate-500 mx-1"></div>
+                    <div class="flex items-center gap-2 text-sm ${disabledClass}" id="temp-order-group-key-container">
+                        <span class="text-slate-600 dark:text-slate-400 font-normal">グループ化:</span>
+                        <label class="inline-flex items-center cursor-pointer">
+                            <input type="radio" name="temp-order-group-key" value="section" class="text-green-600 focus:ring-green-500" ${
+                              groupKey === "section" ? "checked" : ""
+                            }>
+                            <span class="ml-1 text-slate-700 dark:text-slate-300">工区ごと</span>
+                        </label>
+                        <label class="inline-flex items-center cursor-pointer">
+                            <input type="radio" name="temp-order-group-key" value="floor" class="text-green-600 focus:ring-green-500" ${
+                              groupKey === "floor" ? "checked" : ""
+                            }>
+                            <span class="ml-1 text-slate-700 dark:text-slate-300">フロアごと</span>
+                        </label>
+                    </div>
+                </div>
+             `;
+  }
+
+  const headerHtml = `
+        <div class="flex flex-col sm:flex-row justify-between sm:items-center mt-8 mb-4 border-b-2 border-green-400 pb-2 gap-3">
+            <h2 class="text-2xl font-bold text-slate-900 dark:text-slate-100">仮ボルト注文明細</h2>
+            <div class="flex flex-wrap gap-2 items-center self-end">
+                ${settingsHtml}
+                <button id="toggle-temp-order-view-btn" class="px-3 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 rounded text-sm font-medium transition-colors border border-slate-300 dark:border-slate-600">${toggleButtonText}</button>
+            </div>
+        </div>`;
+
+  // データ計算
+  const { resultsByLocation } = calculateTempBoltResults(project);
+
+  // 表示対象のロケーションIDを特定
+  const targetLocationIds = new Set();
+  if (project.mode === "advanced") {
+    project.customLevels.forEach((level) => {
+      if (state.activeTallyLevel !== "all" && state.activeTallyLevel !== level)
+        return;
+      project.customAreas.forEach((area) =>
+        targetLocationIds.add(`${level}-${area}`),
+      );
+    });
+  } else {
+    for (let f = 2; f <= project.floors; f++) {
+      if (
+        state.activeTallyLevel !== "all" &&
+        state.activeTallyLevel !== f.toString()
+      )
+        continue;
+      for (let s = 1; s <= project.sections; s++)
+        targetLocationIds.add(`${f}-${s}`);
+    }
+    if (state.activeTallyLevel === "all" || state.activeTallyLevel === "R") {
+      for (let s = 1; s <= project.sections; s++)
+        targetLocationIds.add(`R-${s}`);
+    }
+    if (project.hasPH) {
+      if (state.activeTallyLevel === "all" || state.activeTallyLevel === "PH") {
+        for (let s = 1; s <= project.sections; s++)
+          targetLocationIds.add(`PH-${s}`);
+      }
+    }
+  }
+
+  // テーブル生成用ヘルパー
+  const createTable = (title, data) => {
+    if (Object.keys(data).length === 0) return "";
+
+    let body = "";
+    // サイズ順にソート（boltSortを利用）
+    Object.keys(data)
+      .sort(boltSort)
+      .forEach((size) => {
+        const count = data[size];
+        body += `
+                <tr class="hover:bg-green-50 dark:hover:bg-slate-700/50">
+                    <td class="px-4 py-2 border border-green-200 dark:border-slate-700 text-center">${size}</td>
+                    <td class="px-4 py-2 border border-green-200 dark:border-slate-700 text-center">${count.toLocaleString()}</td>
+                </tr>`;
+      });
+
+    return `
+            <div class="min-w-[200px] max-w-full flex-grow bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
+                <h4 class="text-sm font-bold bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 px-4 py-2 border-b border-green-200 dark:border-slate-700">${title}</h4>
+                <table class="text-sm border-collapse w-full">
+                    <thead class="bg-green-50 dark:bg-slate-700 text-xs text-green-800 dark:text-green-200">
+                        <tr>
+                            <th class="px-4 py-2 border border-green-200 dark:border-slate-600 text-center w-1/2">サイズ</th>
+                            <th class="px-4 py-2 border border-green-200 dark:border-slate-600 text-center w-1/2">本数</th>
+                        </tr>
+                    </thead>
+                    <tbody class="dark:bg-slate-800">${body}</tbody>
+                </table>
+            </div>`;
+  };
+
+  let contentHtml = "";
+  let hasContent = false;
+
+  if (viewMode === "location") {
+    // エリア・フロア別
+    targetLocationIds.forEach((locId) => {
+      let label = locId;
+      if (project.mode === "advanced") {
+        label = locId.replace("-", " - ");
+      } else {
+        const parts = locId.split("-");
+        if (["R", "PH"].includes(parts[0]))
+          label = `${parts[0]}階 ${parts[1]}工区`;
+        else label = `${parts[0]}階 ${parts[1]}工区`;
+      }
+
+      const locData = resultsByLocation[locId];
+      if (locData) {
+        const sizeCounts = {};
+        let total = 0;
+        Object.keys(locData).forEach((size) => {
+          if (locData[size].total > 0) {
+            sizeCounts[size] = locData[size].total;
+            total += locData[size].total;
+          }
+        });
+
+        if (total > 0) {
+          contentHtml += createTable(label, sizeCounts);
+          hasContent = true;
+        }
+      }
+    });
+  } else {
+    // フロア/工区別 (Group View)
+    const resultsByGroup = {};
+
+    const getGroupName = (locationId) => {
+      if (state.tempOrderDetailsGroupAll) {
+        return "全工区合計";
+      }
+
+      const groupKey = state.tempOrderDetailsGroupKey || "section";
+
+      if (project.mode === "advanced") {
+        const sortedLevels = [...project.customLevels].sort(
+          (a, b) => b.length - a.length,
+        );
+        for (const level of sortedLevels) {
+          if (locationId.startsWith(level + "-")) {
+            // const area = locationId.substring(level.length + 1); // 未使用変数削除
+            if (groupKey === "floor") {
+              return level;
+            } else {
+              return locationId.substring(level.length + 1); // area
+            }
+          }
+        }
+        return locationId;
+      } else {
+        const parts = locationId.split("-");
+        if (groupKey === "floor") {
+          return `${parts[0]}階`;
+        } else {
+          return `${parts[1]}工区`;
+        }
+      }
+    };
+
+    targetLocationIds.forEach((locId) => {
+      const groupName = getGroupName(locId);
+      const locData = resultsByLocation[locId];
+      if (locData) {
+        if (!resultsByGroup[groupName]) resultsByGroup[groupName] = {};
+        Object.keys(locData).forEach((size) => {
+          if (locData[size].total > 0) {
+            resultsByGroup[groupName][size] =
+              (resultsByGroup[groupName][size] || 0) + locData[size].total;
+          }
+        });
+      }
+    });
+
+    Object.keys(resultsByGroup)
+      .sort((a, b) => {
+        const numA = parseInt(a.replace(/\D/g, "")) || 0;
+        const numB = parseInt(b.replace(/\D/g, "")) || 0;
+        if (numA !== numB) return numA - numB;
+        return a.localeCompare(b);
+      })
+      .forEach((groupName) => {
+        if (Object.keys(resultsByGroup[groupName]).length > 0) {
+          contentHtml += createTable(groupName, resultsByGroup[groupName]);
+          hasContent = true;
+        }
+      });
+  }
+
+  // ★ HTMLを描画
+  if (hasContent) {
+    container.innerHTML =
+      headerHtml +
+      `<div class="flex flex-wrap gap-4 items-start content-start">${contentHtml}</div>`;
+  } else {
+    container.innerHTML =
+      headerHtml +
+      '<p class="text-gray-500 w-full text-center py-4">表示対象の仮ボルトはありません。</p>';
+  }
+
+  // ▼▼▼ イベントリスナーの再設定 (DOM生成直後に実行) ▼▼▼
+
+  // 1. 表示モード切替ボタン
+  const toggleBtn = container.querySelector("#toggle-temp-order-view-btn");
+  if (toggleBtn) {
+    toggleBtn.addEventListener("click", () => {
+      // stateを更新して再描画
+      state.tempOrderDetailsView =
+        viewMode === "location" ? "section" : "location";
+      renderTempOrderDetails(container, project);
+    });
+  }
+
+  // 2. 「全工区まとめ」チェックボックス
+  const groupAllCheckbox = container.querySelector(
+    "#temp-order-group-all-checkbox",
+  );
+  if (groupAllCheckbox) {
+    groupAllCheckbox.addEventListener("change", (e) => {
+      state.tempOrderDetailsGroupAll = e.target.checked;
+      renderTempOrderDetails(container, project);
+    });
+  }
+
+  // 3. グループ化単位のラジオボタン
+  const groupKeyRadios = container.querySelectorAll(
+    'input[name="temp-order-group-key"]',
+  );
+  groupKeyRadios.forEach((radio) => {
+    radio.addEventListener("change", (e) => {
+      if (e.target.checked) {
+        state.tempOrderDetailsGroupKey = e.target.value;
+        renderTempOrderDetails(container, project);
+      }
+    });
+  });
 };
