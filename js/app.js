@@ -48,6 +48,8 @@ import {
   // newComplexSplCache,
   // resetEditComplexSplCache,
   // resetNewComplexSplCache,
+  renderShopTempBoltResults,
+  updateTallySheetCalculations,
   renderColorPalette,
   updateJointFormUI,
   openEditModal,
@@ -68,6 +70,10 @@ import {
   renderJointsList,
   openEditMemberModal,
   renderMemberLists,
+  renderResults,
+  renderTallySheet,
+  switchView,
+  renderDetailView,
 } from "./modules/ui.js";
 
 import {
@@ -1347,63 +1353,63 @@ document.addEventListener("DOMContentLoaded", () => {
   // --- UI & Modal Functions ---
 
   // ★ 修正版：画面切り替え処理（FABの非表示対応済み）
-  const switchView = (viewName) => {
-    Object.values(views).forEach((v) => v.classList.remove("active"));
-    if (views[viewName]) {
-      views[viewName].classList.add("active");
-    }
+  // const switchView = (viewName) => {
+  //   Object.values(views).forEach((v) => v.classList.remove("active"));
+  //   if (views[viewName]) {
+  //     views[viewName].classList.add("active");
+  //   }
 
-    const navDetailContext = document.getElementById("nav-detail-context");
-    const navListContext = document.getElementById("nav-list-context");
-    const navDetailButtons = document.getElementById("nav-detail-buttons");
-    const mobileNavDetailButtons = document.getElementById(
-      "mobile-nav-detail-buttons",
-    );
+  //   const navDetailContext = document.getElementById("nav-detail-context");
+  //   const navListContext = document.getElementById("nav-list-context");
+  //   const navDetailButtons = document.getElementById("nav-detail-buttons");
+  //   const mobileNavDetailButtons = document.getElementById(
+  //     "mobile-nav-detail-buttons",
+  //   );
 
-    if (viewName === "detail") {
-      fixedNav.classList.remove("hidden");
-      navListContext.classList.add("hidden");
-      navDetailContext.classList.remove("hidden");
-      navDetailButtons.classList.remove("hidden");
-      navDetailButtons.classList.add("flex");
-      mobileNavDetailButtons.classList.remove("hidden");
+  //   if (viewName === "detail") {
+  //     fixedNav.classList.remove("hidden");
+  //     navListContext.classList.add("hidden");
+  //     navDetailContext.classList.remove("hidden");
+  //     navDetailButtons.classList.remove("hidden");
+  //     navDetailButtons.classList.add("flex");
+  //     mobileNavDetailButtons.classList.remove("hidden");
 
-      const project = state.projects.find(
-        (p) => p.id === state.currentProjectId,
-      );
-      if (project) {
-        navProjectTitle.textContent = project.name;
-      }
-      switchTab("joints");
+  //     const project = state.projects.find(
+  //       (p) => p.id === state.currentProjectId,
+  //     );
+  //     if (project) {
+  //       navProjectTitle.textContent = project.name;
+  //     }
+  //     switchTab("joints");
 
-      // 詳細画面に入った時にFABの表示状態を更新
-      if (typeof updateQuickNavVisibility === "function")
-        updateQuickNavVisibility();
-    } else {
-      navListContext.classList.remove("hidden");
-      navDetailContext.classList.add("hidden");
-      navDetailButtons.classList.add("hidden");
-      navDetailButtons.classList.remove("flex");
-      mobileNavDetailButtons.classList.add("hidden");
+  //     // 詳細画面に入った時にFABの表示状態を更新
+  //     if (typeof updateQuickNavVisibility === "function")
+  //       updateQuickNavVisibility();
+  //   } else {
+  //     navListContext.classList.remove("hidden");
+  //     navDetailContext.classList.add("hidden");
+  //     navDetailButtons.classList.add("hidden");
+  //     navDetailButtons.classList.remove("flex");
+  //     mobileNavDetailButtons.classList.add("hidden");
 
-      // ▼▼▼ 修正：一覧画面に戻ったらナビとFABを隠し、状態をリセット ▼▼▼
-      const quickNav = document.getElementById("quick-nav-container");
-      if (quickNav) quickNav.classList.add("hidden");
+  //     // ▼▼▼ 修正：一覧画面に戻ったらナビとFABを隠し、状態をリセット ▼▼▼
+  //     const quickNav = document.getElementById("quick-nav-container");
+  //     if (quickNav) quickNav.classList.add("hidden");
 
-      const fabContainer = document.getElementById("fab-container");
-      if (fabContainer) fabContainer.classList.add("hidden");
+  //     const fabContainer = document.getElementById("fab-container");
+  //     if (fabContainer) fabContainer.classList.add("hidden");
 
-      // メニューが開いたまま戻った場合、閉じた状態にリセットする
-      if (
-        typeof isFabOpen !== "undefined" &&
-        isFabOpen &&
-        typeof toggleFab === "function"
-      ) {
-        toggleFab();
-      }
-      // ▲▲▲ 修正ここまで ▲▲▲
-    }
-  };
+  //     // メニューが開いたまま戻った場合、閉じた状態にリセットする
+  //     if (
+  //       typeof isFabOpen !== "undefined" &&
+  //       isFabOpen &&
+  //       typeof toggleFab === "function"
+  //     ) {
+  //       toggleFab();
+  //     }
+  //     // ▲▲▲ 修正ここまで ▲▲▲
+  //   }
+  // };
   const switchTab = (tabName) => {
     const jointsSection = document.getElementById("joints-section");
     const tallySection = document.getElementById("tally-section");
@@ -3516,779 +3522,779 @@ document.addEventListener("DOMContentLoaded", () => {
   //   );
   // };
   // ★ 修正版：renderTallySheet（色バッジ対応・ヘッダー背景色削除版）
-  const renderTallySheet = (project) => {
-    if (!project) return;
-    const tallySheetContainer = document.getElementById(
-      "tally-sheet-container",
-    );
-    const tabsContainer = document.getElementById("tally-floor-tabs");
+  //   const renderTallySheet = (project) => {
+  //     if (!project) return;
+  //     const tallySheetContainer = document.getElementById(
+  //       "tally-sheet-container",
+  //     );
+  //     const tabsContainer = document.getElementById("tally-floor-tabs");
 
-    // 1. 階層タブの生成
-    const levels = getProjectLevels(project);
-    let tabsHtml = `<button class="tally-tab-btn px-3 py-1 rounded-full text-sm font-bold transition-colors border ${
-      state.activeTallyLevel === "all"
-        ? "bg-blue-600 text-white border-blue-600"
-        : "bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-300 dark:border-slate-600 hover:bg-slate-100"
-    }" data-level="all">全表示</button>`;
+  //     // 1. 階層タブの生成
+  //     const levels = getProjectLevels(project);
+  //     let tabsHtml = `<button class="tally-tab-btn px-3 py-1 rounded-full text-sm font-bold transition-colors border ${
+  //       state.activeTallyLevel === "all"
+  //         ? "bg-blue-600 text-white border-blue-600"
+  //         : "bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-300 dark:border-slate-600 hover:bg-slate-100"
+  //     }" data-level="all">全表示</button>`;
 
-    levels.forEach((lvl) => {
-      const isActive = state.activeTallyLevel === lvl.id;
-      const activeClass = isActive
-        ? "bg-blue-600 text-white border-blue-600"
-        : "bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-300 dark:border-slate-600 hover:bg-slate-100";
-      tabsHtml += `<button class="tally-tab-btn px-3 py-1 rounded-full text-sm font-bold transition-colors border ${activeClass}" data-level="${lvl.id}">${lvl.label}</button>`;
-    });
-    tabsContainer.innerHTML = tabsHtml;
+  //     levels.forEach((lvl) => {
+  //       const isActive = state.activeTallyLevel === lvl.id;
+  //       const activeClass = isActive
+  //         ? "bg-blue-600 text-white border-blue-600"
+  //         : "bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-300 dark:border-slate-600 hover:bg-slate-100";
+  //       tabsHtml += `<button class="tally-tab-btn px-3 py-1 rounded-full text-sm font-bold transition-colors border ${activeClass}" data-level="${lvl.id}">${lvl.label}</button>`;
+  //     });
+  //     tabsContainer.innerHTML = tabsHtml;
 
-    // タブクリック時の処理
-    tabsContainer.querySelectorAll(".tally-tab-btn").forEach((btn) => {
-      btn.addEventListener("click", () => {
-        state.activeTallyLevel = btn.dataset.level;
-        renderTallySheet(project);
-        renderResults(project);
-      });
-    });
+  //     // タブクリック時の処理
+  //     tabsContainer.querySelectorAll(".tally-tab-btn").forEach((btn) => {
+  //       btn.addEventListener("click", () => {
+  //         state.activeTallyLevel = btn.dataset.level;
+  //         renderTallySheet(project);
+  //         renderResults(project);
+  //       });
+  //     });
 
-    // 2. データのフィルタリング
-    const tallyList = getTallyList(project).filter((item) => {
-      if (state.activeTallyLevel === "all") return true;
-      if (!item.isMember) return true;
-      if (!item.targetLevels || item.targetLevels.length === 0) return true;
-      return item.targetLevels.includes(state.activeTallyLevel);
-    });
+  //     // 2. データのフィルタリング
+  //     const tallyList = getTallyList(project).filter((item) => {
+  //       if (state.activeTallyLevel === "all") return true;
+  //       if (!item.isMember) return true;
+  //       if (!item.targetLevels || item.targetLevels.length === 0) return true;
+  //       return item.targetLevels.includes(state.activeTallyLevel);
+  //     });
 
-    if (tallyList.length === 0) {
-      tallySheetContainer.innerHTML =
-        '<p class="text-gray-500 dark:text-gray-400">この階層に表示する部材がありません。</p>';
-      if (resultsCard) resultsCard.classList.add("hidden");
-      return;
-    }
+  //     if (tallyList.length === 0) {
+  //       tallySheetContainer.innerHTML =
+  //         '<p class="text-gray-500 dark:text-gray-400">この階層に表示する部材がありません。</p>';
+  //       if (resultsCard) resultsCard.classList.add("hidden");
+  //       return;
+  //     }
 
-    // ロケーション行のフィルタリング
-    let locations = [];
-    if (project.mode === "advanced") {
-      project.customLevels.forEach((level) => {
-        if (
-          state.activeTallyLevel !== "all" &&
-          state.activeTallyLevel !== level
-        )
-          return;
-        project.customAreas.forEach((area) =>
-          locations.push({
-            id: `${level}-${area}`,
-            label: `${level} - ${area}`,
-          }),
-        );
-      });
-    } else {
-      for (let f = 2; f <= project.floors; f++) {
-        const lvlId = f.toString();
-        if (
-          state.activeTallyLevel !== "all" &&
-          state.activeTallyLevel !== lvlId
-        )
-          continue;
-        for (let s = 1; s <= project.sections; s++)
-          locations.push({ id: `${f}-${s}`, label: `${f}階 ${s}工区` });
-      }
+  //     // ロケーション行のフィルタリング
+  //     let locations = [];
+  //     if (project.mode === "advanced") {
+  //       project.customLevels.forEach((level) => {
+  //         if (
+  //           state.activeTallyLevel !== "all" &&
+  //           state.activeTallyLevel !== level
+  //         )
+  //           return;
+  //         project.customAreas.forEach((area) =>
+  //           locations.push({
+  //             id: `${level}-${area}`,
+  //             label: `${level} - ${area}`,
+  //           }),
+  //         );
+  //       });
+  //     } else {
+  //       for (let f = 2; f <= project.floors; f++) {
+  //         const lvlId = f.toString();
+  //         if (
+  //           state.activeTallyLevel !== "all" &&
+  //           state.activeTallyLevel !== lvlId
+  //         )
+  //           continue;
+  //         for (let s = 1; s <= project.sections; s++)
+  //           locations.push({ id: `${f}-${s}`, label: `${f}階 ${s}工区` });
+  //       }
 
-      if (state.activeTallyLevel === "all" || state.activeTallyLevel === "R") {
-        for (let s = 1; s <= project.sections; s++)
-          locations.push({ id: `R-${s}`, label: `R階 ${s}工区` });
-      }
+  //       if (state.activeTallyLevel === "all" || state.activeTallyLevel === "R") {
+  //         for (let s = 1; s <= project.sections; s++)
+  //           locations.push({ id: `R-${s}`, label: `R階 ${s}工区` });
+  //       }
 
-      if (project.hasPH) {
-        if (
-          state.activeTallyLevel === "all" ||
-          state.activeTallyLevel === "PH"
-        ) {
-          for (let s = 1; s <= project.sections; s++)
-            locations.push({ id: `PH-${s}`, label: `PH階 ${s}工区` });
-        }
-      }
-    }
+  //       if (project.hasPH) {
+  //         if (
+  //           state.activeTallyLevel === "all" ||
+  //           state.activeTallyLevel === "PH"
+  //         ) {
+  //           for (let s = 1; s <= project.sections; s++)
+  //             locations.push({ id: `PH-${s}`, label: `PH階 ${s}工区` });
+  //         }
+  //       }
+  //     }
 
-    if (locations.length === 0) {
-      tallySheetContainer.innerHTML =
-        '<p class="text-gray-500 dark:text-gray-400">表示するエリアがありません。</p>';
-      if (resultsCard) resultsCard.classList.add("hidden");
-      return;
-    }
+  //     if (locations.length === 0) {
+  //       tallySheetContainer.innerHTML =
+  //         '<p class="text-gray-500 dark:text-gray-400">表示するエリアがありません。</p>';
+  //       if (resultsCard) resultsCard.classList.add("hidden");
+  //       return;
+  //     }
 
-    const typeNameMap = {
-      girder: "大梁",
-      beam: "小梁",
-      column: "本柱",
-      stud: "間柱",
-      wall_girt: "胴縁",
-      roof_purlin: "母屋",
-      other: "その他",
-    };
+  //     const typeNameMap = {
+  //       girder: "大梁",
+  //       beam: "小梁",
+  //       column: "本柱",
+  //       stud: "間柱",
+  //       wall_girt: "胴縁",
+  //       roof_purlin: "母屋",
+  //       other: "その他",
+  //     };
 
-    const locks = project.tallyLocks || {};
+  //     const locks = project.tallyLocks || {};
 
-    // ▼▼▼ 1行目：ロック用チェックボックス（修正：style属性を削除） ▼▼▼
-    const lockHeaderRow = tallyList
-      .map((item) => {
-        const isLocked = locks[item.id] || false;
-        const lockedClass = isLocked ? "locked-column" : "";
-        const j = item.joint;
-        let colorClass = "";
+  //     // ▼▼▼ 1行目：ロック用チェックボックス（修正：style属性を削除） ▼▼▼
+  //     const lockHeaderRow = tallyList
+  //       .map((item) => {
+  //         const isLocked = locks[item.id] || false;
+  //         const lockedClass = isLocked ? "locked-column" : "";
+  //         const j = item.joint;
+  //         let colorClass = "";
 
-        if (j.type === "girder")
-          colorClass = j.isPinJoint
-            ? "bg-cyan-200 text-cyan-800 border-cyan-300 dark:bg-cyan-900/50 dark:text-cyan-200 dark:border-cyan-700"
-            : "bg-blue-200 text-blue-800 border-blue-300 dark:bg-blue-900/50 dark:text-blue-200 dark:border-blue-700";
-        else if (j.type === "beam")
-          colorClass = j.isPinJoint
-            ? "bg-teal-200 text-teal-800 border-teal-300 dark:bg-teal-900/50 dark:text-teal-200 dark:border-teal-700"
-            : "bg-green-200 text-green-800 border-green-300 dark:bg-green-900/50 dark:text-green-200 dark:border-green-700";
-        else if (j.type === "column")
-          colorClass =
-            "bg-red-200 text-red-800 border-red-300 dark:bg-red-900/50 dark:text-red-200 dark:border-red-700";
-        else if (j.type === "stud")
-          colorClass = j.isPinJoint
-            ? "bg-purple-200 text-purple-800 border-purple-300 dark:bg-purple-900/50 dark:text-purple-200 dark:border-purple-700"
-            : "bg-indigo-200 text-indigo-800 border-indigo-300 dark:bg-indigo-900/50 dark:text-indigo-200 dark:border-indigo-700";
-        else if (j.type === "wall_girt")
-          colorClass =
-            "bg-gray-200 text-gray-800 border-gray-300 dark:bg-gray-800/60 dark:text-gray-200 dark:border-gray-700";
-        else if (j.type === "roof_purlin")
-          colorClass =
-            "bg-orange-200 text-orange-800 border-orange-300 dark:bg-orange-900/50 dark:text-orange-200 dark:border-orange-700";
-        else if (j.type === "other")
-          colorClass =
-            "bg-amber-200 text-amber-800 border-amber-300 dark:bg-amber-900/50 dark:text-amber-200 dark:border-amber-700";
+  //         if (j.type === "girder")
+  //           colorClass = j.isPinJoint
+  //             ? "bg-cyan-200 text-cyan-800 border-cyan-300 dark:bg-cyan-900/50 dark:text-cyan-200 dark:border-cyan-700"
+  //             : "bg-blue-200 text-blue-800 border-blue-300 dark:bg-blue-900/50 dark:text-blue-200 dark:border-blue-700";
+  //         else if (j.type === "beam")
+  //           colorClass = j.isPinJoint
+  //             ? "bg-teal-200 text-teal-800 border-teal-300 dark:bg-teal-900/50 dark:text-teal-200 dark:border-teal-700"
+  //             : "bg-green-200 text-green-800 border-green-300 dark:bg-green-900/50 dark:text-green-200 dark:border-green-700";
+  //         else if (j.type === "column")
+  //           colorClass =
+  //             "bg-red-200 text-red-800 border-red-300 dark:bg-red-900/50 dark:text-red-200 dark:border-red-700";
+  //         else if (j.type === "stud")
+  //           colorClass = j.isPinJoint
+  //             ? "bg-purple-200 text-purple-800 border-purple-300 dark:bg-purple-900/50 dark:text-purple-200 dark:border-purple-700"
+  //             : "bg-indigo-200 text-indigo-800 border-indigo-300 dark:bg-indigo-900/50 dark:text-indigo-200 dark:border-indigo-700";
+  //         else if (j.type === "wall_girt")
+  //           colorClass =
+  //             "bg-gray-200 text-gray-800 border-gray-300 dark:bg-gray-800/60 dark:text-gray-200 dark:border-gray-700";
+  //         else if (j.type === "roof_purlin")
+  //           colorClass =
+  //             "bg-orange-200 text-orange-800 border-orange-300 dark:bg-orange-900/50 dark:text-orange-200 dark:border-orange-700";
+  //         else if (j.type === "other")
+  //           colorClass =
+  //             "bg-amber-200 text-amber-800 border-amber-300 dark:bg-amber-900/50 dark:text-amber-200 dark:border-amber-700";
 
-        return `<td class="px-2 py-1 text-center border ${colorClass} ${lockedClass}" data-column-id="${
-          item.id
-        }">
-                            <input type="checkbox" class="tally-lock-checkbox h-4 w-4 rounded border-gray-300 text-blue-800 focus:ring-yellow-500" data-id="${
-                              item.id
-                            }" ${isLocked ? "checked" : ""}>
-                        </td>`;
-      })
-      .join("");
+  //         return `<td class="px-2 py-1 text-center border ${colorClass} ${lockedClass}" data-column-id="${
+  //           item.id
+  //         }">
+  //                             <input type="checkbox" class="tally-lock-checkbox h-4 w-4 rounded border-gray-300 text-blue-800 focus:ring-yellow-500" data-id="${
+  //                               item.id
+  //                             }" ${isLocked ? "checked" : ""}>
+  //                         </td>`;
+  //       })
+  //       .join("");
 
-    // ▼▼▼ 2行目：部材名（修正：style属性削除、バッジ追加） ▼▼▼
-    const headers = tallyList
-      .map((item) => {
-        const j = item.joint;
-        let typeName = typeNameMap[j.type] || "不明";
-        if (j.isPinJoint) typeName += "(ピン取り)";
-        const headerText = item.name;
-        const tooltipText = `部材: ${item.name}\n対応継手: ${j.name} (${typeName})`;
-        const isLocked = locks[item.id] || false;
-        const lockedClass = isLocked ? "locked-column" : "";
+  //     // ▼▼▼ 2行目：部材名（修正：style属性削除、バッジ追加） ▼▼▼
+  //     const headers = tallyList
+  //       .map((item) => {
+  //         const j = item.joint;
+  //         let typeName = typeNameMap[j.type] || "不明";
+  //         if (j.isPinJoint) typeName += "(ピン取り)";
+  //         const headerText = item.name;
+  //         const tooltipText = `部材: ${item.name}\n対応継手: ${j.name} (${typeName})`;
+  //         const isLocked = locks[item.id] || false;
+  //         const lockedClass = isLocked ? "locked-column" : "";
 
-        let colorClass = "";
-        if (j.type === "girder")
-          colorClass = j.isPinJoint
-            ? "bg-cyan-200 text-cyan-800 border-cyan-300 dark:bg-cyan-900/50 dark:text-cyan-200 dark:border-cyan-700"
-            : "bg-blue-200 text-blue-800 border-blue-300 dark:bg-blue-900/50 dark:text-blue-200 dark:border-blue-700";
-        else if (j.type === "beam")
-          colorClass = j.isPinJoint
-            ? "bg-teal-200 text-teal-800 border-teal-300 dark:bg-teal-900/50 dark:text-teal-200 dark:border-teal-700"
-            : "bg-green-200 text-green-800 border-green-300 dark:bg-green-900/50 dark:text-green-200 dark:border-green-700";
-        else if (j.type === "column")
-          colorClass =
-            "bg-red-200 text-red-800 border-red-300 dark:bg-red-900/50 dark:text-red-200 dark:border-red-700";
-        else if (j.type === "stud")
-          colorClass = j.isPinJoint
-            ? "bg-purple-200 text-purple-800 border-purple-300 dark:bg-purple-900/50 dark:text-purple-200 dark:border-purple-700"
-            : "bg-indigo-200 text-indigo-800 border-indigo-300 dark:bg-indigo-900/50 dark:text-indigo-200 dark:border-indigo-700";
-        else if (j.type === "wall_girt")
-          colorClass =
-            "bg-gray-200 text-gray-800 border-gray-300 dark:bg-gray-800/60 dark:text-gray-200 dark:border-gray-700";
-        else if (j.type === "roof_purlin")
-          colorClass =
-            "bg-orange-200 text-orange-800 border-orange-300 dark:bg-orange-900/50 dark:text-orange-200 dark:border-orange-700";
-        else if (j.type === "other")
-          colorClass =
-            "bg-amber-200 text-amber-800 border-amber-300 dark:bg-amber-900/50 dark:text-amber-200 dark:border-amber-700";
+  //         let colorClass = "";
+  //         if (j.type === "girder")
+  //           colorClass = j.isPinJoint
+  //             ? "bg-cyan-200 text-cyan-800 border-cyan-300 dark:bg-cyan-900/50 dark:text-cyan-200 dark:border-cyan-700"
+  //             : "bg-blue-200 text-blue-800 border-blue-300 dark:bg-blue-900/50 dark:text-blue-200 dark:border-blue-700";
+  //         else if (j.type === "beam")
+  //           colorClass = j.isPinJoint
+  //             ? "bg-teal-200 text-teal-800 border-teal-300 dark:bg-teal-900/50 dark:text-teal-200 dark:border-teal-700"
+  //             : "bg-green-200 text-green-800 border-green-300 dark:bg-green-900/50 dark:text-green-200 dark:border-green-700";
+  //         else if (j.type === "column")
+  //           colorClass =
+  //             "bg-red-200 text-red-800 border-red-300 dark:bg-red-900/50 dark:text-red-200 dark:border-red-700";
+  //         else if (j.type === "stud")
+  //           colorClass = j.isPinJoint
+  //             ? "bg-purple-200 text-purple-800 border-purple-300 dark:bg-purple-900/50 dark:text-purple-200 dark:border-purple-700"
+  //             : "bg-indigo-200 text-indigo-800 border-indigo-300 dark:bg-indigo-900/50 dark:text-indigo-200 dark:border-indigo-700";
+  //         else if (j.type === "wall_girt")
+  //           colorClass =
+  //             "bg-gray-200 text-gray-800 border-gray-300 dark:bg-gray-800/60 dark:text-gray-200 dark:border-gray-700";
+  //         else if (j.type === "roof_purlin")
+  //           colorClass =
+  //             "bg-orange-200 text-orange-800 border-orange-300 dark:bg-orange-900/50 dark:text-orange-200 dark:border-orange-700";
+  //         else if (j.type === "other")
+  //           colorClass =
+  //             "bg-amber-200 text-amber-800 border-amber-300 dark:bg-amber-900/50 dark:text-amber-200 dark:border-amber-700";
 
-        // 色設定がある場合、バッジを作成（背景色はデフォルトのまま）
-        const colorBadge = j.color
-          ? `<span class="inline-block w-3 h-3 rounded-full ml-1 border border-gray-400 align-middle" style="background-color: ${j.color};"></span>`
-          : "";
+  //         // 色設定がある場合、バッジを作成（背景色はデフォルトのまま）
+  //         const colorBadge = j.color
+  //           ? `<span class="inline-block w-3 h-3 rounded-full ml-1 border border-gray-400 align-middle" style="background-color: ${j.color};"></span>`
+  //           : "";
 
-        return `<th class="px-2 py-3 text-center border min-w-32 ${colorClass} ${lockedClass}" title="${tooltipText}" data-column-id="${item.id}">
-                        ${headerText}${colorBadge}
-                    </th>`;
-      })
-      .join("");
+  //         return `<th class="px-2 py-3 text-center border min-w-32 ${colorClass} ${lockedClass}" title="${tooltipText}" data-column-id="${item.id}">
+  //                         ${headerText}${colorBadge}
+  //                     </th>`;
+  //       })
+  //       .join("");
 
-    // ▼▼▼ 3行目：ボルトサイズ（修正：style属性を削除） ▼▼▼
-    const boltSizeHeaders = tallyList
-      .map((item) => {
-        const j = item.joint;
-        let boltSizeText = "-";
-        let tooltipText = "";
-        if (j.isComplexSpl && j.webInputs) {
-          boltSizeText = j.webInputs.map((w) => w.size || "-").join(", ");
-          tooltipText = j.webInputs
-            .map((w) => `${w.size || "サイズ未設定"}: ${w.count || 0}本`)
-            .join("\n");
-        } else {
-          const sizes = [];
-          if (j.flangeSize) sizes.push(j.flangeSize);
-          if (j.webSize) sizes.push(j.webSize);
-          if (sizes.length > 0) boltSizeText = sizes.join("・");
-          const tooltipParts = [];
-          if (j.flangeSize && j.flangeCount > 0)
-            tooltipParts.push(`フランジ: ${j.flangeCount}本`);
-          if (j.webSize && j.webCount > 0)
-            tooltipParts.push(`ウェブ: ${j.webCount}本`);
-          tooltipText = tooltipParts.join("\n");
-        }
-        const isLocked = locks[item.id] || false;
-        const lockedClass = isLocked ? "locked-column" : "";
-        let colorClass = "";
-        if (j.type === "girder")
-          colorClass = j.isPinJoint
-            ? "bg-cyan-200 text-cyan-800 border-cyan-300 dark:bg-cyan-900/50 dark:text-cyan-200 dark:border-cyan-700"
-            : "bg-blue-200 text-blue-800 border-blue-300 dark:bg-blue-900/50 dark:text-blue-200 dark:border-blue-700";
-        else if (j.type === "beam")
-          colorClass = j.isPinJoint
-            ? "bg-teal-200 text-teal-800 border-teal-300 dark:bg-teal-900/50 dark:text-teal-200 dark:border-teal-700"
-            : "bg-green-200 text-green-800 border-green-300 dark:bg-green-900/50 dark:text-green-200 dark:border-green-700";
-        else if (j.type === "column")
-          colorClass =
-            "bg-red-200 text-red-800 border-red-300 dark:bg-red-900/50 dark:text-red-200 dark:border-red-700";
-        else if (j.type === "stud")
-          colorClass = j.isPinJoint
-            ? "bg-purple-200 text-purple-800 border-purple-300 dark:bg-purple-900/50 dark:text-purple-200 dark:border-purple-700"
-            : "bg-indigo-200 text-indigo-800 border-indigo-300 dark:bg-indigo-900/50 dark:text-indigo-200 dark:border-indigo-700";
-        else if (j.type === "wall_girt")
-          colorClass =
-            "bg-gray-200 text-gray-800 border-gray-300 dark:bg-gray-800/60 dark:text-gray-200 dark:border-gray-700";
-        else if (j.type === "roof_purlin")
-          colorClass =
-            "bg-orange-200 text-orange-800 border-orange-300 dark:bg-orange-900/50 dark:text-orange-200 dark:border-orange-700";
-        else if (j.type === "other")
-          colorClass =
-            "bg-amber-200 text-amber-800 border-amber-300 dark:bg-amber-900/50 dark:text-amber-200 dark:border-amber-700";
+  //     // ▼▼▼ 3行目：ボルトサイズ（修正：style属性を削除） ▼▼▼
+  //     const boltSizeHeaders = tallyList
+  //       .map((item) => {
+  //         const j = item.joint;
+  //         let boltSizeText = "-";
+  //         let tooltipText = "";
+  //         if (j.isComplexSpl && j.webInputs) {
+  //           boltSizeText = j.webInputs.map((w) => w.size || "-").join(", ");
+  //           tooltipText = j.webInputs
+  //             .map((w) => `${w.size || "サイズ未設定"}: ${w.count || 0}本`)
+  //             .join("\n");
+  //         } else {
+  //           const sizes = [];
+  //           if (j.flangeSize) sizes.push(j.flangeSize);
+  //           if (j.webSize) sizes.push(j.webSize);
+  //           if (sizes.length > 0) boltSizeText = sizes.join("・");
+  //           const tooltipParts = [];
+  //           if (j.flangeSize && j.flangeCount > 0)
+  //             tooltipParts.push(`フランジ: ${j.flangeCount}本`);
+  //           if (j.webSize && j.webCount > 0)
+  //             tooltipParts.push(`ウェブ: ${j.webCount}本`);
+  //           tooltipText = tooltipParts.join("\n");
+  //         }
+  //         const isLocked = locks[item.id] || false;
+  //         const lockedClass = isLocked ? "locked-column" : "";
+  //         let colorClass = "";
+  //         if (j.type === "girder")
+  //           colorClass = j.isPinJoint
+  //             ? "bg-cyan-200 text-cyan-800 border-cyan-300 dark:bg-cyan-900/50 dark:text-cyan-200 dark:border-cyan-700"
+  //             : "bg-blue-200 text-blue-800 border-blue-300 dark:bg-blue-900/50 dark:text-blue-200 dark:border-blue-700";
+  //         else if (j.type === "beam")
+  //           colorClass = j.isPinJoint
+  //             ? "bg-teal-200 text-teal-800 border-teal-300 dark:bg-teal-900/50 dark:text-teal-200 dark:border-teal-700"
+  //             : "bg-green-200 text-green-800 border-green-300 dark:bg-green-900/50 dark:text-green-200 dark:border-green-700";
+  //         else if (j.type === "column")
+  //           colorClass =
+  //             "bg-red-200 text-red-800 border-red-300 dark:bg-red-900/50 dark:text-red-200 dark:border-red-700";
+  //         else if (j.type === "stud")
+  //           colorClass = j.isPinJoint
+  //             ? "bg-purple-200 text-purple-800 border-purple-300 dark:bg-purple-900/50 dark:text-purple-200 dark:border-purple-700"
+  //             : "bg-indigo-200 text-indigo-800 border-indigo-300 dark:bg-indigo-900/50 dark:text-indigo-200 dark:border-indigo-700";
+  //         else if (j.type === "wall_girt")
+  //           colorClass =
+  //             "bg-gray-200 text-gray-800 border-gray-300 dark:bg-gray-800/60 dark:text-gray-200 dark:border-gray-700";
+  //         else if (j.type === "roof_purlin")
+  //           colorClass =
+  //             "bg-orange-200 text-orange-800 border-orange-300 dark:bg-orange-900/50 dark:text-orange-200 dark:border-orange-700";
+  //         else if (j.type === "other")
+  //           colorClass =
+  //             "bg-amber-200 text-amber-800 border-amber-300 dark:bg-amber-900/50 dark:text-amber-200 dark:border-amber-700";
 
-        return `<th class="px-2 py-3 text-center border min-w-32 ${colorClass} ${lockedClass}" title="${tooltipText}" data-column-id="${item.id}">${boltSizeText}</th>`;
-      })
-      .join("");
+  //         return `<th class="px-2 py-3 text-center border min-w-32 ${colorClass} ${lockedClass}" title="${tooltipText}" data-column-id="${item.id}">${boltSizeText}</th>`;
+  //       })
+  //       .join("");
 
-    const bodyRows = locations
-      .map(
-        (loc) => `
-                <tr class="tally-row table-row-color">
-                    <td class="whitespace-nowrap px-2 py-3 font-medium text-gray-900 dark:text-gray-100 sticky left-0 z-10 border border-slate-200 dark:border-slate-700 table-sticky-color">
-                        <label class="font-bold">${loc.label}</label>
-                    </td>
-                    ${tallyList
-                      .map((item) => {
-                        const dbValue = project.tally?.[loc.id]?.[item.id];
-                        const value = dbValue === 0 ? 0 : dbValue || "";
-                        const isLocked = locks[item.id] || false;
-                        const lockedClass = isLocked ? "locked-column" : "";
-                        return `
-<td class="p-0 border border-slate-200 dark:border-slate-700 ${lockedClass}" data-column-id="${
-                          item.id
-                        }">
-    <input type="text" inputmode="numeric" pattern="\\d*" data-location="${
-      loc.id
-    }" data-id="${
-      item.id
-    }" class="tally-input w-full bg-transparent dark:bg-slate-800/50 border-transparent text-slate-900 dark:text-slate-100 rounded-md py-3 px-2 text-center focus:outline-none focus:ring-2 focus:ring-yellow-500" value="${value}" ${
-      isLocked ? "disabled" : ""
-    }>
-</td>`;
-                      })
-                      .join("")}
-                    <td class="row-total px-2 py-2 text-center font-bold text-blue-800 dark:text-blue-300 align-middle sticky right-0 border border-slate-200 dark:border-slate-700 table-sticky-color"></td>
-                </tr>`,
-      )
-      .join("");
+  //     const bodyRows = locations
+  //       .map(
+  //         (loc) => `
+  //                 <tr class="tally-row table-row-color">
+  //                     <td class="whitespace-nowrap px-2 py-3 font-medium text-gray-900 dark:text-gray-100 sticky left-0 z-10 border border-slate-200 dark:border-slate-700 table-sticky-color">
+  //                         <label class="font-bold">${loc.label}</label>
+  //                     </td>
+  //                     ${tallyList
+  //                       .map((item) => {
+  //                         const dbValue = project.tally?.[loc.id]?.[item.id];
+  //                         const value = dbValue === 0 ? 0 : dbValue || "";
+  //                         const isLocked = locks[item.id] || false;
+  //                         const lockedClass = isLocked ? "locked-column" : "";
+  //                         return `
+  // <td class="p-0 border border-slate-200 dark:border-slate-700 ${lockedClass}" data-column-id="${
+  //                           item.id
+  //                         }">
+  //     <input type="text" inputmode="numeric" pattern="\\d*" data-location="${
+  //       loc.id
+  //     }" data-id="${
+  //       item.id
+  //     }" class="tally-input w-full bg-transparent dark:bg-slate-800/50 border-transparent text-slate-900 dark:text-slate-100 rounded-md py-3 px-2 text-center focus:outline-none focus:ring-2 focus:ring-yellow-500" value="${value}" ${
+  //       isLocked ? "disabled" : ""
+  //     }>
+  // </td>`;
+  //                       })
+  //                       .join("")}
+  //                     <td class="row-total px-2 py-2 text-center font-bold text-blue-800 dark:text-blue-300 align-middle sticky right-0 border border-slate-200 dark:border-slate-700 table-sticky-color"></td>
+  //                 </tr>`,
+  //       )
+  //       .join("");
 
-    const footerCols = tallyList
-      .map((item) => {
-        const isLocked = locks[item.id] || false;
-        const lockedClass = isLocked ? "locked-column" : "";
-        return `<td data-id="${item.id}" class="col-total px-2 py-2 text-center border border-orange-400 dark:border-orange-700 ${lockedClass}" data-column-id="${item.id}"></td>`;
-      })
-      .join("");
+  //     const footerCols = tallyList
+  //       .map((item) => {
+  //         const isLocked = locks[item.id] || false;
+  //         const lockedClass = isLocked ? "locked-column" : "";
+  //         return `<td data-id="${item.id}" class="col-total px-2 py-2 text-center border border-orange-400 dark:border-orange-700 ${lockedClass}" data-column-id="${item.id}"></td>`;
+  //       })
+  //       .join("");
 
-    tallySheetContainer.innerHTML = `
-            <table class="table-fixed text-sm text-left border-collapse">
-                <colgroup>
-                    <col style="width: 128px;">
-                </colgroup>
-                <thead class="text-xs sticky top-0 z-20">
-                    <tr>
-                        <th class="whitespace-nowrap px-2 py-3 sticky left-0 z-30 table-sticky-header-color align-bottom" rowspan="3">
-                           <div class="flex flex-col items-center justify-center h-full">
-                               <span>階層 / エリア</span>
-                               <span class="text-xs font-normal mt-1">(ロック)</span>
-                           </div>
-                        </th>
-                        ${lockHeaderRow}
-                        <th class="px-2 py-3 sticky right-0 table-sticky-header-color align-middle font-bold text-slate-700 dark:text-slate-200" rowspan="3">合計</th>
-                    </tr>
-                    <tr>
-                        ${headers}
-                    </tr>
-                    <tr>
-                        ${boltSizeHeaders}
-                    </tr>
-                </thead>
-                <tbody>${bodyRows}</tbody>
-                <tfoot class="font-bold sticky bottom-0 table-footer-color">
-                    <tr>
-                        <td class="px-2 py-2 sticky left-0 z-10 border border-orange-400 dark:border-orange-700">列合計</td>
-                        
-                        ${footerCols}
-                        
-                        <td class="grand-total px-2 py-2 text-center sticky right-0 border border-orange-400 dark:border-orange-700"></td>
-                    </tr>
-                </tfoot>
-            </table>`;
+  //     tallySheetContainer.innerHTML = `
+  //             <table class="table-fixed text-sm text-left border-collapse">
+  //                 <colgroup>
+  //                     <col style="width: 128px;">
+  //                 </colgroup>
+  //                 <thead class="text-xs sticky top-0 z-20">
+  //                     <tr>
+  //                         <th class="whitespace-nowrap px-2 py-3 sticky left-0 z-30 table-sticky-header-color align-bottom" rowspan="3">
+  //                            <div class="flex flex-col items-center justify-center h-full">
+  //                                <span>階層 / エリア</span>
+  //                                <span class="text-xs font-normal mt-1">(ロック)</span>
+  //                            </div>
+  //                         </th>
+  //                         ${lockHeaderRow}
+  //                         <th class="px-2 py-3 sticky right-0 table-sticky-header-color align-middle font-bold text-slate-700 dark:text-slate-200" rowspan="3">合計</th>
+  //                     </tr>
+  //                     <tr>
+  //                         ${headers}
+  //                     </tr>
+  //                     <tr>
+  //                         ${boltSizeHeaders}
+  //                     </tr>
+  //                 </thead>
+  //                 <tbody>${bodyRows}</tbody>
+  //                 <tfoot class="font-bold sticky bottom-0 table-footer-color">
+  //                     <tr>
+  //                         <td class="px-2 py-2 sticky left-0 z-10 border border-orange-400 dark:border-orange-700">列合計</td>
 
-    if (tallyCard) {
-      tallyCard.classList.remove("hidden");
-      tallyCard.id = "anchor-tally-input";
-      tallyCard.setAttribute("data-section-title", "箇所数入力");
-      tallyCard.setAttribute("data-section-color", "blue");
-      tallyCard.classList.add("scroll-mt-24");
-    }
-    if (resultsCard) resultsCard.classList.remove("hidden");
-    updateTallySheetCalculations(project);
+  //                         ${footerCols}
 
-    if (focusToRestore) {
-      const inputToFocus = tallySheetContainer.querySelector(
-        `input[data-location="${focusToRestore.location}"][data-id="${focusToRestore.id}"]`,
-      );
-      if (inputToFocus) {
-        inputToFocus.focus();
-        if (justFinishedIME) {
-          isEditing = true;
-          inputToFocus.setSelectionRange(
-            inputToFocus.value.length,
-            inputToFocus.value.length,
-          );
-          justFinishedIME = false;
-        }
-      }
-      focusToRestore = null;
-    }
-  };
+  //                         <td class="grand-total px-2 py-2 text-center sticky right-0 border border-orange-400 dark:border-orange-700"></td>
+  //                     </tr>
+  //                 </tfoot>
+  //             </table>`;
+
+  //     if (tallyCard) {
+  //       tallyCard.classList.remove("hidden");
+  //       tallyCard.id = "anchor-tally-input";
+  //       tallyCard.setAttribute("data-section-title", "箇所数入力");
+  //       tallyCard.setAttribute("data-section-color", "blue");
+  //       tallyCard.classList.add("scroll-mt-24");
+  //     }
+  //     if (resultsCard) resultsCard.classList.remove("hidden");
+  //     updateTallySheetCalculations(project);
+
+  //     if (focusToRestore) {
+  //       const inputToFocus = tallySheetContainer.querySelector(
+  //         `input[data-location="${focusToRestore.location}"][data-id="${focusToRestore.id}"]`,
+  //       );
+  //       if (inputToFocus) {
+  //         inputToFocus.focus();
+  //         if (justFinishedIME) {
+  //           isEditing = true;
+  //           inputToFocus.setSelectionRange(
+  //             inputToFocus.value.length,
+  //             inputToFocus.value.length,
+  //           );
+  //           justFinishedIME = false;
+  //         }
+  //       }
+  //       focusToRestore = null;
+  //     }
+  //   };
   // ★ 修正版：renderResults（タブによる完全なフィルタリング対応）
   // ★ 修正版：renderResults（エリア別集計のバグ修正・完全版）
-  const renderResults = (project) => {
-    const resultsCardContent = document.getElementById("results-card-content");
-    resultsCardContent.innerHTML = "";
-    if (!resultsCard) return;
-    resultsCard.classList.add("hidden");
+  // const renderResults = (project) => {
+  //   const resultsCardContent = document.getElementById("results-card-content");
+  //   resultsCardContent.innerHTML = "";
+  //   if (!resultsCard) return;
+  //   resultsCard.classList.add("hidden");
 
-    if (!project) return;
+  //   if (!project) return;
 
-    const { resultsByLocation } = calculateResults(project);
+  //   const { resultsByLocation } = calculateResults(project);
 
-    // 1. 表示対象のロケーションIDを特定
-    const targetLocationIds = new Set();
-    if (project.mode === "advanced") {
-      project.customLevels.forEach((level) => {
-        if (
-          state.activeTallyLevel !== "all" &&
-          state.activeTallyLevel !== level
-        )
-          return;
-        project.customAreas.forEach((area) =>
-          targetLocationIds.add(`${level}-${area}`),
-        );
-      });
-    } else {
-      for (let f = 2; f <= project.floors; f++) {
-        if (
-          state.activeTallyLevel !== "all" &&
-          state.activeTallyLevel !== f.toString()
-        )
-          continue;
-        for (let s = 1; s <= project.sections; s++)
-          targetLocationIds.add(`${f}-${s}`);
-      }
-      if (state.activeTallyLevel === "all" || state.activeTallyLevel === "R") {
-        for (let s = 1; s <= project.sections; s++)
-          targetLocationIds.add(`R-${s}`);
-      }
-      if (project.hasPH) {
-        if (
-          state.activeTallyLevel === "all" ||
-          state.activeTallyLevel === "PH"
-        ) {
-          for (let s = 1; s <= project.sections; s++)
-            targetLocationIds.add(`PH-${s}`);
-        }
-      }
-    }
+  //   // 1. 表示対象のロケーションIDを特定
+  //   const targetLocationIds = new Set();
+  //   if (project.mode === "advanced") {
+  //     project.customLevels.forEach((level) => {
+  //       if (
+  //         state.activeTallyLevel !== "all" &&
+  //         state.activeTallyLevel !== level
+  //       )
+  //         return;
+  //       project.customAreas.forEach((area) =>
+  //         targetLocationIds.add(`${level}-${area}`),
+  //       );
+  //     });
+  //   } else {
+  //     for (let f = 2; f <= project.floors; f++) {
+  //       if (
+  //         state.activeTallyLevel !== "all" &&
+  //         state.activeTallyLevel !== f.toString()
+  //       )
+  //         continue;
+  //       for (let s = 1; s <= project.sections; s++)
+  //         targetLocationIds.add(`${f}-${s}`);
+  //     }
+  //     if (state.activeTallyLevel === "all" || state.activeTallyLevel === "R") {
+  //       for (let s = 1; s <= project.sections; s++)
+  //         targetLocationIds.add(`R-${s}`);
+  //     }
+  //     if (project.hasPH) {
+  //       if (
+  //         state.activeTallyLevel === "all" ||
+  //         state.activeTallyLevel === "PH"
+  //       ) {
+  //         for (let s = 1; s <= project.sections; s++)
+  //           targetLocationIds.add(`PH-${s}`);
+  //       }
+  //     }
+  //   }
 
-    // 2. 有効なボルトサイズと総本数をフィルタリングして再計算
-    const filteredBoltSizes = new Set();
-    let grandTotalBolts = 0;
+  //   // 2. 有効なボルトサイズと総本数をフィルタリングして再計算
+  //   const filteredBoltSizes = new Set();
+  //   let grandTotalBolts = 0;
 
-    for (const locId in resultsByLocation) {
-      if (!targetLocationIds.has(locId)) continue;
+  //   for (const locId in resultsByLocation) {
+  //     if (!targetLocationIds.has(locId)) continue;
 
-      const dataBySize = resultsByLocation[locId];
-      for (const size in dataBySize) {
-        const count = dataBySize[size].total;
-        if (count > 0) {
-          filteredBoltSizes.add(size);
-          grandTotalBolts += count;
-        }
-      }
-    }
+  //     const dataBySize = resultsByLocation[locId];
+  //     for (const size in dataBySize) {
+  //       const count = dataBySize[size].total;
+  //       if (count > 0) {
+  //         filteredBoltSizes.add(size);
+  //         grandTotalBolts += count;
+  //       }
+  //     }
+  //   }
 
-    const buttonsHtml = `
-        <div class="flex justify-end gap-4 mb-4">
-            <button id="recalculate-btn" class="btn btn-secondary text-sm">
-                <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="currentColor" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M8 3a5 5 0 1 0 4.546 2.914.5.5 0 0 1 .908-.417A6 6 0 1 1 8 2v1z"/><path d="M8 4.466V.534a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384L8.41 4.658A.25.25 0 0 1 8 4.466z"/></svg>
-                結果を再計算
-            </button>
-            <button id="export-excel-btn" class="btn bg-green-600 hover:bg-green-700 dark:bg-green-700 dark:hover:bg-green-600 text-white text-sm">
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
-                Excelデータを出力
-            </button>
-        </div>`;
+  //   const buttonsHtml = `
+  //       <div class="flex justify-end gap-4 mb-4">
+  //           <button id="recalculate-btn" class="btn btn-secondary text-sm">
+  //               <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="currentColor" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M8 3a5 5 0 1 0 4.546 2.914.5.5 0 0 1 .908-.417A6 6 0 1 1 8 2v1z"/><path d="M8 4.466V.534a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384L8.41 4.658A.25.25 0 0 1 8 4.466z"/></svg>
+  //               結果を再計算
+  //           </button>
+  //           <button id="export-excel-btn" class="btn bg-green-600 hover:bg-green-700 dark:bg-green-700 dark:hover:bg-green-600 text-white text-sm">
+  //               <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+  //               Excelデータを出力
+  //           </button>
+  //       </div>`;
 
-    if (filteredBoltSizes.size === 0) {
-      resultsCardContent.innerHTML =
-        buttonsHtml +
-        '<p class="text-gray-500 dark:text-gray-400">該当するデータがありません。</p>';
-      resultsCard.classList.remove("hidden");
-      return;
-    }
+  //   if (filteredBoltSizes.size === 0) {
+  //     resultsCardContent.innerHTML =
+  //       buttonsHtml +
+  //       '<p class="text-gray-500 dark:text-gray-400">該当するデータがありません。</p>';
+  //     resultsCard.classList.remove("hidden");
+  //     return;
+  //   }
 
-    const sortedSizes = Array.from(filteredBoltSizes).sort(boltSort);
+  //   const sortedSizes = Array.from(filteredBoltSizes).sort(boltSort);
 
-    // --- テーブル1：フロア工区別 ---
-    let floorColumns = [];
-    if (project.mode === "advanced") {
-      project.customLevels.forEach((level) => {
-        if (
-          state.activeTallyLevel !== "all" &&
-          state.activeTallyLevel !== level
-        )
-          return;
-        project.customAreas.forEach((area) =>
-          floorColumns.push({
-            id: `${level}-${area}`,
-            label: `${level}-${area}`,
-          }),
-        );
-        floorColumns.push({
-          id: `${level}_total`,
-          label: `${level} 合計`,
-          isTotal: true,
-          level: level,
-        });
-      });
-    } else {
-      for (let f = 2; f <= project.floors; f++) {
-        if (
-          state.activeTallyLevel !== "all" &&
-          state.activeTallyLevel !== f.toString()
-        )
-          continue;
-        for (let s = 1; s <= project.sections; s++)
-          floorColumns.push({ id: `${f}-${s}`, label: `${f}F-${s}` });
-        floorColumns.push({
-          id: `${f}F_total`,
-          label: `${f}F 合計`,
-          isTotal: true,
-          floor: f,
-        });
-      }
-      if (state.activeTallyLevel === "all" || state.activeTallyLevel === "R") {
-        for (let s = 1; s <= project.sections; s++)
-          floorColumns.push({ id: `R-${s}`, label: `RF-${s}` });
-        floorColumns.push({
-          id: `R_total`,
-          label: `RF 合計`,
-          isTotal: true,
-          floor: "R",
-        });
-      }
-      if (project.hasPH) {
-        if (
-          state.activeTallyLevel === "all" ||
-          state.activeTallyLevel === "PH"
-        ) {
-          for (let s = 1; s <= project.sections; s++)
-            floorColumns.push({ id: `PH-${s}`, label: `PH-${s}` });
-          floorColumns.push({
-            id: `PH_total`,
-            label: `PH 合計`,
-            isTotal: true,
-            floor: "PH",
-          });
-        }
-      }
-    }
+  //   // --- テーブル1：フロア工区別 ---
+  //   let floorColumns = [];
+  //   if (project.mode === "advanced") {
+  //     project.customLevels.forEach((level) => {
+  //       if (
+  //         state.activeTallyLevel !== "all" &&
+  //         state.activeTallyLevel !== level
+  //       )
+  //         return;
+  //       project.customAreas.forEach((area) =>
+  //         floorColumns.push({
+  //           id: `${level}-${area}`,
+  //           label: `${level}-${area}`,
+  //         }),
+  //       );
+  //       floorColumns.push({
+  //         id: `${level}_total`,
+  //         label: `${level} 合計`,
+  //         isTotal: true,
+  //         level: level,
+  //       });
+  //     });
+  //   } else {
+  //     for (let f = 2; f <= project.floors; f++) {
+  //       if (
+  //         state.activeTallyLevel !== "all" &&
+  //         state.activeTallyLevel !== f.toString()
+  //       )
+  //         continue;
+  //       for (let s = 1; s <= project.sections; s++)
+  //         floorColumns.push({ id: `${f}-${s}`, label: `${f}F-${s}` });
+  //       floorColumns.push({
+  //         id: `${f}F_total`,
+  //         label: `${f}F 合計`,
+  //         isTotal: true,
+  //         floor: f,
+  //       });
+  //     }
+  //     if (state.activeTallyLevel === "all" || state.activeTallyLevel === "R") {
+  //       for (let s = 1; s <= project.sections; s++)
+  //         floorColumns.push({ id: `R-${s}`, label: `RF-${s}` });
+  //       floorColumns.push({
+  //         id: `R_total`,
+  //         label: `RF 合計`,
+  //         isTotal: true,
+  //         floor: "R",
+  //       });
+  //     }
+  //     if (project.hasPH) {
+  //       if (
+  //         state.activeTallyLevel === "all" ||
+  //         state.activeTallyLevel === "PH"
+  //       ) {
+  //         for (let s = 1; s <= project.sections; s++)
+  //           floorColumns.push({ id: `PH-${s}`, label: `PH-${s}` });
+  //         floorColumns.push({
+  //           id: `PH_total`,
+  //           label: `PH 合計`,
+  //           isTotal: true,
+  //           floor: "PH",
+  //         });
+  //       }
+  //     }
+  //   }
 
-    const floorHeaders = floorColumns
-      .map((col) => {
-        const totalColClass = col.isTotal
-          ? "bg-blue-100 dark:bg-blue-900/50 text-blue-800 dark:text-blue-200"
-          : "";
-        return `<th class="px-2 py-3 text-center border border-slate-300 dark:border-slate-600 ${totalColClass}">${col.label}</th>`;
-      })
-      .join("");
+  //   const floorHeaders = floorColumns
+  //     .map((col) => {
+  //       const totalColClass = col.isTotal
+  //         ? "bg-blue-100 dark:bg-blue-900/50 text-blue-800 dark:text-blue-200"
+  //         : "";
+  //       return `<th class="px-2 py-3 text-center border border-slate-300 dark:border-slate-600 ${totalColClass}">${col.label}</th>`;
+  //     })
+  //     .join("");
 
-    let floorTable = `
-        <div id="anchor-result-floor" data-section-title="集計：フロア工区別" data-section-color="yellow" class="scroll-mt-24">
-            <div class="flex items-center gap-4 mb-4 border-b-2 border-yellow-400 pb-2">
-                <h2 class="text-2xl font-bold text-slate-900 dark:text-slate-100">ボルト本数(フロア工区別)</h2>
-                <span class="font-bold text-red-600 dark:text-red-400 text-lg">(総本数: ${grandTotalBolts.toLocaleString()}本)</span>
-            </div>
-        </div>
-        <div class="overflow-x-auto custom-scrollbar">
-            <table class="w-auto text-sm border-collapse">
-                <thead class="bg-slate-200 dark:bg-slate-700 text-xs text-slate-700 dark:text-slate-300">
-                    <tr>
-                        <th class="px-2 py-3 sticky left-0 bg-slate-200 dark:bg-slate-700 z-10 border border-slate-300 dark:border-slate-600">ボルトサイズ</th>
-                        ${floorHeaders}
-                        <th class="px-2 py-3 text-center sticky right-0 bg-yellow-300 dark:bg-yellow-800/50 text-yellow-800 dark:text-yellow-200 border border-yellow-400 dark:border-yellow-700">総合計</th>
-                    </tr>
-                </thead>
-                <tbody>`;
+  //   let floorTable = `
+  //       <div id="anchor-result-floor" data-section-title="集計：フロア工区別" data-section-color="yellow" class="scroll-mt-24">
+  //           <div class="flex items-center gap-4 mb-4 border-b-2 border-yellow-400 pb-2">
+  //               <h2 class="text-2xl font-bold text-slate-900 dark:text-slate-100">ボルト本数(フロア工区別)</h2>
+  //               <span class="font-bold text-red-600 dark:text-red-400 text-lg">(総本数: ${grandTotalBolts.toLocaleString()}本)</span>
+  //           </div>
+  //       </div>
+  //       <div class="overflow-x-auto custom-scrollbar">
+  //           <table class="w-auto text-sm border-collapse">
+  //               <thead class="bg-slate-200 dark:bg-slate-700 text-xs text-slate-700 dark:text-slate-300">
+  //                   <tr>
+  //                       <th class="px-2 py-3 sticky left-0 bg-slate-200 dark:bg-slate-700 z-10 border border-slate-300 dark:border-slate-600">ボルトサイズ</th>
+  //                       ${floorHeaders}
+  //                       <th class="px-2 py-3 text-center sticky right-0 bg-yellow-300 dark:bg-yellow-800/50 text-yellow-800 dark:text-yellow-200 border border-yellow-400 dark:border-yellow-700">総合計</th>
+  //                   </tr>
+  //               </thead>
+  //               <tbody>`;
 
-    sortedSizes.forEach((size) => {
-      let rowTotal = 0;
-      const rowTotalJoints = {};
-      let rowHtml = `<tr class="hover:bg-slate-50 dark:hover:bg-slate-700/50"><td class="px-2 py-2 font-bold text-gray-900 dark:text-gray-100 sticky left-0 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700">${size}</td>`;
+  //   sortedSizes.forEach((size) => {
+  //     let rowTotal = 0;
+  //     const rowTotalJoints = {};
+  //     let rowHtml = `<tr class="hover:bg-slate-50 dark:hover:bg-slate-700/50"><td class="px-2 py-2 font-bold text-gray-900 dark:text-gray-100 sticky left-0 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700">${size}</td>`;
 
-      floorColumns.forEach((col) => {
-        let cellValue = 0;
-        let tooltipText = "",
-          detailsClass = "",
-          dataAttribute = "",
-          jointData = {};
-        if (col.isTotal) {
-          const areas =
-            project.mode === "advanced"
-              ? project.customAreas
-              : Array.from({ length: project.sections }, (_, i) => i + 1);
-          areas.forEach((area) => {
-            const id =
-              project.mode === "advanced"
-                ? `${col.level}-${area}`
-                : `${col.floor}-${area}`;
-            const dataForCell = resultsByLocation[id]?.[size];
-            if (dataForCell) {
-              cellValue += dataForCell.total;
-              for (const [name, count] of Object.entries(dataForCell.joints))
-                jointData[name] = (jointData[name] || 0) + count;
-            }
-          });
-        } else {
-          const cellData = resultsByLocation[col.id]?.[size];
-          cellValue = cellData?.total || 0;
-          if (cellData?.joints) jointData = cellData.joints;
-        }
-        if (Object.keys(jointData).length > 0) {
-          tooltipText = Object.entries(jointData)
-            .map(([name, count]) => `${name}: ${count.toLocaleString()}本`)
-            .join("\n");
-          detailsClass =
-            "has-details cursor-pointer hover:bg-yellow-100 dark:hover:bg-yellow-800/50 transition-colors";
-          dataAttribute = `data-details='${JSON.stringify(jointData)}'`;
-          if (!col.isTotal) {
-            for (const [name, count] of Object.entries(jointData))
-              rowTotalJoints[name] = (rowTotalJoints[name] || 0) + count;
-          }
-        }
-        if (!col.isTotal) rowTotal += cellValue;
-        const totalColClass = col.isTotal
-          ? "font-bold bg-blue-50 dark:bg-blue-900/40"
-          : "";
-        rowHtml += `<td class="px-2 py-2 text-center border border-slate-200 dark:border-slate-700 ${totalColClass} ${detailsClass}" title="${tooltipText}" ${dataAttribute}>${
-          cellValue > 0 ? cellValue.toLocaleString() : "-"
-        }</td>`;
-      });
+  //     floorColumns.forEach((col) => {
+  //       let cellValue = 0;
+  //       let tooltipText = "",
+  //         detailsClass = "",
+  //         dataAttribute = "",
+  //         jointData = {};
+  //       if (col.isTotal) {
+  //         const areas =
+  //           project.mode === "advanced"
+  //             ? project.customAreas
+  //             : Array.from({ length: project.sections }, (_, i) => i + 1);
+  //         areas.forEach((area) => {
+  //           const id =
+  //             project.mode === "advanced"
+  //               ? `${col.level}-${area}`
+  //               : `${col.floor}-${area}`;
+  //           const dataForCell = resultsByLocation[id]?.[size];
+  //           if (dataForCell) {
+  //             cellValue += dataForCell.total;
+  //             for (const [name, count] of Object.entries(dataForCell.joints))
+  //               jointData[name] = (jointData[name] || 0) + count;
+  //           }
+  //         });
+  //       } else {
+  //         const cellData = resultsByLocation[col.id]?.[size];
+  //         cellValue = cellData?.total || 0;
+  //         if (cellData?.joints) jointData = cellData.joints;
+  //       }
+  //       if (Object.keys(jointData).length > 0) {
+  //         tooltipText = Object.entries(jointData)
+  //           .map(([name, count]) => `${name}: ${count.toLocaleString()}本`)
+  //           .join("\n");
+  //         detailsClass =
+  //           "has-details cursor-pointer hover:bg-yellow-100 dark:hover:bg-yellow-800/50 transition-colors";
+  //         dataAttribute = `data-details='${JSON.stringify(jointData)}'`;
+  //         if (!col.isTotal) {
+  //           for (const [name, count] of Object.entries(jointData))
+  //             rowTotalJoints[name] = (rowTotalJoints[name] || 0) + count;
+  //         }
+  //       }
+  //       if (!col.isTotal) rowTotal += cellValue;
+  //       const totalColClass = col.isTotal
+  //         ? "font-bold bg-blue-50 dark:bg-blue-900/40"
+  //         : "";
+  //       rowHtml += `<td class="px-2 py-2 text-center border border-slate-200 dark:border-slate-700 ${totalColClass} ${detailsClass}" title="${tooltipText}" ${dataAttribute}>${
+  //         cellValue > 0 ? cellValue.toLocaleString() : "-"
+  //       }</td>`;
+  //     });
 
-      const grandTotalTooltip = Object.entries(rowTotalJoints)
-        .sort((a, b) => a[0].localeCompare(b[0]))
-        .map(([name, count]) => `${name}: ${count.toLocaleString()}本`)
-        .join("\n");
-      const grandTotalDetailsClass =
-        Object.keys(rowTotalJoints).length > 0
-          ? "has-details cursor-pointer hover:bg-yellow-200 dark:hover:bg-yellow-700/50 transition-colors"
-          : "";
-      const grandTotalDataAttribute =
-        Object.keys(rowTotalJoints).length > 0
-          ? `data-details='${JSON.stringify(rowTotalJoints)}'`
-          : "";
-      rowHtml += `<td class="px-2 py-2 text-center font-bold sticky right-0 bg-yellow-100 dark:bg-yellow-900/50 border border-yellow-200 dark:border-yellow-800 ${grandTotalDetailsClass}" title="${grandTotalTooltip}" ${grandTotalDataAttribute}>${
-        rowTotal > 0 ? rowTotal.toLocaleString() : "-"
-      }</td></tr>`;
-      floorTable += rowHtml;
-    });
-    floorTable += `</tbody></table></div>`;
+  //     const grandTotalTooltip = Object.entries(rowTotalJoints)
+  //       .sort((a, b) => a[0].localeCompare(b[0]))
+  //       .map(([name, count]) => `${name}: ${count.toLocaleString()}本`)
+  //       .join("\n");
+  //     const grandTotalDetailsClass =
+  //       Object.keys(rowTotalJoints).length > 0
+  //         ? "has-details cursor-pointer hover:bg-yellow-200 dark:hover:bg-yellow-700/50 transition-colors"
+  //         : "";
+  //     const grandTotalDataAttribute =
+  //       Object.keys(rowTotalJoints).length > 0
+  //         ? `data-details='${JSON.stringify(rowTotalJoints)}'`
+  //         : "";
+  //     rowHtml += `<td class="px-2 py-2 text-center font-bold sticky right-0 bg-yellow-100 dark:bg-yellow-900/50 border border-yellow-200 dark:border-yellow-800 ${grandTotalDetailsClass}" title="${grandTotalTooltip}" ${grandTotalDataAttribute}>${
+  //       rowTotal > 0 ? rowTotal.toLocaleString() : "-"
+  //     }</td></tr>`;
+  //     floorTable += rowHtml;
+  //   });
+  //   floorTable += `</tbody></table></div>`;
 
-    // --- テーブル2：工区/エリア別集計 ---
-    let sectionColumns = [];
-    if (project.mode === "advanced") {
-      project.customAreas.forEach((area) =>
-        sectionColumns.push({ id: area, label: area }),
-      );
-    } else {
-      for (let s = 1; s <= project.sections; s++)
-        sectionColumns.push({ id: `${s}工区`, label: `${s}工区` });
-    }
+  //   // --- テーブル2：工区/エリア別集計 ---
+  //   let sectionColumns = [];
+  //   if (project.mode === "advanced") {
+  //     project.customAreas.forEach((area) =>
+  //       sectionColumns.push({ id: area, label: area }),
+  //     );
+  //   } else {
+  //     for (let s = 1; s <= project.sections; s++)
+  //       sectionColumns.push({ id: `${s}工区`, label: `${s}工区` });
+  //   }
 
-    const resultsBySection = {};
-    sectionColumns.forEach((sc) => (resultsBySection[sc.id] = {}));
+  //   const resultsBySection = {};
+  //   sectionColumns.forEach((sc) => (resultsBySection[sc.id] = {}));
 
-    // ▼▼▼ 修正：エリア名抽出ロジックの強化 ▼▼▼
-    // 長い階層名から順にマッチングさせることで、前方一致の誤爆を防ぐ
-    const sortedLevels =
-      project.mode === "advanced"
-        ? [...project.customLevels].sort((a, b) => b.length - a.length)
-        : [];
+  //   // ▼▼▼ 修正：エリア名抽出ロジックの強化 ▼▼▼
+  //   // 長い階層名から順にマッチングさせることで、前方一致の誤爆を防ぐ
+  //   const sortedLevels =
+  //     project.mode === "advanced"
+  //       ? [...project.customLevels].sort((a, b) => b.length - a.length)
+  //       : [];
 
-    for (const locationId in resultsByLocation) {
-      if (!targetLocationIds.has(locationId)) continue; // フィルタリング
+  //   for (const locationId in resultsByLocation) {
+  //     if (!targetLocationIds.has(locationId)) continue; // フィルタリング
 
-      let foundArea = null;
-      if (project.mode === "advanced") {
-        // "GL-RF-1面" のようなケースに対応するため、階層名を除去してエリア名を取得
-        for (const level of sortedLevels) {
-          if (locationId.startsWith(level + "-")) {
-            foundArea = locationId.substring(level.length + 1); // "1面" を取得
-            break;
-          }
-        }
-      } else {
-        foundArea = `${locationId.split("-")[1]}工区`;
-      }
+  //     let foundArea = null;
+  //     if (project.mode === "advanced") {
+  //       // "GL-RF-1面" のようなケースに対応するため、階層名を除去してエリア名を取得
+  //       for (const level of sortedLevels) {
+  //         if (locationId.startsWith(level + "-")) {
+  //           foundArea = locationId.substring(level.length + 1); // "1面" を取得
+  //           break;
+  //         }
+  //       }
+  //     } else {
+  //       foundArea = `${locationId.split("-")[1]}工区`;
+  //     }
 
-      if (foundArea && resultsBySection[foundArea]) {
-        for (const size in resultsByLocation[locationId]) {
-          if (!resultsBySection[foundArea][size])
-            resultsBySection[foundArea][size] = { total: 0, joints: {} };
-          const locData = resultsByLocation[locationId][size];
-          resultsBySection[foundArea][size].total += locData.total;
-          for (const jointName in locData.joints) {
-            resultsBySection[foundArea][size].joints[jointName] =
-              (resultsBySection[foundArea][size].joints[jointName] || 0) +
-              locData.joints[jointName];
-          }
-        }
-      }
-    }
-    // ▲▲▲ 修正ここまで ▲▲▲
+  //     if (foundArea && resultsBySection[foundArea]) {
+  //       for (const size in resultsByLocation[locationId]) {
+  //         if (!resultsBySection[foundArea][size])
+  //           resultsBySection[foundArea][size] = { total: 0, joints: {} };
+  //         const locData = resultsByLocation[locationId][size];
+  //         resultsBySection[foundArea][size].total += locData.total;
+  //         for (const jointName in locData.joints) {
+  //           resultsBySection[foundArea][size].joints[jointName] =
+  //             (resultsBySection[foundArea][size].joints[jointName] || 0) +
+  //             locData.joints[jointName];
+  //         }
+  //       }
+  //     }
+  //   }
+  //   // ▲▲▲ 修正ここまで ▲▲▲
 
-    const sectionHeaders = sectionColumns
-      .map(
-        (col) =>
-          `<th class="px-2 py-3 text-center border border-slate-300 dark:border-slate-600">${col.label}</th>`,
-      )
-      .join("");
+  //   const sectionHeaders = sectionColumns
+  //     .map(
+  //       (col) =>
+  //         `<th class="px-2 py-3 text-center border border-slate-300 dark:border-slate-600">${col.label}</th>`,
+  //     )
+  //     .join("");
 
-    let sectionTable = `
-        <div id="anchor-result-area" data-section-title="集計：工区/エリア別" data-section-color="orange" class="scroll-mt-24">
-            <div class="flex items-center gap-4 mt-8 mb-4 border-b-2 border-yellow-400 pb-2">
-            <h2 class="text-2xl font-bold text-slate-900 dark:text-slate-100">ボルト本数(${
-              project.mode === "advanced" ? "エリア別" : "工区別"
-            })</h2>
-            <span class="font-bold text-red-600 dark:text-red-400 text-lg">(総本数: ${grandTotalBolts.toLocaleString()}本)</span>
-        </div>
-        <div class="overflow-x-auto custom-scrollbar">
-            <table class="w-auto text-sm border-collapse">
-                <thead class="bg-slate-200 dark:bg-slate-700 text-xs text-slate-700 dark:text-slate-300">
-                    <tr>
-                        <th class="px-2 py-3 sticky left-0 bg-slate-200 dark:bg-slate-700 z-10 border border-slate-300 dark:border-slate-600">ボルトサイズ</th>
-                        ${sectionHeaders}
-                        <th class="px-2 py-3 text-center sticky right-0 bg-yellow-300 dark:bg-yellow-800/50 text-yellow-800 dark:text-yellow-200 border border-yellow-400 dark:border-yellow-700">総合計</th>
-                    </tr>
-                </thead>
-                <tbody>`;
+  //   let sectionTable = `
+  //       <div id="anchor-result-area" data-section-title="集計：工区/エリア別" data-section-color="orange" class="scroll-mt-24">
+  //           <div class="flex items-center gap-4 mt-8 mb-4 border-b-2 border-yellow-400 pb-2">
+  //           <h2 class="text-2xl font-bold text-slate-900 dark:text-slate-100">ボルト本数(${
+  //             project.mode === "advanced" ? "エリア別" : "工区別"
+  //           })</h2>
+  //           <span class="font-bold text-red-600 dark:text-red-400 text-lg">(総本数: ${grandTotalBolts.toLocaleString()}本)</span>
+  //       </div>
+  //       <div class="overflow-x-auto custom-scrollbar">
+  //           <table class="w-auto text-sm border-collapse">
+  //               <thead class="bg-slate-200 dark:bg-slate-700 text-xs text-slate-700 dark:text-slate-300">
+  //                   <tr>
+  //                       <th class="px-2 py-3 sticky left-0 bg-slate-200 dark:bg-slate-700 z-10 border border-slate-300 dark:border-slate-600">ボルトサイズ</th>
+  //                       ${sectionHeaders}
+  //                       <th class="px-2 py-3 text-center sticky right-0 bg-yellow-300 dark:bg-yellow-800/50 text-yellow-800 dark:text-yellow-200 border border-yellow-400 dark:border-yellow-700">総合計</th>
+  //                   </tr>
+  //               </thead>
+  //               <tbody>`;
 
-    sortedSizes.forEach((size) => {
-      let rowTotal = 0;
-      const rowTotalJoints = {};
-      let rowHtml = `<tr class="hover:bg-slate-50 dark:hover:bg-slate-700/50"><td class="px-2 py-2 font-bold text-gray-900 dark:text-gray-100 sticky left-0 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700">${size}</td>`;
+  //   sortedSizes.forEach((size) => {
+  //     let rowTotal = 0;
+  //     const rowTotalJoints = {};
+  //     let rowHtml = `<tr class="hover:bg-slate-50 dark:hover:bg-slate-700/50"><td class="px-2 py-2 font-bold text-gray-900 dark:text-gray-100 sticky left-0 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700">${size}</td>`;
 
-      sectionColumns.forEach((col) => {
-        const cellData = resultsBySection[col.id]?.[size];
-        const cellValue = cellData?.total || 0;
-        let tooltipText = "",
-          detailsClass = "",
-          dataAttribute = "";
-        if (cellData?.joints && Object.keys(cellData.joints).length > 0) {
-          tooltipText = Object.entries(cellData.joints)
-            .map(([name, count]) => `${name}: ${count.toLocaleString()}本`)
-            .join("\n");
-          for (const [name, count] of Object.entries(cellData.joints))
-            rowTotalJoints[name] = (rowTotalJoints[name] || 0) + count;
-          detailsClass =
-            "has-details cursor-pointer hover:bg-yellow-100 dark:hover:bg-yellow-800/50 transition-colors";
-          dataAttribute = `data-details='${JSON.stringify(cellData.joints)}'`;
-        }
-        rowTotal += cellValue;
-        rowHtml += `<td class="px-2 py-2 text-center border border-slate-200 dark:border-slate-700 ${detailsClass}" title="${tooltipText}" ${dataAttribute}>${
-          cellValue > 0 ? cellValue.toLocaleString() : "-"
-        }</td>`;
-      });
+  //     sectionColumns.forEach((col) => {
+  //       const cellData = resultsBySection[col.id]?.[size];
+  //       const cellValue = cellData?.total || 0;
+  //       let tooltipText = "",
+  //         detailsClass = "",
+  //         dataAttribute = "";
+  //       if (cellData?.joints && Object.keys(cellData.joints).length > 0) {
+  //         tooltipText = Object.entries(cellData.joints)
+  //           .map(([name, count]) => `${name}: ${count.toLocaleString()}本`)
+  //           .join("\n");
+  //         for (const [name, count] of Object.entries(cellData.joints))
+  //           rowTotalJoints[name] = (rowTotalJoints[name] || 0) + count;
+  //         detailsClass =
+  //           "has-details cursor-pointer hover:bg-yellow-100 dark:hover:bg-yellow-800/50 transition-colors";
+  //         dataAttribute = `data-details='${JSON.stringify(cellData.joints)}'`;
+  //       }
+  //       rowTotal += cellValue;
+  //       rowHtml += `<td class="px-2 py-2 text-center border border-slate-200 dark:border-slate-700 ${detailsClass}" title="${tooltipText}" ${dataAttribute}>${
+  //         cellValue > 0 ? cellValue.toLocaleString() : "-"
+  //       }</td>`;
+  //     });
 
-      const grandTotalTooltip = Object.entries(rowTotalJoints)
-        .sort((a, b) => a[0].localeCompare(b[0]))
-        .map(([name, count]) => `${name}: ${count.toLocaleString()}本`)
-        .join("\n");
-      const grandTotalDetailsClass =
-        Object.keys(rowTotalJoints).length > 0
-          ? "has-details cursor-pointer hover:bg-yellow-200 dark:hover:bg-yellow-700/50 transition-colors"
-          : "";
-      const grandTotalDataAttribute =
-        Object.keys(rowTotalJoints).length > 0
-          ? `data-details='${JSON.stringify(rowTotalJoints)}'`
-          : "";
-      rowHtml += `<td class="px-2 py-2 text-center font-bold sticky right-0 bg-yellow-100 dark:bg-yellow-900/50 border border-yellow-200 dark:border-yellow-800 ${grandTotalDetailsClass}" title="${grandTotalTooltip}" ${grandTotalDataAttribute}>${
-        rowTotal > 0 ? rowTotal.toLocaleString() : "-"
-      }</td></tr>`;
-      sectionTable += rowHtml;
-    });
-    sectionTable += `</tbody></table></div>`;
-    floorTable += `</div>`;
+  //     const grandTotalTooltip = Object.entries(rowTotalJoints)
+  //       .sort((a, b) => a[0].localeCompare(b[0]))
+  //       .map(([name, count]) => `${name}: ${count.toLocaleString()}本`)
+  //       .join("\n");
+  //     const grandTotalDetailsClass =
+  //       Object.keys(rowTotalJoints).length > 0
+  //         ? "has-details cursor-pointer hover:bg-yellow-200 dark:hover:bg-yellow-700/50 transition-colors"
+  //         : "";
+  //     const grandTotalDataAttribute =
+  //       Object.keys(rowTotalJoints).length > 0
+  //         ? `data-details='${JSON.stringify(rowTotalJoints)}'`
+  //         : "";
+  //     rowHtml += `<td class="px-2 py-2 text-center font-bold sticky right-0 bg-yellow-100 dark:bg-yellow-900/50 border border-yellow-200 dark:border-yellow-800 ${grandTotalDetailsClass}" title="${grandTotalTooltip}" ${grandTotalDataAttribute}>${
+  //       rowTotal > 0 ? rowTotal.toLocaleString() : "-"
+  //     }</td></tr>`;
+  //     sectionTable += rowHtml;
+  //   });
+  //   sectionTable += `</tbody></table></div>`;
+  //   floorTable += `</div>`;
 
-    const orderDetailsContainer = `<div id="order-details-container" data-section-title="注文明細" data-section-color="pink" class="scroll-mt-24"></div>`;
-    // ▼▼▼ 追加: 仮ボルト注文明細用コンテナ ▼▼▼
-    const tempOrderDetailsContainer = `<div id="temp-order-details-container" data-section-title="仮ボルト注文明細" data-section-color="purple" class="scroll-mt-24"></div>`;
-    // ▲▲▲ 追加ここまで ▲▲▲
-    const tempBoltsHtml = renderTempBoltResults(project);
-    const shopTempBoltsHtml = renderShopTempBoltResults(project);
+  //   const orderDetailsContainer = `<div id="order-details-container" data-section-title="注文明細" data-section-color="pink" class="scroll-mt-24"></div>`;
+  //   // ▼▼▼ 追加: 仮ボルト注文明細用コンテナ ▼▼▼
+  //   const tempOrderDetailsContainer = `<div id="temp-order-details-container" data-section-title="仮ボルト注文明細" data-section-color="purple" class="scroll-mt-24"></div>`;
+  //   // ▲▲▲ 追加ここまで ▲▲▲
+  //   const tempBoltsHtml = renderTempBoltResults(project);
+  //   const shopTempBoltsHtml = renderShopTempBoltResults(project);
 
-    resultsCardContent.innerHTML =
-      buttonsHtml +
-      floorTable +
-      sectionTable +
-      orderDetailsContainer +
-      tempBoltsHtml +
-      tempOrderDetailsContainer +
-      shopTempBoltsHtml;
+  //   resultsCardContent.innerHTML =
+  //     buttonsHtml +
+  //     floorTable +
+  //     sectionTable +
+  //     orderDetailsContainer +
+  //     tempBoltsHtml +
+  //     tempOrderDetailsContainer +
+  //     shopTempBoltsHtml;
 
-    const container = document.getElementById("order-details-container");
-    if (container) {
-      // HTML文字列の代入をやめ、要素を引数として渡す
-      renderOrderDetails(container, project, resultsByLocation);
-    }
+  //   const container = document.getElementById("order-details-container");
+  //   if (container) {
+  //     // HTML文字列の代入をやめ、要素を引数として渡す
+  //     renderOrderDetails(container, project, resultsByLocation);
+  //   }
 
-    // ▼▼▼ 追加: 仮ボルト注文明細の描画呼び出し ▼▼▼
-    const tempContainer = document.getElementById(
-      "temp-order-details-container",
-    );
-    if (tempContainer) {
-      renderTempOrderDetails(tempContainer, project);
-    }
-    // ▲▲▲ 追加ここまで ▲▲▲
+  //   // ▼▼▼ 追加: 仮ボルト注文明細の描画呼び出し ▼▼▼
+  //   const tempContainer = document.getElementById(
+  //     "temp-order-details-container",
+  //   );
+  //   if (tempContainer) {
+  //     renderTempOrderDetails(tempContainer, project);
+  //   }
+  //   // ▲▲▲ 追加ここまで ▲▲▲
 
-    if (resultsCard) resultsCard.classList.remove("hidden");
-  };
+  //   if (resultsCard) resultsCard.classList.remove("hidden");
+  // };
 
   // // ★ 修正版：renderTempBoltResults（ボルトサイズの絞り込み対応・完全版）
   // const renderTempBoltResults = (project) => {
@@ -4438,47 +4444,47 @@ document.addEventListener("DOMContentLoaded", () => {
 
   //   return floorTable;
   // };
-  const renderShopTempBoltResults = (project) => {
-    const totals = calculateShopTempBoltResults(project);
+  // const renderShopTempBoltResults = (project) => {
+  //   const totals = calculateShopTempBoltResults(project);
 
-    if (Object.keys(totals).length === 0) {
-      return "";
-    }
+  //   if (Object.keys(totals).length === 0) {
+  //     return "";
+  //   }
 
-    const sortedSizes = Object.keys(totals).sort(boltSort);
+  //   const sortedSizes = Object.keys(totals).sort(boltSort);
 
-    let tableRows = "";
-    sortedSizes.forEach((size) => {
-      const data = totals[size];
-      const jointNamesString = Array.from(data.joints).join(", ");
+  //   let tableRows = "";
+  //   sortedSizes.forEach((size) => {
+  //     const data = totals[size];
+  //     const jointNamesString = Array.from(data.joints).join(", ");
 
-      tableRows += `
-                    <tr class="hover:bg-slate-50 dark:hover:bg-slate-700/50">
-                        <td class="px-2 py-2 border border-slate-200 dark:border-slate-700 text-center">${size}</td>
-                        <td class="px-2 py-2 border border-slate-200 dark:border-slate-700 text-center">${data.total.toLocaleString()}</td>
-                        <td class="px-2 py-2 border border-slate-200 dark:border-slate-700 text-center">${jointNamesString}</td>
-                    </tr>
-                `;
-    });
+  //     tableRows += `
+  //                   <tr class="hover:bg-slate-50 dark:hover:bg-slate-700/50">
+  //                       <td class="px-2 py-2 border border-slate-200 dark:border-slate-700 text-center">${size}</td>
+  //                       <td class="px-2 py-2 border border-slate-200 dark:border-slate-700 text-center">${data.total.toLocaleString()}</td>
+  //                       <td class="px-2 py-2 border border-slate-200 dark:border-slate-700 text-center">${jointNamesString}</td>
+  //                   </tr>
+  //               `;
+  //   });
 
-    // ▼▼▼ 修正：ナビゲーション用ラッパーを追加 ▼▼▼
-    return `
-                <div id="anchor-shop-bolt" data-section-title="工場仮ボルト集計" data-section-color="cyan" class="scroll-mt-24">
-                    <h2 class="text-2xl font-bold mt-8 mb-4 border-b-2 border-cyan-400 pb-2 text-slate-900 dark:text-slate-100">工場使用仮ボルト集計</h2>
-                <div class="overflow-x-auto custom-scrollbar">
-                    <table class="w-auto text-sm border-collapse">
-                        <thead class="bg-slate-200 dark:bg-slate-700 text-xs text-slate-700 dark:text-slate-300">
-                            <tr>
-                                <th class="px-2 py-3 border border-slate-300 dark:border-slate-600 text-center">ボルトサイズ</th>
-                                <th class="px-2 py-3 border border-slate-300 dark:border-slate-600 text-center">本数</th>
-                                <th class="px-2 py-3 border border-slate-300 dark:border-slate-600 text-center">継手名</th>
-                            </tr>
-                        </thead>
-                        <tbody class="dark:bg-slate-800">${tableRows}</tbody>
-                    </table>
-                </div>
-            </div>`; // ← ▼▼▼ 修正：ラッパーの閉じタグを追加（テンプレートリテラル内）
-  };
+  //   // ▼▼▼ 修正：ナビゲーション用ラッパーを追加 ▼▼▼
+  //   return `
+  //               <div id="anchor-shop-bolt" data-section-title="工場仮ボルト集計" data-section-color="cyan" class="scroll-mt-24">
+  //                   <h2 class="text-2xl font-bold mt-8 mb-4 border-b-2 border-cyan-400 pb-2 text-slate-900 dark:text-slate-100">工場使用仮ボルト集計</h2>
+  //               <div class="overflow-x-auto custom-scrollbar">
+  //                   <table class="w-auto text-sm border-collapse">
+  //                       <thead class="bg-slate-200 dark:bg-slate-700 text-xs text-slate-700 dark:text-slate-300">
+  //                           <tr>
+  //                               <th class="px-2 py-3 border border-slate-300 dark:border-slate-600 text-center">ボルトサイズ</th>
+  //                               <th class="px-2 py-3 border border-slate-300 dark:border-slate-600 text-center">本数</th>
+  //                               <th class="px-2 py-3 border border-slate-300 dark:border-slate-600 text-center">継手名</th>
+  //                           </tr>
+  //                       </thead>
+  //                       <tbody class="dark:bg-slate-800">${tableRows}</tbody>
+  //                   </table>
+  //               </div>
+  //           </div>`; // ← ▼▼▼ 修正：ラッパーの閉じタグを追加（テンプレートリテラル内）
+  // };
 
   // ★ 追加：仮ボルト注文明細のレンダリング関数
   // const renderTempOrderDetails = (container, project) => {
@@ -4743,79 +4749,79 @@ document.addEventListener("DOMContentLoaded", () => {
   // };
 
   // ★ 修正版：renderDetailView（常に表を表示し、リアルタイム反映させる）
-  const renderDetailView = () => {
-    const project = state.projects.find((p) => p.id === state.currentProjectId);
-    if (!project) {
-      switchView("list");
-      return;
-    }
-    navProjectTitle.textContent = project.name;
+  // const renderDetailView = () => {
+  //   const project = state.projects.find((p) => p.id === state.currentProjectId);
+  //   if (!project) {
+  //     switchView("list");
+  //     return;
+  //   }
+  //   navProjectTitle.textContent = project.name;
 
-    // リストの描画
-    renderJointsList(project);
-    renderMemberLists(project);
+  //   // リストの描画
+  //   renderJointsList(project);
+  //   renderMemberLists(project);
 
-    // ▼▼▼ 追加：常設フォームの階層チェックボックスを生成 ▼▼▼
-    const staticLevelsContainer = document.getElementById(
-      "add-member-levels-container",
-    );
-    if (staticLevelsContainer) {
-      staticLevelsContainer.innerHTML = "";
-      const levels = getProjectLevels(project);
-      levels.forEach((lvl) => {
-        const label = document.createElement("label");
-        label.className =
-          "flex items-center gap-2 text-sm cursor-pointer text-slate-700 dark:text-slate-300";
-        // クラス名 'static-level-checkbox' を付与して識別
-        label.innerHTML = `<input type="checkbox" value="${lvl.id}" class="static-level-checkbox h-4 w-4 text-blue-600 rounded border-gray-300 focus:ring-yellow-500"> ${lvl.label}`;
-        staticLevelsContainer.appendChild(label);
-      });
-    }
-    // ▲▲▲ 追加ここまで ▲▲▲
+  //   // ▼▼▼ 追加：常設フォームの階層チェックボックスを生成 ▼▼▼
+  //   const staticLevelsContainer = document.getElementById(
+  //     "add-member-levels-container",
+  //   );
+  //   if (staticLevelsContainer) {
+  //     staticLevelsContainer.innerHTML = "";
+  //     const levels = getProjectLevels(project);
+  //     levels.forEach((lvl) => {
+  //       const label = document.createElement("label");
+  //       label.className =
+  //         "flex items-center gap-2 text-sm cursor-pointer text-slate-700 dark:text-slate-300";
+  //       // クラス名 'static-level-checkbox' を付与して識別
+  //       label.innerHTML = `<input type="checkbox" value="${lvl.id}" class="static-level-checkbox h-4 w-4 text-blue-600 rounded border-gray-300 focus:ring-yellow-500"> ${lvl.label}`;
+  //       staticLevelsContainer.appendChild(label);
+  //     });
+  //   }
+  //   // ▲▲▲ 追加ここまで ▲▲▲
 
-    // 集計表と結果の描画
-    renderTallySheet(project);
-    renderResults(project);
-  };
+  //   // 集計表と結果の描画
+  //   renderTallySheet(project);
+  //   renderResults(project);
+  // };
 
   // --- Calculation Functions ---
 
-  const updateTallySheetCalculations = (project) => {
-    if (!project) return;
-    const tallyList = getTallyList(project);
+  // const updateTallySheetCalculations = (project) => {
+  //   if (!project) return;
+  //   const tallyList = getTallyList(project);
 
-    tallyList.forEach((item) => {
-      let colTotal = 0;
-      document
-        .querySelectorAll(`.tally-input[data-id="${item.id}"]`)
-        .forEach((input) => (colTotal += parseInt(input.value) || 0));
-      const totalCell = document.querySelector(
-        `.col-total[data-id="${item.id}"]`,
-      );
-      if (totalCell) {
-        totalCell.textContent = colTotal;
-      }
-    });
+  //   tallyList.forEach((item) => {
+  //     let colTotal = 0;
+  //     document
+  //       .querySelectorAll(`.tally-input[data-id="${item.id}"]`)
+  //       .forEach((input) => (colTotal += parseInt(input.value) || 0));
+  //     const totalCell = document.querySelector(
+  //       `.col-total[data-id="${item.id}"]`,
+  //     );
+  //     if (totalCell) {
+  //       totalCell.textContent = colTotal;
+  //     }
+  //   });
 
-    document.querySelectorAll(".tally-row").forEach((row) => {
-      let rowTotal = 0;
-      row
-        .querySelectorAll(".tally-input")
-        .forEach((input) => (rowTotal += parseInt(input.value) || 0));
-      const totalCell = row.querySelector(".row-total");
-      if (totalCell) {
-        totalCell.textContent = rowTotal;
-      }
-    });
+  //   document.querySelectorAll(".tally-row").forEach((row) => {
+  //     let rowTotal = 0;
+  //     row
+  //       .querySelectorAll(".tally-input")
+  //       .forEach((input) => (rowTotal += parseInt(input.value) || 0));
+  //     const totalCell = row.querySelector(".row-total");
+  //     if (totalCell) {
+  //       totalCell.textContent = rowTotal;
+  //     }
+  //   });
 
-    const grandTotal = Array.from(
-      document.querySelectorAll(".col-total"),
-    ).reduce((sum, cell) => sum + (parseInt(cell.textContent) || 0), 0);
-    const grandTotalCell = document.querySelector(".grand-total");
-    if (grandTotalCell) {
-      grandTotalCell.textContent = grandTotal;
-    }
-  };
+  //   const grandTotal = Array.from(
+  //     document.querySelectorAll(".col-total"),
+  //   ).reduce((sum, cell) => sum + (parseInt(cell.textContent) || 0), 0);
+  //   const grandTotalCell = document.querySelector(".grand-total");
+  //   if (grandTotalCell) {
+  //     grandTotalCell.textContent = grandTotal;
+  //   }
+  // };
 
   // --- ロジック定義エリアに追加 ---
 
