@@ -5,6 +5,8 @@ import {
   getMasterOrderedKeys,
   getBoltWeight,
   boltSort,
+  aggregateByFloor,
+  calculateAggregatedData,
 } from "./calculator.js";
 
 // 並び順の定義（定数として外に出しました）
@@ -1475,4 +1477,277 @@ export const populateGlobalBoltSelectorModal = () => {
     });
     container.appendChild(grid);
   });
+};
+
+/**
+ * 注文詳細画面の描画（修正版：トップ余白を mt-8 に統一）
+ */
+export const renderOrderDetails = (container, project, resultsByLocation) => {
+  if (!container) return;
+  if (!project) {
+    container.innerHTML = "";
+    return;
+  }
+
+  try {
+    container.innerHTML = ""; // 全体初期化
+
+    // ---------------------------------------------------------
+    // 1. データの前処理
+    // ---------------------------------------------------------
+    const masterKeys = getMasterOrderedKeys(project);
+    const targetKeys = new Set(masterKeys.filter((k) => resultsByLocation[k]));
+
+    const filteredHonBolts = {}; // 本ボルト用
+    const specialBolts = {
+      column: {}, // 柱用
+      dLock: {}, // D-Lock
+      naka: {}, // 中ボルト(ミリ)
+      nakaM: {}, // 中ボルト(Mネジ)
+    };
+
+    masterKeys.forEach((locId) => {
+      if (!targetKeys.has(locId)) return;
+      const locationData = resultsByLocation[locId];
+
+      filteredHonBolts[locId] = {}; // 箱作成
+
+      Object.keys(locationData).forEach((size) => {
+        const data = locationData[size];
+        const qty = data.total || 0;
+
+        if (size.includes("(本柱)")) {
+          specialBolts.column[size] = (specialBolts.column[size] || 0) + qty;
+        } else if (size.startsWith("D")) {
+          specialBolts.dLock[size] = (specialBolts.dLock[size] || 0) + qty;
+        } else if (size.startsWith("中ボ")) {
+          specialBolts.nakaM[size] = (specialBolts.nakaM[size] || 0) + qty;
+        } else if (size.startsWith("中")) {
+          specialBolts.naka[size] = (specialBolts.naka[size] || 0) + qty;
+        } else {
+          filteredHonBolts[locId][size] = data;
+        }
+      });
+
+      if (Object.keys(filteredHonBolts[locId]).length === 0) {
+        delete filteredHonBolts[locId];
+      }
+    });
+
+    // ---------------------------------------------------------
+    // 2. セクションコンテナの作成
+    // ---------------------------------------------------------
+
+    // A. 本ボルトセクション
+    const honBoltSection = document.createElement("section");
+    honBoltSection.className = "mb-16";
+    container.appendChild(honBoltSection);
+
+    // B. D-Lockセクション
+    const dLockSection = document.createElement("section");
+    dLockSection.className = "mb-16";
+    container.appendChild(dLockSection);
+
+    // C. 中ボルトセクション
+    const nakaBoltSection = document.createElement("section");
+    nakaBoltSection.className = "mb-16";
+    container.appendChild(nakaBoltSection);
+
+    // ---------------------------------------------------------
+    // 3. 本ボルトセクションの描画ロジック
+    // ---------------------------------------------------------
+    const renderHonBoltSection = () => {
+      const hasHonBolts = Object.keys(filteredHonBolts).length > 0;
+      const hasColumnBolts = Object.keys(specialBolts.column).length > 0;
+
+      if (!hasHonBolts && !hasColumnBolts) {
+        honBoltSection.style.display = "none";
+        return;
+      }
+      honBoltSection.style.display = "block";
+      honBoltSection.innerHTML = "";
+
+      // state初期化 (ui.js内の変数 currentGroupingState を直接使用)
+      const dataKeys = Object.keys(filteredHonBolts);
+      const shouldReset = dataKeys.some(
+        (sec) => !currentGroupingState.hasOwnProperty(sec),
+      );
+      if (shouldReset) {
+        // オブジェクトの中身をクリア
+        for (const key in currentGroupingState)
+          delete currentGroupingState[key];
+
+        dataKeys.forEach((section, index) => {
+          currentGroupingState[section] = index + 1;
+        });
+      }
+
+      // ヘッダー
+      const headerHtml = `
+                <div class="flex flex-col md:flex-row justify-between items-start md:items-end mt-8 mb-10 border-b-2 border-pink-500 pb-4 gap-4">
+                    <div>
+                        <h2 class="text-2xl font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+                            <span class="text-pink-500">■</span> 本ボルト注文明細
+                        </h2>
+                        <p class="text-sm text-slate-500 dark:text-slate-400 pl-6 mt-1">S10T / F8T / 柱用ボルト</p>
+                    </div>
+                    
+                    <div class="flex bg-slate-100 dark:bg-slate-800 p-1 rounded-lg border border-slate-200 dark:border-slate-700">
+                        <button id="view-mode-detailed" type="button" class="px-4 py-2 text-sm font-medium rounded-md transition-all">工区別 (詳細)</button>
+                        <button id="view-mode-floor" type="button" class="px-4 py-2 text-sm font-medium rounded-md transition-all">フロア別 (集計)</button>
+                    </div>
+                </div>
+            `;
+      honBoltSection.insertAdjacentHTML("beforeend", headerHtml);
+
+      // コントロール & テーブルエリア
+      const controlsContainer = document.createElement("div");
+      honBoltSection.appendChild(controlsContainer);
+
+      const tableContainer = document.createElement("div");
+      tableContainer.className =
+        "flex flex-wrap gap-8 items-start align-top content-start";
+      honBoltSection.appendChild(tableContainer);
+
+      // 更新関数
+      const updateView = () => {
+        const btnDetail = honBoltSection.querySelector("#view-mode-detailed");
+        const btnFloor = honBoltSection.querySelector("#view-mode-floor");
+        const activeClass =
+          "bg-white dark:bg-slate-700 shadow text-blue-600 dark:text-blue-400";
+        const inactiveClass =
+          "text-slate-500 hover:text-slate-700 dark:hover:text-slate-300";
+
+        // ui.js内の変数 currentViewMode を直接参照
+        if (currentViewMode === "detailed") {
+          btnDetail.className = `px-4 py-2 text-sm font-medium rounded-md transition-all ${activeClass}`;
+          btnFloor.className = `px-4 py-2 text-sm font-medium rounded-md transition-all ${inactiveClass}`;
+        } else {
+          btnDetail.className = `px-4 py-2 text-sm font-medium rounded-md transition-all ${inactiveClass}`;
+          btnFloor.className = `px-4 py-2 text-sm font-medium rounded-md transition-all ${activeClass}`;
+        }
+
+        renderGroupingControls(
+          controlsContainer,
+          filteredHonBolts,
+          project,
+          updateView,
+        );
+
+        let data, sortedKeys;
+        if (currentViewMode === "floor") {
+          const result = aggregateByFloor(filteredHonBolts, project);
+          data = result.data;
+          sortedKeys = result.order;
+        } else {
+          data = calculateAggregatedData(
+            filteredHonBolts,
+            currentGroupingState,
+            project,
+          );
+          const allAggregatedKeys = Object.keys(data);
+          const fullMasterList = getMasterOrderedKeys(project);
+          sortedKeys = allAggregatedKeys.sort((a, b) => {
+            const firstKeyA = a.split(" + ")[0];
+            const firstKeyB = b.split(" + ")[0];
+            return (
+              fullMasterList.indexOf(firstKeyA) -
+              fullMasterList.indexOf(firstKeyB)
+            );
+          });
+        }
+
+        renderAggregatedTables(tableContainer, data, sortedKeys, {
+          column: specialBolts.column,
+        });
+      };
+
+      // イベントリスナー設定
+      // (同じファイル内の変数なので、直接書き換えられます)
+      honBoltSection.querySelector("#view-mode-detailed").onclick = () => {
+        setCurrentViewMode("detailed");
+        updateView();
+      };
+      honBoltSection.querySelector("#view-mode-floor").onclick = () => {
+        setCurrentViewMode("floor");
+        updateView();
+      };
+
+      updateView();
+    };
+
+    // ---------------------------------------------------------
+    // 4. D-Lockセクションの描画ロジック
+    // ---------------------------------------------------------
+    const renderDLockSection = () => {
+      if (Object.keys(specialBolts.dLock).length === 0) {
+        dLockSection.style.display = "none";
+        return;
+      }
+      dLockSection.style.display = "block";
+
+      const headerHtml = `
+                <div class="mt-12 mb-10 border-b-2 border-gray-500 pb-4">
+                    <h2 class="text-2xl font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+                        <span class="text-gray-500">■</span> D-Lock 注文明細
+                    </h2>
+                </div>
+            `;
+      dLockSection.innerHTML = headerHtml;
+
+      const tableContainer = document.createElement("div");
+      tableContainer.className = "flex flex-wrap gap-8 items-start align-top";
+      dLockSection.appendChild(tableContainer);
+
+      renderAggregatedTables(
+        tableContainer,
+        {},
+        [],
+        { dLock: specialBolts.dLock },
+        true,
+      );
+    };
+
+    // ---------------------------------------------------------
+    // 5. 中ボルトセクションの描画ロジック
+    // ---------------------------------------------------------
+    const renderNakaBoltSection = () => {
+      const hasNaka = Object.keys(specialBolts.naka).length > 0;
+      const hasNakaM = Object.keys(specialBolts.nakaM).length > 0;
+      if (!hasNaka && !hasNakaM) {
+        nakaBoltSection.style.display = "none";
+        return;
+      }
+      nakaBoltSection.style.display = "block";
+
+      const headerHtml = `
+                <div class="mt-12 mb-10 border-b-2 border-blue-500 pb-4">
+                    <h2 class="text-2xl font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+                        <span class="text-blue-500">■</span> 中ボルト注文明細
+                    </h2>
+                </div>
+            `;
+      nakaBoltSection.innerHTML = headerHtml;
+
+      const tableContainer = document.createElement("div");
+      tableContainer.className = "flex flex-wrap gap-8 items-start align-top";
+      nakaBoltSection.appendChild(tableContainer);
+
+      renderAggregatedTables(
+        tableContainer,
+        {},
+        [],
+        { naka: specialBolts.naka, nakaM: specialBolts.nakaM },
+        true,
+      );
+    };
+
+    // 実行
+    renderHonBoltSection();
+    renderDLockSection();
+    renderNakaBoltSection();
+  } catch (err) {
+    console.error("renderOrderDetailsエラー:", err);
+    container.innerHTML = `<div class="p-4 bg-red-100 text-red-700">表示エラー: ${err.message}</div>`;
+  }
 };
