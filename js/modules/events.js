@@ -38,9 +38,8 @@ export function setupEventListeners() {
   setupColorPalleteEvents(); //カラーパレット関係
 
   setupFloatingFABBottunEvents(); //登録用フローティングボタン
-  
-  setupBoltSizeInputClicked();
 
+  setupBoltSizeInputClicked(); //ボルトサイズ選択モーダルの起動イベント
 
   // ▼▼▼ 追加: 編集モーダル複合スプライス入力の監視 (4セット分) ▼▼▼
   for (let i = 1; i <= 4; i++) {
@@ -402,16 +401,42 @@ function setupComfirmAddModalEvents() {
 }
 
 function setupBoltSizeInputClicked() {
-  // 例: ボルトサイズ入力欄がクリックされたら
-  boltSizeInput.addEventListener('click', (e) => {
-    // 1. ターゲットを保存
-    state.activeBoltTarget = e.target;
+  // ▼▼▼ 修正：ボルト選択モーダルを開く対象のIDリスト ▼▼▼
+  const boltInputIds = [
+    // 編集モーダルの入力欄
+    "edit-flange-size",
+    "edit-web-size",
 
-    // 2. モーダルの中身を作る
-    populateGlobalBoltSelectorModal();
+    // 仮ボルト詳細の入力欄
+    "edit-shop-temp-bolt-size",
+    "edit-shop-temp-bolt-size-f",
+    "edit-shop-temp-bolt-size-w",
 
-    // 3. モーダルを開く
-    const modal = document.getElementById("bolt-selector-modal");
-    openModal(modal);
-  })
+    // 複合スプライスの入力欄（初期表示されているもの）
+    "edit-web-size", // 重複していますが念のため
+    "edit-web-size-2",
+    "edit-web-size-3",
+    "edit-web-size-4",
+  ];
+
+  boltInputIds.forEach((id) => {
+    const inputElement = document.getElementById(id);
+
+    // 要素が存在する場合のみイベントを設定
+    if (inputElement) {
+      // クリックされたらボルト選択モーダルを開く
+      inputElement.addEventListener("click", (e) => {
+        // 1. 現在操作中の入力欄を state に保存
+        state.activeBoltTarget = e.target;
+
+        // 2. モーダルの中身（ボタン一覧）を生成
+        populateGlobalBoltSelectorModal();
+
+        // 3. モーダルを表示
+        // ※IDはHTMLに合わせて修正してください
+        const modal = document.getElementById("bolt-selector-modal");
+        openModal(modal);
+      });
+    }
+  });
 }
