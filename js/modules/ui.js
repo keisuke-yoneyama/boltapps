@@ -4692,20 +4692,38 @@ export const switchTab = (tabName) => {
 
 /**
  * 画面表示を切り替える (一覧画面 <-> 詳細画面)
- * 強制表示切り替え版
+ * ナビゲーション表示修正版
  */
 export const switchView = (viewName) => {
   console.group(`[DEBUG] switchView called with: "${viewName}"`);
 
-  // HTMLのIDに合わせて取得（ID修正済みと仮定）
-  // ※もし動かない場合は "view-project-list" を "project-list-view" に書き換えてください
-  const viewList = document.getElementById("project-list-view");
-  const viewDetail = document.getElementById("project-detail-view");
+  // 1. メイン画面の要素取得
+  const viewList =
+    document.getElementById("view-project-list") ||
+    document.getElementById("project-list-view");
+  const viewDetail =
+    document.getElementById("view-project-detail") ||
+    document.getElementById("project-detail-view");
+
+  // 2. ナビゲーション関連の要素取得
+  const navElements = {
+    fixedNav: document.getElementById("fixed-nav"),
+    navListContext: document.getElementById("nav-list-context"),
+    navDetailContext: document.getElementById("nav-detail-context"),
+    navDetailButtons: document.getElementById("nav-detail-buttons"), // PC用タブ
+    mobileNavDetailButtons: document.getElementById(
+      "mobile-nav-detail-buttons",
+    ), // モバイル用タブ
+    navProjectTitle: document.getElementById("nav-project-title"),
+  };
+
+  // 要素の存在チェックログ
+  Object.entries(navElements).forEach(([key, el]) => {
+    if (!el) console.warn(`⚠️ Warning: Element '${key}' not found in HTML.`);
+  });
 
   if (!viewList || !viewDetail) {
-    console.error(
-      "❌ CRITICAL: Main view elements NOT found. Check IDs in HTML.",
-    );
+    console.error("❌ CRITICAL: Main view elements NOT found.");
     console.groupEnd();
     return;
   }
@@ -4716,38 +4734,78 @@ export const switchView = (viewName) => {
   if (viewName === "detail") {
     console.log("➡️ Action: Switching to DETAIL view");
 
-    // クラス操作 + 直接スタイル操作で確実に隠す
+    // メイン画面の切り替え
     viewList.classList.add("hidden");
-    viewList.style.display = "none"; // ★強制非表示
-
+    viewList.style.display = "none";
     viewDetail.classList.remove("hidden");
-    viewDetail.style.display = "block"; // ★強制表示
+    viewDetail.style.display = "block";
 
-    // ... (ナビゲーション表示処理：変更なし) ...
-    const fixedNav = document.getElementById("fixed-nav");
-    if (fixedNav) fixedNav.classList.remove("hidden");
+    // --- ナビゲーションバーの制御 ---
+    console.log("   - Updating Navigation for Detail View...");
 
-    // ... (タイトル更新処理：変更なし) ...
-    const navProjectTitle = document.getElementById("nav-project-title");
-    const project = state.projects.find((p) => p.id === state.currentProjectId);
-    if (project && navProjectTitle) {
-      navProjectTitle.textContent = project.name;
+    // 親ナビゲーションを表示
+    if (navElements.fixedNav) navElements.fixedNav.classList.remove("hidden");
+
+    // リスト用パーツを隠す
+    if (navElements.navListContext)
+      navElements.navListContext.classList.add("hidden");
+
+    // 詳細用パーツ(戻るボタン等)を表示
+    if (navElements.navDetailContext)
+      navElements.navDetailContext.classList.remove("hidden");
+
+    // PC用タブボタンを表示 (hiddenを消し、flexをつける)
+    if (navElements.navDetailButtons) {
+      navElements.navDetailButtons.classList.remove("hidden");
+      navElements.navDetailButtons.classList.add("flex");
+      console.log("   - Showed PC Tabs (nav-detail-buttons)");
     }
 
+    // モバイル用タブボタンを表示
+    if (navElements.mobileNavDetailButtons) {
+      navElements.mobileNavDetailButtons.classList.remove("hidden");
+      console.log("   - Showed Mobile Tabs (mobile-nav-detail-buttons)");
+    }
+
+    // タイトル更新
+    const project = state.projects.find((p) => p.id === state.currentProjectId);
+    if (project && navElements.navProjectTitle) {
+      navElements.navProjectTitle.textContent = project.name;
+    }
+
+    // デフォルトタブへ
     switchTab("joints");
 
+    // FAB表示更新
     if (typeof updateQuickNavVisibility === "function")
       updateQuickNavVisibility();
   } else {
     console.log("⬅️ Action: Switching to LIST view");
 
+    // メイン画面の切り替え
     viewList.classList.remove("hidden");
-    viewList.style.display = "block"; // ★強制表示
-
+    viewList.style.display = "block";
     viewDetail.classList.add("hidden");
-    viewDetail.style.display = "none"; // ★強制非表示
+    viewDetail.style.display = "none";
 
-    // ... (ナビゲーション非表示処理：変更なし) ...
+    // --- ナビゲーションバーの制御 ---
+    if (navElements.navListContext)
+      navElements.navListContext.classList.remove("hidden");
+    if (navElements.navDetailContext)
+      navElements.navDetailContext.classList.add("hidden");
+
+    // タブボタンを隠す
+    if (navElements.navDetailButtons) {
+      navElements.navDetailButtons.classList.add("hidden");
+      navElements.navDetailButtons.classList.remove("flex");
+    }
+    if (navElements.mobileNavDetailButtons) {
+      navElements.mobileNavDetailButtons.classList.add("hidden");
+    }
+
+    // FABリセットなど
+    const quickNav = document.getElementById("quick-nav-container");
+    if (quickNav) quickNav.classList.add("hidden");
 
     state.currentProjectId = null;
   }
