@@ -63,6 +63,8 @@ import {
   renderTempOrderDetails,
   renderTempBoltResults,
   renderProjectList,
+  openBoltSelectorModal,
+  openConfirmDeleteModal,
 } from "./modules/ui.js";
 
 import {
