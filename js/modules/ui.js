@@ -3151,3 +3151,521 @@ export const openEditMemberModal = (memberId) => {
   const modal = document.getElementById("edit-member-modal");
   openModal(modal);
 };
+
+/**
+ * 部材リストを描画する（ソート・階層フィルタリング付き）
+ */
+export const renderMemberLists = (project) => {
+  if (!project) return;
+
+  const container = document.getElementById("member-lists-container");
+  const tabsContainer = document.getElementById("member-list-tabs");
+
+  if (!container || !tabsContainer) return;
+
+  // ヘッダークリックイベント (イベント委譲)
+  if (!container.dataset.listenerAdded) {
+    container.addEventListener("click", (e) => {
+      const th = e.target.closest("th[data-sort-key]");
+      if (th) {
+        const sectionDiv = th.closest("div[data-section-id]");
+        if (!sectionDiv) return;
+
+        const sectionId = sectionDiv.dataset.sectionId;
+        const key = th.dataset.sortKey;
+
+        if (!state.sort[sectionId])
+          state.sort[sectionId] = { key: null, order: "asc" };
+        const currentSort = state.sort[sectionId];
+
+        if (currentSort.key === key) {
+          currentSort.order = currentSort.order === "asc" ? "desc" : "asc";
+        } else {
+          currentSort.key = key;
+          currentSort.order = "asc";
+        }
+
+        // 再描画
+        renderMemberLists(
+          state.projects.find((p) => p.id === state.currentProjectId),
+        );
+      }
+    });
+    container.dataset.listenerAdded = "true";
+  }
+
+  // 1. 階層タブ生成
+  const levels = getProjectLevels(project);
+  let tabsHtml = `<button class="level-tab-btn px-3 py-1 rounded-full text-sm font-bold transition-colors border ${
+    state.activeMemberLevel === "all"
+      ? "bg-blue-600 text-white border-blue-600"
+      : "bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-300 dark:border-slate-600 hover:bg-slate-100"
+  }" data-level="all">全て</button>`;
+
+  levels.forEach((lvl) => {
+    const isActive = state.activeMemberLevel === lvl.id;
+    const activeClass = isActive
+      ? "bg-blue-600 text-white border-blue-600"
+      : "bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-300 dark:border-slate-600 hover:bg-slate-100";
+    tabsHtml += `<button class="level-tab-btn px-3 py-1 rounded-full text-sm font-bold transition-colors border ${activeClass}" data-level="${lvl.id}">${lvl.label}</button>`;
+  });
+
+  tabsContainer.innerHTML = tabsHtml;
+
+  tabsContainer.querySelectorAll(".level-tab-btn").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      state.activeMemberLevel = btn.dataset.level;
+      renderMemberLists(project);
+    });
+  });
+
+  // 2. 部材データのフィルタリング
+  const jointsMap = new Map(project.joints.map((j) => [j.id, j]));
+  const allMembers = [
+    ...(project.members || []).map((m) => ({ ...m, isMember: true })),
+    ...project.joints
+      .filter((j) => j.countAsMember)
+      .map((j) => ({
+        id: j.id,
+        name: j.name,
+        jointId: j.id,
+        isMember: false,
+      })),
+  ]
+    .map((m) => ({ ...m, joint: jointsMap.get(m.jointId) }))
+    .filter((m) => m.joint)
+    .filter((m) => {
+      if (state.activeMemberLevel === "all") return true;
+      if (!m.isMember) return true;
+      if (!m.targetLevels || m.targetLevels.length === 0) return true;
+      return m.targetLevels.includes(state.activeMemberLevel);
+    });
+
+  // テーブル行生成ヘルパー
+  const populateMemberTable = (tbodyId, members, color) => {
+    const tbody = document.getElementById(tbodyId);
+    if (!tbody) return;
+
+    tbody.innerHTML = members
+      .map((member) => {
+        const { joint } = member;
+        const borderColor = "border-slate-400",
+          darkBorderColor = "dark:border-slate-600";
+        const isPin = joint.isPinJoint || false;
+        const colorBadge = joint.color
+          ? `<span class="inline-block w-3 h-3 rounded-full ml-2 border border-gray-400" style="background-color: ${joint.color}; vertical-align: middle;"></span>`
+          : "";
+
+        let actionsHtml = member.isMember
+          ? `<button data-id="${member.id}" class="edit-member-btn text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 font-semibold">編集</button>
+               <button data-id="${member.id}" class="delete-member-btn text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300 font-semibold">削除</button>`
+          : `<button data-joint-id="${member.jointId}" class="edit-joint-btn text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 font-semibold">継手編集</button>`;
+
+        let boltInfo = "";
+        if (joint.isComplexSpl && joint.webInputs) {
+          const webInfo = joint.webInputs
+            .map((w) => `${w.size || "-"} / ${w.count}本`)
+            .join(",<br>");
+          boltInfo = `<td class="px-4 py-3 border-b border-r ${borderColor} ${darkBorderColor}">${webInfo}</td>`;
+        } else {
+          const singleBoltTypes = ["column", "wall_girt", "roof_purlin"];
+          if (singleBoltTypes.includes(joint.type)) {
+            boltInfo = `<td class="px-4 py-3 border-b border-r ${borderColor} ${darkBorderColor}">${
+              joint.flangeSize || "-"
+            } / ${joint.flangeCount}本</td>`;
+          } else if (isPin) {
+            boltInfo = `<td class="px-4 py-3 border-b border-r ${borderColor} ${darkBorderColor}">${
+              joint.webSize || "-"
+            } / ${joint.webCount}本</td>`;
+          } else {
+            boltInfo = `<td class="px-4 py-3 border-b border-r ${borderColor} ${darkBorderColor}">${
+              joint.flangeSize || "-"
+            } / ${joint.flangeCount}本</td>
+                          <td class="px-4 py-3 border-b border-r ${borderColor} ${darkBorderColor}">${
+                            joint.webSize || "-"
+                          } / ${joint.webCount}本</td>`;
+          }
+        }
+
+        let tempBoltInfoCells = "";
+        if (!["wall_girt", "roof_purlin", "column"].includes(joint.type)) {
+          const tempBoltInfo = getTempBoltInfo(joint, project.tempBoltMap);
+          if (joint.isComplexSpl) {
+            const webTempInfo = tempBoltInfo.webs
+              .map((info) => {
+                const className = info.text.includes("未設定")
+                  ? "text-red-600 font-bold"
+                  : "";
+                return `<span class="${className}" title="${info.formula}">${info.text}</span>`;
+              })
+              .join(",<br>");
+            tempBoltInfoCells = `<td class="px-4 py-3 text-center border-b border-r ${borderColor} ${darkBorderColor}">${webTempInfo}</td>`;
+          } else {
+            const twoColumns =
+              ["girder", "beam", "other", "stud"].includes(joint.type) &&
+              !joint.isPinJoint;
+            if (twoColumns) {
+              const flangeClass = tempBoltInfo.flange.text.includes("未設定")
+                ? "text-red-600 font-bold"
+                : "";
+              const webClass = tempBoltInfo.web.text.includes("未設定")
+                ? "text-red-600 font-bold"
+                : "";
+              tempBoltInfoCells = `
+                  <td class="px-4 py-3 text-center border-b border-r ${borderColor} ${darkBorderColor} ${flangeClass}" title="${tempBoltInfo.flange.formula}">${tempBoltInfo.flange.text}</td>
+                  <td class="px-4 py-3 text-center border-b border-r ${borderColor} ${darkBorderColor} ${webClass}" title="${tempBoltInfo.web.formula}">${tempBoltInfo.web.text}</td>`;
+            } else {
+              const singleClass = tempBoltInfo.single.text.includes("未設定")
+                ? "text-red-600 font-bold"
+                : "";
+              tempBoltInfoCells = `<td class="px-4 py-3 text-center border-b border-r ${borderColor} ${darkBorderColor} ${singleClass}" title="${tempBoltInfo.single.formula}">${tempBoltInfo.single.text}</td>`;
+            }
+          }
+        }
+
+        let floorBadge = "";
+        if (member.isMember) {
+          if (!member.targetLevels || member.targetLevels.length === 0) {
+            floorBadge =
+              '<span class="text-xs bg-gray-200 dark:bg-gray-700 px-1 rounded ml-2">全</span>';
+          } else {
+            const displayLevels =
+              member.targetLevels.length > 3
+                ? `${member.targetLevels.length}フロア`
+                : member.targetLevels
+                    .map((l) => {
+                      const lvlObj = levels.find((x) => x.id === l);
+                      return lvlObj
+                        ? lvlObj.label.replace("階", "").replace("F", "")
+                        : l;
+                    })
+                    .join(",");
+            floorBadge = `<span class="text-xs bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 px-1 rounded ml-2">${displayLevels}</span>`;
+          }
+        } else {
+          floorBadge =
+            '<span class="text-xs bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 px-1 rounded ml-2">全</span>';
+        }
+
+        return `
+                <tr class="bg-${color}-50 dark:bg-slate-800/50 hover:bg-${color}-100 dark:hover:bg-slate-700/50">
+                    <td class="px-4 py-3 text-center border-b border-r ${borderColor} ${darkBorderColor}">
+                        <div class="flex justify-center gap-2 whitespace-nowrap">${actionsHtml}</div>
+                    </td>
+                    <td class="px-4 py-3 font-medium text-gray-900 dark:text-gray-100 border-b border-r ${borderColor} ${darkBorderColor}">
+                        ${member.name}${floorBadge}
+                    </td>
+                    <td class="px-4 py-3 border-b border-r ${borderColor} ${darkBorderColor}">
+                        ${joint.name}${colorBadge}
+                    </td>
+                    ${boltInfo}
+                    ${tempBoltInfoCells}
+                </tr>`;
+      })
+      .join("");
+  };
+
+  const memberSections = [
+    {
+      type: "girder",
+      isPin: false,
+      title: "部材 - 大梁",
+      color: "blue",
+      cols: [
+        { label: "操作", key: null },
+        { label: "部材名", key: "name" },
+        { label: "使用継手", key: "jointName" },
+        { label: "フランジ", key: "flange" },
+        { label: "ウェブ", key: "web" },
+        { label: "仮ボルト(フランジ)", key: "temp-flange" },
+        { label: "仮ボルト(ウェブ)", key: "temp-web" },
+      ],
+    },
+    {
+      type: "girder",
+      isPin: true,
+      title: "部材 - 大梁 (ピン取り)",
+      color: "cyan",
+      cols: [
+        { label: "操作", key: null },
+        { label: "部材名", key: "name" },
+        { label: "使用継手", key: "jointName" },
+        { label: "ウェブ", key: "web" },
+        { label: "仮ボルト", key: "temp-web" },
+      ],
+    },
+    {
+      type: "beam",
+      isPin: false,
+      title: "部材 - 小梁",
+      color: "green",
+      cols: [
+        { label: "操作", key: null },
+        { label: "部材名", key: "name" },
+        { label: "使用継手", key: "jointName" },
+        { label: "フランジ", key: "flange" },
+        { label: "ウェブ", key: "web" },
+        { label: "仮ボルト(フランジ)", key: "temp-flange" },
+        { label: "仮ボルト(ウェブ)", key: "temp-web" },
+      ],
+    },
+    {
+      type: "beam",
+      isPin: true,
+      title: "部材 - 小梁 (ピン取り)",
+      color: "teal",
+      cols: [
+        { label: "操作", key: null },
+        { label: "部材名", key: "name" },
+        { label: "使用継手", key: "jointName" },
+        { label: "ウェブ", key: "web" },
+        { label: "仮ボルト", key: "temp-web" },
+      ],
+    },
+    {
+      type: "column",
+      isPin: false,
+      title: "部材 - 本柱",
+      color: "red",
+      cols: [
+        { label: "操作", key: null },
+        { label: "部材名", key: "name" },
+        { label: "使用継手", key: "jointName" },
+        { label: "エレクション", key: "bolt" },
+      ],
+    },
+    {
+      type: "stud",
+      isPin: false,
+      title: "部材 - 間柱",
+      color: "indigo",
+      cols: [
+        { label: "操作", key: null },
+        { label: "部材名", key: "name" },
+        { label: "使用継手", key: "jointName" },
+        { label: "フランジボルト", key: "flange" },
+        { label: "ウェブボルト", key: "web" },
+        { label: "仮ボルト(フランジ)", key: "temp-flange" },
+        { label: "仮ボルト(ウェブ)", key: "temp-web" },
+      ],
+    },
+    {
+      type: "stud",
+      isPin: true,
+      title: "部材 - 間柱 (ピン取り)",
+      color: "purple",
+      cols: [
+        { label: "操作", key: null },
+        { label: "部材名", key: "name" },
+        { label: "使用継手", key: "jointName" },
+        { label: "ボルトサイズ", key: "bolt" },
+        { label: "仮ボルト", key: "temp-web" },
+      ],
+    },
+    {
+      type: "wall_girt",
+      isPin: false,
+      title: "部材 - 胴縁",
+      color: "gray",
+      cols: [
+        { label: "操作", key: null },
+        { label: "部材名", key: "name" },
+        { label: "使用継手", key: "jointName" },
+        { label: "ボルトサイズ", key: "bolt" },
+      ],
+    },
+    {
+      type: "roof_purlin",
+      isPin: false,
+      title: "部材 - 母屋",
+      color: "orange",
+      cols: [
+        { label: "操作", key: null },
+        { label: "部材名", key: "name" },
+        { label: "使用継手", key: "jointName" },
+        { label: "ボルトサイズ", key: "bolt" },
+      ],
+    },
+    {
+      type: "other",
+      isPin: false,
+      title: "部材 - その他",
+      color: "amber",
+      cols: [
+        { label: "操作", key: null },
+        { label: "部材名", key: "name" },
+        { label: "使用継手", key: "jointName" },
+        { label: "フランジ", key: "flange" },
+        { label: "ウェブ", key: "web" },
+        { label: "仮ボルト(フランジ)", key: "temp-flange" },
+        { label: "仮ボルト(ウェブ)", key: "temp-web" },
+      ],
+    },
+    {
+      type: "other",
+      isPin: true,
+      title: "部材 - その他 (ピン取り)",
+      color: "amber",
+      cols: [
+        { label: "操作", key: null },
+        { label: "部材名", key: "name" },
+        { label: "使用継手", key: "jointName" },
+        { label: "ボルト", key: "bolt" },
+        { label: "仮ボルト", key: "temp-web" },
+      ],
+    },
+  ];
+
+  let html = "";
+  const sectionsToRender = [];
+
+  memberSections.forEach((section) => {
+    const filteredMembers = allMembers.filter(
+      (m) =>
+        m.joint &&
+        m.joint.type === section.type &&
+        (m.joint.isPinJoint || false) === section.isPin,
+    );
+    if (filteredMembers.length > 0) {
+      const sectionId = `member-${section.type}-${
+        section.isPin ? "pin" : "rigid"
+      }`;
+      const sortState = state.sort[sectionId];
+
+      if (sortState && sortState.key) {
+        filteredMembers.sort((a, b) => {
+          const key = sortState.key;
+
+          const getVal = (m) => {
+            if (key === "name") return m.name;
+            if (key === "jointName") return m.joint.name;
+            if (key === "flange")
+              return `${m.joint.flangeSize}-${m.joint.flangeCount}`;
+            if (key === "web") return `${m.joint.webSize}-${m.joint.webCount}`;
+            if (key === "bolt")
+              return (
+                m.joint.flangeSize ||
+                m.joint.webSize ||
+                m.joint.shopTempBoltSize ||
+                ""
+              );
+            if (key === "web_complex")
+              return m.joint.webInputs && m.joint.webInputs.length > 0
+                ? m.joint.webInputs[0].size
+                : m.joint.webSize || "";
+
+            if (key.startsWith("temp")) {
+              const info = getTempBoltInfo(m.joint, project.tempBoltMap);
+              if (key === "temp-flange") return info.flange.text;
+              if (key === "temp-web") return info.web.text;
+              if (key === "temp_web_complex")
+                return info.webs && info.webs.length > 0
+                  ? info.webs[0].text
+                  : info.web.text;
+            }
+            return "";
+          };
+
+          const valA = getVal(a);
+          const valB = getVal(b);
+
+          // ボルトサイズ系なら boltSort を使う
+          if (
+            [
+              "flange",
+              "web",
+              "bolt",
+              "web_complex",
+              "temp-flange",
+              "temp-web",
+              "temp_web_complex",
+            ].includes(key)
+          ) {
+            const strA =
+              valA === null || valA === undefined ? "" : String(valA);
+            const strB =
+              valB === null || valB === undefined ? "" : String(valB);
+            const cleanA = strA.split("/")[0].trim();
+            const cleanB = strB.split("/")[0].trim();
+
+            const cmp = boltSort(cleanA, cleanB);
+            if (cmp !== 0) return sortState.order === "asc" ? cmp : -cmp;
+
+            return sortState.order === "asc"
+              ? strA.localeCompare(strB)
+              : strB.localeCompare(strA);
+          }
+
+          if (valA < valB) return sortState.order === "asc" ? -1 : 1;
+          if (valA > valB) return sortState.order === "asc" ? 1 : -1;
+          return 0;
+        });
+      } else {
+        // デフォルトソート
+        filteredMembers.sort((a, b) => {
+          const jointNameCompare = a.joint.name.localeCompare(
+            b.joint.name,
+            "ja",
+          );
+          if (jointNameCompare !== 0) return jointNameCompare;
+          return a.name.localeCompare(b.name, "ja");
+        });
+      }
+
+      const tbodyId = `members-list-${section.type}${section.isPin ? "-pin" : ""}`;
+      let finalCols = section.cols;
+      const hasComplexSpl = filteredMembers.some((m) => m.joint.isComplexSpl);
+      if (hasComplexSpl && section.isPin) {
+        finalCols = [
+          { label: "操作", key: null },
+          { label: "部材名", key: "name" },
+          { label: "使用継手", key: "jointName" },
+          { label: "ウェブ (複合SPL)", key: "web_complex" },
+          { label: "仮ボルト (複合SPL)", key: "temp_web_complex" },
+        ];
+      }
+
+      const headerHtml = finalCols
+        .map((col) => {
+          let sortIcon = "";
+          let cursorClass = "";
+          let dataAttr = "";
+          if (col.key) {
+            cursorClass =
+              "cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors";
+            dataAttr = `data-sort-key="${col.key}"`;
+            if (sortState && sortState.key === col.key) {
+              sortIcon = sortState.order === "asc" ? " ▲" : " ▼";
+            }
+          }
+          return `<th class="px-4 py-3 whitespace-nowrap ${cursorClass}" ${dataAttr}>${col.label}${sortIcon}</th>`;
+        })
+        .join("");
+
+      const anchorId = `anchor-member-${section.type}-${section.isPin ? "pin" : "rigid"}`;
+
+      html += `
+            <div id="${anchorId}" class="rounded-lg border border-slate-400 dark:border-slate-600 scroll-mt-24" data-section-title="部材：${section.title}" data-section-color="${section.color}" data-section-id="${sectionId}">
+                <h3 class="text-lg font-semibold bg-${section.color}-200 text-${section.color}-800 dark:bg-slate-700 dark:text-${section.color}-200 px-4 py-2 rounded-t-lg">${section.title}</h3>
+                <div class="overflow-x-auto custom-scrollbar bg-${section.color}-50 dark:bg-slate-900/50 rounded-b-lg">
+                    <table class="w-full min-w-[400px] text-sm text-left">
+                        <thead class="bg-${section.color}-100 text-${section.color}-700 dark:bg-slate-800/60 dark:text-${section.color}-200 text-xs"><tr>${headerHtml}</tr></thead>
+                        <tbody id="${tbodyId}"></tbody>
+                    </table>
+                </div>
+            </div>`;
+      sectionsToRender.push({
+        tbodyId,
+        filteredMembers,
+        color: section.color,
+        section,
+      });
+    }
+  });
+
+  container.innerHTML = html;
+
+  sectionsToRender.forEach((s) =>
+    populateMemberTable(s.tbodyId, s.filteredMembers, s.color, s.section),
+  );
+};
