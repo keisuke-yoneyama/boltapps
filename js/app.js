@@ -76,6 +76,9 @@ import {
   renderTallySheet,
   switchView,
   renderDetailView,
+  performHistoryAction,
+  saveStateToHistory,
+  updateUndoRedoButtons,
 } from "./modules/ui.js";
 
 import {
@@ -940,10 +943,10 @@ document.addEventListener("DOMContentLoaded", () => {
   const tallySection = document.getElementById("tally-section");
   const hamburgerBtn = document.getElementById("hamburger-btn");
   const mobileMenu = document.getElementById("mobile-menu");
-  const undoBtn = document.getElementById("undo-btn");
-  const redoBtn = document.getElementById("redo-btn");
-  const mobileUndoBtn = document.getElementById("mobile-undo-btn");
-  const mobileRedoBtn = document.getElementById("mobile-redo-btn");
+  // const undoBtn = document.getElementById("undo-btn");
+  // const redoBtn = document.getElementById("redo-btn");
+  // const mobileUndoBtn = document.getElementById("mobile-undo-btn");
+  // const mobileRedoBtn = document.getElementById("mobile-redo-btn");
   const projectsContainer = document.getElementById("projects-container");
   const projectNameInput = document.getElementById("project-name");
   const projectFloorsInput = document.getElementById("project-floors");
@@ -2227,60 +2230,60 @@ document.addEventListener("DOMContentLoaded", () => {
   //     .join("");
   // };
   // --- History Management Functions ---
-  const updateUndoRedoButtons = () => {
-    const canUndo = history.currentIndex > 0;
-    const canRedo = history.currentIndex < history.stack.length - 1;
+  // const updateUndoRedoButtons = () => {
+  //   const canUndo = history.currentIndex > 0;
+  //   const canRedo = history.currentIndex < history.stack.length - 1;
 
-    [undoBtn, mobileUndoBtn].forEach((btn) => (btn.disabled = !canUndo));
-    [redoBtn, mobileRedoBtn].forEach((btn) => (btn.disabled = !canRedo));
-  };
+  //   [undoBtn, mobileUndoBtn].forEach((btn) => (btn.disabled = !canUndo));
+  //   [redoBtn, mobileRedoBtn].forEach((btn) => (btn.disabled = !canRedo));
+  // };
 
-  const saveStateToHistory = (projectsData) => {
-    if (isUndoRedoOperation) return;
+  // const saveStateToHistory = (projectsData) => {
+  //   if (isUndoRedoOperation) return;
 
-    if (history.currentIndex < history.stack.length - 1) {
-      history.stack = history.stack.slice(0, history.currentIndex + 1);
-    }
+  //   if (history.currentIndex < history.stack.length - 1) {
+  //     history.stack = history.stack.slice(0, history.currentIndex + 1);
+  //   }
 
-    history.stack.push(JSON.parse(JSON.stringify(projectsData)));
-    history.currentIndex++;
+  //   history.stack.push(JSON.parse(JSON.stringify(projectsData)));
+  //   history.currentIndex++;
 
-    if (history.stack.length > MAX_HISTORY_SIZE) {
-      history.stack.shift();
-      history.currentIndex--;
-    }
-    updateUndoRedoButtons();
-  };
+  //   if (history.stack.length > MAX_HISTORY_SIZE) {
+  //     history.stack.shift();
+  //     history.currentIndex--;
+  //   }
+  //   updateUndoRedoButtons();
+  // };
 
-  const performHistoryAction = (action) => {
-    if (action === "undo" && history.currentIndex > 0) {
-      isUndoRedoOperation = true;
-      history.currentIndex--;
-    } else if (
-      action === "redo" &&
-      history.currentIndex < history.stack.length - 1
-    ) {
-      isUndoRedoOperation = true;
-      history.currentIndex++;
-    } else {
-      return;
-    }
+  // const performHistoryAction = (action) => {
+  //   if (action === "undo" && history.currentIndex > 0) {
+  //     isUndoRedoOperation = true;
+  //     history.currentIndex--;
+  //   } else if (
+  //     action === "redo" &&
+  //     history.currentIndex < history.stack.length - 1
+  //   ) {
+  //     isUndoRedoOperation = true;
+  //     history.currentIndex++;
+  //   } else {
+  //     return;
+  //   }
 
-    state.projects = JSON.parse(
-      JSON.stringify(history.stack[history.currentIndex]),
-    );
+  //   state.projects = JSON.parse(
+  //     JSON.stringify(history.stack[history.currentIndex]),
+  //   );
 
-    if (views.detail.classList.contains("active")) {
-      renderDetailView();
-    } else {
-      updateProjectListUI();
-    }
-    updateUndoRedoButtons();
+  //   if (views.detail.classList.contains("active")) {
+  //     renderDetailView();
+  //   } else {
+  //     updateProjectListUI();
+  //   }
+  //   updateUndoRedoButtons();
 
-    setTimeout(() => {
-      isUndoRedoOperation = false;
-    }, 100);
-  };
+  //   setTimeout(() => {
+  //     isUndoRedoOperation = false;
+  //   }, 100);
+  // };
 
   // --- Rendering Functions ---
   // ★ 修正版：renderProjectList（グリッド表示・コンパクトカード化）
@@ -7208,16 +7211,19 @@ document.addEventListener("DOMContentLoaded", () => {
       switchView("list");
     });
 
-  undoBtn.addEventListener("click", () => performHistoryAction("undo"));
-  redoBtn.addEventListener("click", () => performHistoryAction("redo"));
-  mobileUndoBtn.addEventListener("click", () => performHistoryAction("undo"));
-  mobileRedoBtn.addEventListener("click", () => performHistoryAction("redo"));
+  // ▼▼▼ Undo/Redoボタンのイベントリスナー ▼▼▼
+  //とりあえず以前の場所に記載、あとで改善の余地あり
+  const undoBtn = document.getElementById("undo-btn");
+  const redoBtn = document.getElementById("redo-btn");
+  const mobileUndoBtn = document.getElementById("mobile-undo-btn");
+  const mobileRedoBtn = document.getElementById("mobile-redo-btn");
 
-  //const memberJointSelectInputForClick = document.getElementById('member-joint-select-input');
-  //memberJointSelectInputForClick.addEventListener('click', () => {
-  //    openJointSelectorBtn.click(); // 既に機能があるボタンのクリックイベントを呼び出す
-  //});
-  // ▼▼▼ このコードブロックをまるごと追加してください ▼▼▼
+  [undoBtn, mobileUndoBtn].forEach((btn) => {
+    if (btn) btn.addEventListener("click", () => performHistoryAction("undo"));
+  });
+  [redoBtn, mobileRedoBtn].forEach((btn) => {
+    if (btn) btn.addEventListener("click", () => performHistoryAction("redo"));
+  });
 
   // 「▼」ボタンがクリックされた時の処理
   openJointSelectorBtn.addEventListener("click", () => {

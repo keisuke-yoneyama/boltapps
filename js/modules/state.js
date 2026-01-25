@@ -1,7 +1,7 @@
 export const state = {
   projects: [],
   currentProjectId: null,
-  activeBoltTarget: null,// 現在ボルト選択中の入力欄（DOM要素）を保持
+  activeBoltTarget: null, // 現在ボルト選択中の入力欄（DOM要素）を保持
   tempJointData: null,
   activeTab: "joints",
   scrollPositions: { joints: 0, tally: 0 },
@@ -27,8 +27,18 @@ export const state = {
   pendingUpdateData: null,
 
   // ▼▼▼ 追加：グローバルボルトサイズ設定 ▼▼▼
-  globalBoltSizes: [],// ボルトマスタ
+  globalBoltSizes: [], // ボルトマスタ
+
+  // ▼▼▼ 追加: ヒストリー機能用のState ▼▼▼
+  history: {
+    stack: [],
+    currentIndex: -1,
+  },
+  isUndoRedoOperation: false,
 };
+
+// 定数もここでexportしておくと便利です
+export const MAX_HISTORY_SIZE = 20;
 
 export function resetTempJointData() {
   state.tempJointData = null;
