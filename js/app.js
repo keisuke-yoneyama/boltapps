@@ -79,6 +79,9 @@ import {
   performHistoryAction,
   saveStateToHistory,
   updateUndoRedoButtons,
+  populateHugBoltSelector,
+  resetJointForm,
+  generateCustomInputFields,
 } from "./modules/ui.js";
 
 import {
@@ -1896,72 +1899,72 @@ document.addEventListener("DOMContentLoaded", () => {
   //   });
   // };
 
-  const populateHugBoltSelector = (selectElement) => {
-    const allHugBolts = Object.values(HUG_BOLT_SIZES).flat();
-    selectElement.innerHTML = '<option value="">サイズを選択...</option>';
-    allHugBolts.forEach((size) => {
-      const option = document.createElement("option");
-      option.value = size;
-      option.textContent = size;
-      selectElement.appendChild(option);
-    });
-  };
+  // const populateHugBoltSelector = (selectElement) => {
+  //   const allHugBolts = Object.values(HUG_BOLT_SIZES).flat();
+  //   selectElement.innerHTML = '<option value="">サイズを選択...</option>';
+  //   allHugBolts.forEach((size) => {
+  //     const option = document.createElement("option");
+  //     option.value = size;
+  //     option.textContent = size;
+  //     selectElement.appendChild(option);
+  //   });
+  // };
 
-  const resetJointForm = () => {
-    jointNameInput.value = "";
-    // ▼▼▼ 追加：常設フォームのカラー設定リセット ▼▼▼
-    if (jointColorToggle) {
-      jointColorToggle.checked = false;
-      jointColorSection.classList.add("hidden");
-      jointColorInput.value = "#ffffff";
-      renderStaticColorPalette(null);
-    }
-    // ▲▲▲ 追加ここまで ▲▲▲
-    // ▼▼▼ 修正：色のリセット ▼▼▼
-    // editJointColorInput.value = '#ffffff';
-    // editJointColorInput.dataset.isNull = "true";
-    if (typeof editJointColorInput !== "undefined" && editJointColorInput) {
-      editJointColorInput.value = "#ffffff";
-      editJointColorInput.dataset.isNull = "true";
-      renderColorPalette(null);
-    }
-    // ▲▲▲ 修正ここまで ▲▲▲
-    flangeSizeInput.value = "";
-    flangeCountInput.value = "";
-    webSizeInput.value = "";
-    webCountInput.value = "";
-    shopTempBoltCountInput.value = "";
-    shopTempBoltSizeInput.value = "";
-    isPinJointInput.checked = false;
-    isDoubleShearInput.checked = false;
-    countAsMemberInput.checked = false;
-    hasShopSplInput.checked = false;
-    hasBoltCorrectionInput.checked = false;
-    tempBoltSettingInput.value = "calculated";
-    isComplexSplInput.checked = false;
-    complexSplCountInput.value = "2";
-    newComplexSplCache = Array.from({ length: 4 }, () => ({
-      size: "",
-      count: "",
-    }));
-    if (isBundledWithColumnInput) isBundledWithColumnInput.checked = false; // ★追加
-    updateJointFformUI(false);
-  };
+  // const resetJointForm = () => {
+  //   jointNameInput.value = "";
+  //   // ▼▼▼ 追加：常設フォームのカラー設定リセット ▼▼▼
+  //   if (jointColorToggle) {
+  //     jointColorToggle.checked = false;
+  //     jointColorSection.classList.add("hidden");
+  //     jointColorInput.value = "#ffffff";
+  //     renderStaticColorPalette(null);
+  //   }
+  //   // ▲▲▲ 追加ここまで ▲▲▲
+  //   // ▼▼▼ 修正：色のリセット ▼▼▼
+  //   // editJointColorInput.value = '#ffffff';
+  //   // editJointColorInput.dataset.isNull = "true";
+  //   if (typeof editJointColorInput !== "undefined" && editJointColorInput) {
+  //     editJointColorInput.value = "#ffffff";
+  //     editJointColorInput.dataset.isNull = "true";
+  //     renderColorPalette(null);
+  //   }
+  //   // ▲▲▲ 修正ここまで ▲▲▲
+  //   flangeSizeInput.value = "";
+  //   flangeCountInput.value = "";
+  //   webSizeInput.value = "";
+  //   webCountInput.value = "";
+  //   shopTempBoltCountInput.value = "";
+  //   shopTempBoltSizeInput.value = "";
+  //   isPinJointInput.checked = false;
+  //   isDoubleShearInput.checked = false;
+  //   countAsMemberInput.checked = false;
+  //   hasShopSplInput.checked = false;
+  //   hasBoltCorrectionInput.checked = false;
+  //   tempBoltSettingInput.value = "calculated";
+  //   isComplexSplInput.checked = false;
+  //   complexSplCountInput.value = "2";
+  //   newComplexSplCache = Array.from({ length: 4 }, () => ({
+  //     size: "",
+  //     count: "",
+  //   }));
+  //   if (isBundledWithColumnInput) isBundledWithColumnInput.checked = false; // ★追加
+  //   updateJointformUI(false);
+  // };
 
-  const generateCustomInputFields = (count, container, prefix, values = []) => {
-    container.innerHTML = "";
-    for (let i = 0; i < count; i++) {
-      const input = document.createElement("input");
-      input.type = "text";
-      input.className = `custom-input w-full bg-white border border-gray-400 text-gray-900 rounded-md p-2 focus:ring-yellow-500 focus:border-yellow-500`;
-      input.placeholder = `${prefix.includes("level") ? "階層" : "エリア"} ${
-        i + 1
-      }`;
-      input.id = `${prefix}-${i}`;
-      input.value = values[i] || "";
-      container.appendChild(input);
-    }
-  };
+  // const generateCustomInputFields = (count, container, prefix, values = []) => {
+  //   container.innerHTML = "";
+  //   for (let i = 0; i < count; i++) {
+  //     const input = document.createElement("input");
+  //     input.type = "text";
+  //     input.className = `custom-input w-full bg-white border border-gray-400 text-gray-900 rounded-md p-2 focus:ring-yellow-500 focus:border-yellow-500`;
+  //     input.placeholder = `${prefix.includes("level") ? "階層" : "エリア"} ${
+  //       i + 1
+  //     }`;
+  //     input.id = `${prefix}-${i}`;
+  //     input.value = values[i] || "";
+  //     container.appendChild(input);
+  //   }
+  // };
   // (Remaining functions would be here in the full code)
 
   // ★ 修正版：UI更新処理（胴縁などの単一ボルト表示バグ修正済み）

@@ -4875,3 +4875,125 @@ export const performHistoryAction = (action) => {
     state.isUndoRedoOperation = false;
   }, 100);
 };
+
+/**
+ * HUGボルトのサイズ選択肢を生成する
+ */
+export const populateHugBoltSelector = (selectElement) => {
+  const allHugBolts = Object.values(HUG_BOLT_SIZES).flat();
+  selectElement.innerHTML = '<option value="">サイズを選択...</option>';
+  allHugBolts.forEach((size) => {
+    const option = document.createElement("option");
+    option.value = size;
+    option.textContent = size;
+    selectElement.appendChild(option);
+  });
+};
+
+/**
+ * 継手入力フォームをリセットする
+ */
+export const resetJointForm = () => {
+  // DOM要素の取得 (変数定義が外にある場合はそのままでOKですが、安全のためここで取得推奨)
+  const jointNameInput = document.getElementById("joint-name");
+  const jointColorToggle = document.getElementById("joint-color-toggle");
+  const jointColorSection = document.getElementById("joint-color-section");
+  const jointColorInput = document.getElementById("joint-color");
+  const editJointColorInput = document.getElementById("edit-joint-color");
+  const flangeSizeInput = document.getElementById("flange-size");
+  const flangeCountInput = document.getElementById("flange-count");
+  const webSizeInput = document.getElementById("web-size");
+  const webCountInput = document.getElementById("web-count");
+  const shopTempBoltCountInput = document.getElementById(
+    "shop-temp-bolt-count",
+  );
+  const shopTempBoltSizeInput = document.getElementById("shop-temp-bolt-size");
+  const isPinJointInput = document.getElementById("is-pin-joint");
+  const isDoubleShearInput = document.getElementById("is-double-shear");
+  const countAsMemberInput = document.getElementById("count-as-member");
+  const hasShopSplInput = document.getElementById("has-shop-spl");
+  const hasBoltCorrectionInput = document.getElementById("has-bolt-correction");
+  const tempBoltSettingInput = document.getElementById("temp-bolt-setting");
+  const isComplexSplInput = document.getElementById("is-complex-spl");
+  const complexSplCountInput = document.getElementById("complex-spl-count");
+  const isBundledWithColumnInput = document.getElementById(
+    "is-bundled-with-column",
+  ); // ★本柱と同梱
+
+  if (jointNameInput) jointNameInput.value = "";
+
+  // 常設フォームのカラー設定リセット
+  if (jointColorToggle) {
+    jointColorToggle.checked = false;
+    if (jointColorSection) jointColorSection.classList.add("hidden");
+    if (jointColorInput) jointColorInput.value = "#ffffff";
+
+    // ui.js内の関数
+    if (typeof renderStaticColorPalette === "function")
+      renderStaticColorPalette(null);
+  }
+
+  // 編集フォームのカラーリセット
+  if (editJointColorInput) {
+    editJointColorInput.value = "#ffffff";
+    editJointColorInput.dataset.isNull = "true";
+
+    // ui.js内の関数
+    if (typeof renderColorPalette === "function") renderColorPalette(null);
+  }
+
+  if (flangeSizeInput) flangeSizeInput.value = "";
+  if (flangeCountInput) flangeCountInput.value = "";
+  if (webSizeInput) webSizeInput.value = "";
+  if (webCountInput) webCountInput.value = "";
+  if (shopTempBoltCountInput) shopTempBoltCountInput.value = "";
+  if (shopTempBoltSizeInput) shopTempBoltSizeInput.value = "";
+
+  if (isPinJointInput) isPinJointInput.checked = false;
+  if (isDoubleShearInput) isDoubleShearInput.checked = false;
+  if (countAsMemberInput) countAsMemberInput.checked = false;
+  if (hasShopSplInput) hasShopSplInput.checked = false;
+  if (hasBoltCorrectionInput) hasBoltCorrectionInput.checked = false;
+  if (tempBoltSettingInput) tempBoltSettingInput.value = "calculated";
+
+  if (isComplexSplInput) isComplexSplInput.checked = false;
+  if (complexSplCountInput) complexSplCountInput.value = "2";
+
+  // キャッシュのリセット
+  newComplexSplCache = Array.from({ length: 4 }, () => ({
+    size: "",
+    count: "",
+  }));
+  //本柱と同梱
+  if (isBundledWithColumnInput) isBundledWithColumnInput.checked = false;
+
+  // ui.js内の関数（UIの表示状態更新）
+  // ※この関数も ui.js に移動する必要があります
+  if (typeof updateJointFformUI === "function") {
+    updateJointFormUI(false);
+  }
+};
+
+/**
+ * カスタムレベル/エリア入力フィールドを生成する
+ */
+export const generateCustomInputFields = (
+  count,
+  container,
+  prefix,
+  values = [],
+) => {
+  if (!container) return;
+  container.innerHTML = "";
+  for (let i = 0; i < count; i++) {
+    const input = document.createElement("input");
+    input.type = "text";
+    input.className = `custom-input w-full bg-white border border-gray-400 text-gray-900 rounded-md p-2 focus:ring-yellow-500 focus:border-yellow-500`;
+    input.placeholder = `${prefix.includes("level") ? "階層" : "エリア"} ${
+      i + 1
+    }`;
+    input.id = `${prefix}-${i}`;
+    input.value = values[i] || "";
+    container.appendChild(input);
+  }
+};
