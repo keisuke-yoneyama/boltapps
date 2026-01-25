@@ -15,29 +15,15 @@ import {
 } from "./modules/config.js";
 
 import {
-  getBoltWeight,
-  boltSort,
   getProjectLevels,
-  getMasterOrderedKeys,
-  aggregateByFloor,
-  calculateAggregatedData,
   calculateResults,
   getTallyList,
-  getTempBoltInfo,
-  calculateTempBoltResults,
-  calculateShopTempBoltResults,
   calculateAggregatedResults,
-  ensureProjectBoltSizes,
   checkAndMigrateBoltSizes,
   cleanupAndSaveBoltSettings,
 } from "./modules/calculator.js";
 
-import {
-  appId,
-  auth,
-  db,
-  isDevelopmentEnvironment,
-} from "./modules/firebase.js";
+import { auth, isDevelopmentEnvironment } from "./modules/firebase.js";
 
 import {
   showToast,
@@ -52,14 +38,11 @@ import {
   // resetNewComplexSplCache,
   renderBoltSizeSettings,
   toggleQuickNav,
-  setupQuickNav,
   renderBulkMemberInputs,
   updateColumnLockUI,
   resetMemberForm,
-  setupBoltSettingsUI,
   updateDynamicInputs,
   switchTab,
-  renderShopTempBoltResults,
   updateTallySheetCalculations,
   renderColorPalette,
   updateJointFormUI,
@@ -67,22 +50,16 @@ import {
   openEditProjectModal,
   renderStaticColorPalette,
   toggleFab,
-  updateQuickNavVisibility,
   populateJointDropdownForEdit,
-  renderAggregatedTables,
   makeDraggable,
   populateGlobalBoltSelectorModal,
   renderOrderDetails,
   renderTempOrderDetails,
-  renderTempBoltResults,
   renderProjectList,
   openBoltSelectorModal,
   openConfirmDeleteModal,
-  renderJointsList,
   openEditMemberModal,
-  renderMemberLists,
   renderResults,
-  renderTallySheet,
   switchView,
   renderDetailView,
   performHistoryAction,
@@ -99,24 +76,16 @@ import {
   addProject,
   deleteProject,
   updateProjectData,
-  getProjectById,
-  setProjectData,
-  getAllProjects,
   updateProjectPropertyNameBatch,
   getGlobalSettings,
-  saveGlobalSettings,
 } from "./modules/db.js";
 
 import { setupEventListeners } from "./modules/events.js";
 
 import { state } from "./modules/state.js";
 
-// ▼▼▼ この1行を追記 ▼▼▼
-let focusToRestore = null;
-let justFinishedIME = false;
 // let db, auth, projectsCollectionRef,
 let unsubscribeProjects;
-const MAX_HISTORY_SIZE = 21;
 let history = { stack: [], currentIndex: -1 };
 let isUndoRedoOperation = false;
 let levelNameCache = []; //★Ui.jsに移動中
