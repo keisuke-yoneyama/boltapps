@@ -36,7 +36,6 @@ import {
   auth,
   db,
   isDevelopmentEnvironment,
-  getGlobalSettings,
 } from "./modules/firebase.js";
 
 import {
