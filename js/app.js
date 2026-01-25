@@ -29,6 +29,7 @@ import {
   calculateAggregatedResults,
   ensureProjectBoltSizes,
   checkAndMigrateBoltSizes,
+  cleanupAndSaveBoltSettings,
 } from "./modules/calculator.js";
 
 import {
@@ -49,6 +50,8 @@ import {
   // newComplexSplCache,
   // resetEditComplexSplCache,
   // resetNewComplexSplCache,
+  renderBoltSizeSettings,
+  setupBoltSettingsUI,
   updateDynamicInputs,
   switchTab,
   renderShopTempBoltResults,
@@ -5409,44 +5412,27 @@ document.addEventListener("DOMContentLoaded", () => {
     }, 100);
   });
 
-  /**
-   * 設定画面を閉じる時の処理
-   * 「復元マーク」を全て削除して、きれいな状態で保存します。
-   */
+  // 閉じるボタンの処理
   const finalizeBoltSettings = () => {
     const project = state.projects.find((p) => p.id === state.currentProjectId);
+    const boltSizeSettingsModal = document.getElementById(
+      "bolt-size-settings-modal",
+    );
 
-    if (project && project.boltSizes) {
-      let hasChanges = false;
-
-      // 全てのボルトデータから 'restored' フラグを削除する
-      project.boltSizes.forEach((bolt) => {
-        if (bolt.restored) {
-          delete bolt.restored; // フラグを消す
-          hasChanges = true;
-        }
-      });
-
-      // 変更があった（マークを消した）場合、または単に閉じる場合でも保存を実行
-      // ▼▼▼ 修正箇所 ▼▼▼
-      // db.js の関数を使うことで、パス指定などの複雑な処理を削除できます
-      updateProjectData(state.currentProjectId, {
-        boltSizes: project.boltSizes,
-      })
-        .then(() => console.log("💾 復元マークをクリアして保存しました"))
-        .catch((err) => console.error("保存エラー:", err));
-      // ▲▲▲ 修正箇所ここまで ▲▲▲
+    // 保存処理 (calculator.js)
+    if (project) {
+      cleanupAndSaveBoltSettings(project);
     }
 
-    // モーダルを閉じる
+    // モーダルを閉じる (ui.js)
     closeModal(boltSizeSettingsModal);
   };
 
-  // ×ボタンで閉じる時
-  closeBoltSizeModalBtn.addEventListener("click", finalizeBoltSettings);
-
-  // 下部の「閉じる(保存)」ボタンで閉じる時
-  saveBoltSizeSettingsBtn.addEventListener("click", finalizeBoltSettings);
+  //とりあえずここに書く。app.jsの移動はあとでやる
+  if (closeBoltSizeModalBtn)
+    closeBoltSizeModalBtn.addEventListener("click", finalizeBoltSettings);
+  if (saveBoltSizeSettingsBtn)
+    saveBoltSizeSettingsBtn.addEventListener("click", finalizeBoltSettings);
 
   // --- Event Listeners ---
   // ★ 修正版：新規工事登録（即時反映対応）

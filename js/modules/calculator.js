@@ -1118,3 +1118,28 @@ export const checkAndMigrateBoltSizes = async () => {
     console.error("Migration failed:", error);
   }
 };
+/**
+ * プロジェクトのボルト設定を保存し、完了処理を行う
+ */
+export const cleanupAndSaveBoltSettings = async (project) => {
+  if (!project || !project.boltSizes) return;
+
+  let hasChanges = false;
+  // 'restored' フラグの削除
+  project.boltSizes.forEach((bolt) => {
+    if (bolt.restored) {
+      delete bolt.restored;
+      hasChanges = true;
+    }
+  });
+
+  try {
+    await updateProjectData(project.id, {
+      boltSizes: project.boltSizes,
+    });
+    console.log("💾 復元マークをクリアして保存しました");
+  } catch (err) {
+    console.error("保存エラー:", err);
+    throw err;
+  }
+};

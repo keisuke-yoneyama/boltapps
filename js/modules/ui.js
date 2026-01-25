@@ -1,4 +1,4 @@
-import { PRESET_COLORS, HUG_BOLT_SIZES } from "./config.js";
+import { PRESET_COLORS, HUG_BOLT_SIZES, BOLT_TYPES } from "./config.js";
 import { state, MAX_HISTORY_SIZE } from "./state.js";
 import {
   getProjectLevels,
@@ -13,7 +13,10 @@ import {
   getTallyList,
   calculateResults,
   calculateShopTempBoltResults,
+  sortGlobalBoltSizes,
 } from "./calculator.js";
+
+import { saveGlobalBoltSizes } from "./firebase.js";
 
 // 並び順の定義（定数として外に出しました）
 const BOLT_TYPE_ORDER = [
@@ -5097,4 +5100,216 @@ export const populateJointSelectorModal = (project, currentJointId) => {
     html += `</div>`;
   }
   jointOptionsContainer.innerHTML = html;
+};
+/**
+ * ボルト設定画面のリストを描画する
+ */
+export const renderBoltSizeSettings = (activeBoltTab = "all") => {
+  const listContainer = document.getElementById("bolt-size-list");
+  if (!listContainer) return;
+
+  listContainer.innerHTML = "";
+  const boltSizes = state.globalBoltSizes || [];
+
+  // 1. タブの見た目を更新
+  document.querySelectorAll(".bolt-tab-btn").forEach((btn) => {
+    const isTarget = btn.dataset.tab === activeBoltTab;
+    if (isTarget) {
+      btn.className =
+        "bolt-tab-btn px-4 py-2 text-sm font-medium whitespace-nowrap text-blue-600 border-b-2 border-blue-600 dark:text-blue-400 dark:border-blue-400 transition-colors";
+    } else {
+      btn.className =
+        "bolt-tab-btn px-4 py-2 text-sm font-medium whitespace-nowrap text-slate-500 border-b-2 border-transparent hover:text-slate-700 hover:border-slate-300 dark:text-slate-400 dark:hover:text-slate-200 transition-colors";
+    }
+  });
+
+  // 2. データのフィルタリング
+  const filteredBolts = boltSizes.filter((bolt) => {
+    const type = bolt.type || "";
+    switch (activeBoltTab) {
+      case "all":
+        return true;
+      case "M16":
+        return type.startsWith("M16");
+      case "M20":
+        return type.startsWith("M20");
+      case "M22":
+        return type.startsWith("M22");
+      case "chubo":
+        return type.startsWith("中ボ");
+      case "dlock_dobu":
+        return type.startsWith("Dドブ");
+      case "dlock_uni":
+        return type.startsWith("Dユニ");
+      case "other":
+        return (
+          !type.startsWith("M16") &&
+          !type.startsWith("M20") &&
+          !type.startsWith("M22") &&
+          !type.startsWith("中ボ") &&
+          !type.startsWith("Dドブ") &&
+          !type.startsWith("Dユニ")
+        );
+      default:
+        return true;
+    }
+  });
+
+  const countEl = document.getElementById("bolt-size-count");
+  if (countEl)
+    countEl.textContent = `表示: ${filteredBolts.length} / 全${boltSizes.length} 件`;
+
+  // 3. リスト生成
+  if (filteredBolts.length === 0) {
+    listContainer.innerHTML =
+      '<li class="text-center text-slate-400 py-4 text-sm">該当するサイズはありません</li>';
+    return;
+  }
+
+  filteredBolts.forEach((bolt) => {
+    // 使用中チェック (全てのプロジェクトから検索)
+    // ※state.projectsへのアクセスが必要
+    const isUsed = state.projects.some((p) =>
+      p.joints.some((j) => j.flangeSize === bolt.id || j.webSize === bolt.id),
+    );
+
+    const li = document.createElement("li");
+    li.className =
+      "flex justify-between items-center bg-white dark:bg-slate-700 p-3 rounded border border-gray-200 dark:border-slate-600 shadow-sm";
+
+    // 使用中の場合は削除ボタンを無効化するなどのUI処理を入れても良いでしょう
+    const deleteBtnHtml = `
+        <button class="delete-bolt-size-btn text-red-500 hover:text-red-700 p-2 rounded hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors" data-id="${bolt.id}" title="削除">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                <path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 000-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd" />
+            </svg>
+        </button>`;
+
+    li.innerHTML = `
+            <div class="flex flex-col">
+                <div class="flex items-center gap-2">
+                    <span class="font-bold text-slate-800 dark:text-slate-200 text-lg">${bolt.label}</span>
+                    ${isUsed ? '<span class="text-xs bg-gray-200 text-gray-600 px-1 rounded">使用中</span>' : ""}
+                </div>
+                <div class="text-xs text-slate-500 dark:text-slate-400">種類: ${bolt.type} / 長さ: ${bolt.length}mm</div>
+            </div>
+            ${deleteBtnHtml}
+        `;
+    listContainer.appendChild(li);
+  });
+
+  // 削除ボタンイベント設定
+  listContainer.querySelectorAll(".delete-bolt-size-btn").forEach((btn) => {
+    btn.addEventListener("click", async (e) => {
+      const idToDelete = e.currentTarget.dataset.id;
+
+      // 再度使用チェック
+      const isUsed = state.projects.some((p) =>
+        p.joints.some(
+          (j) => j.flangeSize === idToDelete || j.webSize === idToDelete,
+        ),
+      );
+
+      if (isUsed) {
+        showCustomAlert(
+          `「${idToDelete}」は登録されている継手(いずれかの工事)で使用されているため、削除できません。`,
+        );
+        return;
+      }
+
+      if (
+        confirm(
+          `「${idToDelete}」をリストから削除しますか？\n(全ての工事の選択肢から削除されます)`,
+        )
+      ) {
+        state.globalBoltSizes = state.globalBoltSizes.filter(
+          (b) => b.id !== idToDelete,
+        );
+
+        renderBoltSizeSettings(activeBoltTab);
+
+        // セレクタの更新が必要ならここで行う
+        // populateGlobalBoltSelectorModal();
+
+        await saveGlobalBoltSizes(state.globalBoltSizes);
+      }
+    });
+  });
+};
+
+/**
+ * ボルト設定画面のイベントリスナーを設定する
+ * (app.jsから呼び出す)
+ */
+export const setupBoltSettingsUI = () => {
+  const navBtnBoltSettings = document.getElementById("nav-btn-bolt-settings");
+  const newBoltTypeSelect = document.getElementById("new-bolt-type"); // ID確認要
+  const boltSizeSettingsModal = document.getElementById(
+    "bolt-size-settings-modal",
+  ); // ID確認要
+  const addBoltSizeBtn = document.getElementById("add-bolt-size-btn"); // ID確認要
+  const newBoltLengthInput = document.getElementById("new-bolt-length-input"); // ID確認要
+  const boltSizeList = document.getElementById("bolt-size-list");
+
+  // 1. 設定モーダルを開く
+  if (navBtnBoltSettings) {
+    navBtnBoltSettings.classList.remove("hidden");
+    navBtnBoltSettings.addEventListener("click", () => {
+      if (newBoltTypeSelect) {
+        newBoltTypeSelect.innerHTML = "";
+        BOLT_TYPES.forEach((type) => {
+          const opt = document.createElement("option");
+          opt.value = type;
+          opt.textContent = type;
+          newBoltTypeSelect.appendChild(opt);
+        });
+        newBoltTypeSelect.value = "M16";
+      }
+      renderBoltSizeSettings();
+      openModal(boltSizeSettingsModal);
+    });
+  }
+
+  // 2. 新規追加ボタン
+  if (addBoltSizeBtn) {
+    addBoltSizeBtn.addEventListener("click", async () => {
+      const type = newBoltTypeSelect.value;
+      const length = parseInt(newBoltLengthInput.value);
+
+      if (!length || length <= 0) {
+        showToast("長さを正しく入力してください");
+        return;
+      }
+
+      const newId = `${type}×${length}`;
+
+      if (state.globalBoltSizes.some((b) => b.id === newId)) {
+        showToast("このサイズは既に登録されています");
+        return;
+      }
+
+      state.globalBoltSizes.push({
+        id: newId,
+        label: newId,
+        type: type,
+        length: length,
+      });
+
+      sortGlobalBoltSizes();
+      renderBoltSizeSettings();
+      populateGlobalBoltSelectorModal(); // 必要なら
+      await saveGlobalBoltSizes(state.globalBoltSizes);
+
+      newBoltLengthInput.value = "";
+      newBoltLengthInput.focus();
+
+      setTimeout(() => {
+        const newItem = Array.from(boltSizeList.children).find((li) =>
+          li.innerHTML.includes(newId),
+        );
+        if (newItem)
+          newItem.scrollIntoView({ behavior: "smooth", block: "center" });
+      }, 100);
+    });
+  }
 };
