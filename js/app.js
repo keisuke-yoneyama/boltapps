@@ -49,6 +49,7 @@ import {
   // newComplexSplCache,
   // resetEditComplexSplCache,
   // resetNewComplexSplCache,
+  updateDynamicInputs,
   switchTab,
   renderShopTempBoltResults,
   updateTallySheetCalculations,
@@ -7386,45 +7387,45 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // --- 修正後のコード (この関数に差し替える) ---
 
-  const updateDynamicInputs = (
-    countInputElement,
-    inputsContainer,
-    cache,
-    prefix,
-    change,
-  ) => {
-    // 1. 現在の入力値をDOMから読み取り、キャッシュ配列を更新する (変更なし)
-    const currentInputs = inputsContainer.querySelectorAll("input");
-    currentInputs.forEach((input, index) => {
-      if (index < cache.length) {
-        cache[index] = input.value;
-      }
-    });
+  // const updateDynamicInputs = (
+  //   countInputElement,
+  //   inputsContainer,
+  //   cache,
+  //   prefix,
+  //   change,
+  // ) => {
+  //   // 1. 現在の入力値をDOMから読み取り、キャッシュ配列を更新する (変更なし)
+  //   const currentInputs = inputsContainer.querySelectorAll("input");
+  //   currentInputs.forEach((input, index) => {
+  //     if (index < cache.length) {
+  //       cache[index] = input.value;
+  //     }
+  //   });
 
-    // 2. 新しい項目数を計算する (変更なし)
-    let newCount = parseInt(countInputElement.value) || 0;
-    newCount += change;
-    if (newCount < 1) newCount = 1;
+  //   // 2. 新しい項目数を計算する (変更なし)
+  //   let newCount = parseInt(countInputElement.value) || 0;
+  //   newCount += change;
+  //   if (newCount < 1) newCount = 1;
 
-    // 3. 項目数が増える場合のみ、キャッシュ配列の長さを調整する【ここが重要】
-    const currentCacheSize = cache.length;
-    if (newCount > currentCacheSize) {
-      // 項目が増えた場合、新しい空の要素をキャッシュに追加
-      for (let i = 0; i < newCount - currentCacheSize; i++) {
-        cache.push("");
-      }
-    }
-    // ★★★ 項目数が減った場合に cache.splice() を呼び出す 'else if' ブロックを削除 ★★★
-    // これにより、キャッシュ配列からデータが削除されなくなります。
+  //   // 3. 項目数が増える場合のみ、キャッシュ配列の長さを調整する【ここが重要】
+  //   const currentCacheSize = cache.length;
+  //   if (newCount > currentCacheSize) {
+  //     // 項目が増えた場合、新しい空の要素をキャッシュに追加
+  //     for (let i = 0; i < newCount - currentCacheSize; i++) {
+  //       cache.push("");
+  //     }
+  //   }
+  //   // ★★★ 項目数が減った場合に cache.splice() を呼び出す 'else if' ブロックを削除 ★★★
+  //   // これにより、キャッシュ配列からデータが削除されなくなります。
 
-    // 4. 表示されている項目数を更新する (変更なし)
-    countInputElement.value = newCount;
+  //   // 4. 表示されている項目数を更新する (変更なし)
+  //   countInputElement.value = newCount;
 
-    // 5. 更新されたキャッシュを元に入力欄を再生成する (変更なし)
-    // generateCustomInputFieldsは最初の `newCount` 個だけ入力欄を生成するため、
-    // キャッシュに余分なデータがあっても問題ありません。
-    generateCustomInputFields(newCount, inputsContainer, prefix, cache);
-  };
+  //   // 5. 更新されたキャッシュを元に入力欄を再生成する (変更なし)
+  //   // generateCustomInputFieldsは最初の `newCount` 個だけ入力欄を生成するため、
+  //   // キャッシュに余分なデータがあっても問題ありません。
+  //   generateCustomInputFields(newCount, inputsContainer, prefix, cache);
+  // };
 
   decrementLevelsBtn.addEventListener("click", () =>
     updateDynamicInputs(
