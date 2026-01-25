@@ -5313,3 +5313,21 @@ export const setupBoltSettingsUI = () => {
     });
   }
 };
+
+/**
+ * 部材登録フォームをリセットする
+ */
+export const resetMemberForm = () => {
+  // HTMLのIDに合わせて取得してください
+  const memberNameInput = document.getElementById("member-name");
+  const memberJointSelectInput = document.getElementById("member-joint-select"); // または member-joint-name ?
+  const memberJointSelectId = document.getElementById("member-joint-id");
+
+  if (memberNameInput) memberNameInput.value = "";
+  if (memberJointSelectInput) memberJointSelectInput.value = "";
+  if (memberJointSelectId) memberJointSelectId.value = "";
+
+  // もし階層チェックボックスのクリアも必要ならここに追加
+  const levelCheckboxes = document.querySelectorAll(".static-level-checkbox");
+  levelCheckboxes.forEach((cb) => (cb.checked = false));
+};

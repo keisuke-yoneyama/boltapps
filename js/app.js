@@ -50,6 +50,7 @@ import {
   // newComplexSplCache,
   // resetEditComplexSplCache,
   // resetNewComplexSplCache,
+  resetMemberForm,
   renderBoltSizeSettings,
   setupBoltSettingsUI,
   updateDynamicInputs,
@@ -3063,11 +3064,11 @@ document.addEventListener("DOMContentLoaded", () => {
   //     }
   //   });
   // };
-  const resetMemberForm = () => {
-    memberNameInput.value = "";
-    memberJointSelectInput.value = "";
-    memberJointSelectId.value = "";
-  };
+  // const resetMemberForm = () => {
+  //   memberNameInput.value = "";
+  //   memberJointSelectInput.value = "";
+  //   memberJointSelectId.value = "";
+  // };
 
   // ★ 修正版：renderMemberLists（操作列を左端に移動）
   // ★ 修正版：renderMemberLists（ボルトソート修正・間柱ピン等対応版）
