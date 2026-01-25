@@ -42,8 +42,8 @@ export const appId =
   typeof __app_id !== "undefined"
     ? __app_id
     : firebaseConfig
-    ? firebaseConfig.projectId
-    : "default-app-id";
+      ? firebaseConfig.projectId
+      : "default-app-id";
 
 const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
@@ -51,5 +51,35 @@ export const db = getFirestore(app);
 
 export const projectsCollectionRef = collection(
   db,
-  `artifacts/${appId}/public/data/projects`
+  `artifacts/${appId}/public/data/projects`,
 );
+
+/**
+ * グローバルボルト設定を保存する
+ */
+export const saveGlobalBoltSizes = async (globalBoltSizes) => {
+  try {
+    // グローバル設定用のドキュメント参照（パスは環境に合わせて確認してください）
+    const globalSettingsRef = doc(
+      db,
+      "artifacts",
+      appId,
+      "public",
+      "data",
+      "settings",
+      "global",
+    );
+
+    await setDoc(
+      globalSettingsRef,
+      {
+        boltSizes: globalBoltSizes,
+      },
+      { merge: true },
+    );
+    console.log("Global bolt sizes saved to DB.");
+  } catch (error) {
+    console.error("Error saving global settings:", error);
+    throw error;
+  }
+};

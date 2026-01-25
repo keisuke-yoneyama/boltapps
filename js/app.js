@@ -28,6 +28,7 @@ import {
   calculateShopTempBoltResults,
   calculateAggregatedResults,
   ensureProjectBoltSizes,
+  checkAndMigrateBoltSizes,
 } from "./modules/calculator.js";
 
 import {
@@ -35,6 +36,7 @@ import {
   auth,
   db,
   isDevelopmentEnvironment,
+  getGlobalSettings,
 } from "./modules/firebase.js";
 
 import {
@@ -867,6 +869,29 @@ let dragSourceElement = null;
 //     container.innerHTML = tablesHtml;
 //   }
 // }
+
+/**
+ * グローバル設定の読み込みと移行ロジック
+ */
+const loadGlobalSettings = async () => {
+  try {
+    const settingsData = await getGlobalSettings();
+    if (settingsData && settingsData.boltSizes) {
+      state.globalBoltSizes = settingsData.boltSizes;
+      console.log(
+        "Global settings loaded:",
+        state.globalBoltSizes.length,
+        "items",
+      );
+    } else {
+      console.log("No global settings found. Checking for migration...");
+      await checkAndMigrateBoltSizes();
+    }
+  } catch (error) {
+    console.error("Error loading global settings:", error);
+    showCustomAlert("設定の読み込みに失敗しました。");
+  }
+};
 
 document.addEventListener("DOMContentLoaded", () => {
   // --- DOM Elements ---
@@ -4850,174 +4875,174 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // --- ロジック定義エリアに追加 ---
 
-  // ▼▼▼ 追加: グローバル設定の読み込みと移行ロジック ▼▼▼
-  const loadGlobalSettings = async () => {
-    try {
-      // ★修正: 特定のプロジェクトIDではなく、グローバル設定を取りに行きます
-      const settingsData = await getGlobalSettings();
+  // // ▼▼▼ 追加: グローバル設定の読み込みと移行ロジック ▼▼▼
+  // const loadGlobalSettings = async () => {
+  //   try {
+  //     // ★修正: 特定のプロジェクトIDではなく、グローバル設定を取りに行きます
+  //     const settingsData = await getGlobalSettings();
 
-      // データが存在し、かつ boltSizes があるか確認
-      if (settingsData && settingsData.boltSizes) {
-        state.globalBoltSizes = settingsData.boltSizes;
-        console.log(
-          "Global settings loaded:",
-          state.globalBoltSizes.length,
-          "items",
-        );
-      } else {
-        console.log("No global settings found. Checking for migration...");
-        // 設定がない場合は、既存プロジェクトから吸い上げる処理へ
-        await checkAndMigrateBoltSizes();
-      }
-    } catch (error) {
-      console.error("Error loading global settings:", error);
-      showCustomAlert("設定の読み込みに失敗しました。");
-    }
-  };
+  //     // データが存在し、かつ boltSizes があるか確認
+  //     if (settingsData && settingsData.boltSizes) {
+  //       state.globalBoltSizes = settingsData.boltSizes;
+  //       console.log(
+  //         "Global settings loaded:",
+  //         state.globalBoltSizes.length,
+  //         "items",
+  //       );
+  //     } else {
+  //       console.log("No global settings found. Checking for migration...");
+  //       // 設定がない場合は、既存プロジェクトから吸い上げる処理へ
+  //       await checkAndMigrateBoltSizes();
+  //     }
+  //   } catch (error) {
+  //     console.error("Error loading global settings:", error);
+  //     showCustomAlert("設定の読み込みに失敗しました。");
+  //   }
+  // };
 
-  const checkAndMigrateBoltSizes = async () => {
-    try {
-      // 1. 全プロジェクトのデータを配列として取得
-      // （以前の getDocs(projectsCollectionRef) を置き換え）
-      const allProjects = await getAllProjects();
+  // const checkAndMigrateBoltSizes = async () => {
+  //   try {
+  //     // 1. 全プロジェクトのデータを配列として取得
+  //     // （以前の getDocs(projectsCollectionRef) を置き換え）
+  //     const allProjects = await getAllProjects();
 
-      // snapshot.empty の代わりに 配列の長さ(length)で判定
-      if (allProjects.length === 0) {
-        // プロジェクトが一つもない場合は、デフォルト値で初期化
-        state.globalBoltSizes = LEGACY_DEFAULT_BOLT_SIZES.map((label) =>
-          parseBoltIdForGlobal(label),
-        );
-        await saveGlobalBoltSizes(); // ※ここも後でdb.js化が必要かも
-        return;
-      }
+  //     // snapshot.empty の代わりに 配列の長さ(length)で判定
+  //     if (allProjects.length === 0) {
+  //       // プロジェクトが一つもない場合は、デフォルト値で初期化
+  //       state.globalBoltSizes = LEGACY_DEFAULT_BOLT_SIZES.map((label) =>
+  //         parseBoltIdForGlobal(label),
+  //       );
+  //       await saveGlobalBoltSizes(); // ※ここも後でdb.js化が必要かも
+  //       return;
+  //     }
 
-      const allBoltSizesMap = new Map();
+  //     const allBoltSizesMap = new Map();
 
-      // 2. 各プロジェクトのボルトサイズを収集
-      // snapshot.forEach ではなく、普通の配列の forEach になります
-      allProjects.forEach((project) => {
-        // project = doc.data() は不要です（すでにデータになっています）
+  //     // 2. 各プロジェクトのボルトサイズを収集
+  //     // snapshot.forEach ではなく、普通の配列の forEach になります
+  //     allProjects.forEach((project) => {
+  //       // project = doc.data() は不要です（すでにデータになっています）
 
-        if (project.boltSizes && Array.isArray(project.boltSizes)) {
-          project.boltSizes.forEach((bolt) => {
-            // IDのゆらぎを吸収してマップに登録
-            const parsed = parseBoltIdForGlobal(bolt.id);
-            if (!allBoltSizesMap.has(parsed.id)) {
-              allBoltSizesMap.set(parsed.id, parsed);
-            }
-          });
-        }
-      });
+  //       if (project.boltSizes && Array.isArray(project.boltSizes)) {
+  //         project.boltSizes.forEach((bolt) => {
+  //           // IDのゆらぎを吸収してマップに登録
+  //           const parsed = parseBoltIdForGlobal(bolt.id);
+  //           if (!allBoltSizesMap.has(parsed.id)) {
+  //             allBoltSizesMap.set(parsed.id, parsed);
+  //           }
+  //         });
+  //       }
+  //     });
 
-      // 3. データが何もない場合はデフォルト値を適用
-      if (allBoltSizesMap.size === 0) {
-        LEGACY_DEFAULT_BOLT_SIZES.forEach((label) => {
-          const parsed = parseBoltIdForGlobal(label);
-          allBoltSizesMap.set(parsed.id, parsed);
-        });
-      }
+  //     // 3. データが何もない場合はデフォルト値を適用
+  //     if (allBoltSizesMap.size === 0) {
+  //       LEGACY_DEFAULT_BOLT_SIZES.forEach((label) => {
+  //         const parsed = parseBoltIdForGlobal(label);
+  //         allBoltSizesMap.set(parsed.id, parsed);
+  //       });
+  //     }
 
-      // 4. マップから配列に変換してStateへ設定
-      state.globalBoltSizes = Array.from(allBoltSizesMap.values());
+  //     // 4. マップから配列に変換してStateへ設定
+  //     state.globalBoltSizes = Array.from(allBoltSizesMap.values());
 
-      // 5. ソートして保存
-      sortGlobalBoltSizes();
-      await saveGlobalBoltSizes(); // ★注意点あり（後述）
+  //     // 5. ソートして保存
+  //     sortGlobalBoltSizes();
+  //     await saveGlobalBoltSizes(); // ★注意点あり（後述）
 
-      console.log(
-        "Migration completed. Total global sizes:",
-        state.globalBoltSizes.length,
-      );
-      showToast("既存データからボルトサイズ設定を統合しました");
-    } catch (error) {
-      console.error("Migration failed:", error);
-    }
-  };
+  //     console.log(
+  //       "Migration completed. Total global sizes:",
+  //       state.globalBoltSizes.length,
+  //     );
+  //     showToast("既存データからボルトサイズ設定を統合しました");
+  //   } catch (error) {
+  //     console.error("Migration failed:", error);
+  //   }
+  // };
 
-  const saveGlobalBoltSizes = async () => {
-    try {
-      // const globalSettingsRef = doc(
-      //   db,
-      //   "artifacts",
-      //   appId,
-      //   "public",
-      //   "data",
-      //   "settings",
-      //   "global"
-      // );
-      /* firestoreのsetDocは、merge:trueオプションをつけることで、
-               ドキュメントが存在しない場合は作成、存在する場合は指定フィールドのみ更新が可能 */
-      // await setDoc(
-      //   globalSettingsRef,
-      //   {
-      //     boltSizes: state.globalBoltSizes,
-      //   },
-      //   { merge: true }
-      // );
-      await setProjectData(state.currentProjectId, {
-        boltsizes: state.globalBoltSizes,
-      });
-    } catch (error) {
-      console.error("Error saving global settings:", error);
-      throw error;
-    }
-  };
+  // const saveGlobalBoltSizes = async () => {
+  //   try {
+  //     // const globalSettingsRef = doc(
+  //     //   db,
+  //     //   "artifacts",
+  //     //   appId,
+  //     //   "public",
+  //     //   "data",
+  //     //   "settings",
+  //     //   "global"
+  //     // );
+  //     /* firestoreのsetDocは、merge:trueオプションをつけることで、
+  //              ドキュメントが存在しない場合は作成、存在する場合は指定フィールドのみ更新が可能 */
+  //     // await setDoc(
+  //     //   globalSettingsRef,
+  //     //   {
+  //     //     boltSizes: state.globalBoltSizes,
+  //     //   },
+  //     //   { merge: true }
+  //     // );
+  //     await setProjectData(state.currentProjectId, {
+  //       boltsizes: state.globalBoltSizes,
+  //     });
+  //   } catch (error) {
+  //     console.error("Error saving global settings:", error);
+  //     throw error;
+  //   }
+  // };
 
-  // ヘルパー: ID解析 (ensureProjectBoltSizes内のものをグローバル用に再定義)
-  const parseBoltIdForGlobal = (idString) => {
-    const cleanId = idString.trim().replace(/x/g, "×");
-    const separator = "×";
-    const isMekki = cleanId.endsWith("■");
-    const processingId = isMekki ? cleanId.replace("■", "") : cleanId;
-    const parts = processingId.split(separator);
-    let type = "Unknown";
-    let length = 0;
+  // // ヘルパー: ID解析 (ensureProjectBoltSizes内のものをグローバル用に再定義)
+  // const parseBoltIdForGlobal = (idString) => {
+  //   const cleanId = idString.trim().replace(/x/g, "×");
+  //   const separator = "×";
+  //   const isMekki = cleanId.endsWith("■");
+  //   const processingId = isMekki ? cleanId.replace("■", "") : cleanId;
+  //   const parts = processingId.split(separator);
+  //   let type = "Unknown";
+  //   let length = 0;
 
-    if (parts.length >= 2) {
-      const lenStr = parts.pop();
-      length = parseInt(lenStr) || 0;
-      let rawType = parts.join(separator);
-      if (rawType.startsWith("中ボ")) {
-        const sizePart = rawType.replace("中ボ", "");
-        type = `中ボ(Mネジ) ${sizePart}`;
-      } else if (isMekki) {
-        type = `${rawType}めっき`;
-      } else {
-        type = rawType;
-      }
-    } else {
-      type = cleanId;
-    }
-    return { id: cleanId, label: cleanId, type, length };
-  };
+  //   if (parts.length >= 2) {
+  //     const lenStr = parts.pop();
+  //     length = parseInt(lenStr) || 0;
+  //     let rawType = parts.join(separator);
+  //     if (rawType.startsWith("中ボ")) {
+  //       const sizePart = rawType.replace("中ボ", "");
+  //       type = `中ボ(Mネジ) ${sizePart}`;
+  //     } else if (isMekki) {
+  //       type = `${rawType}めっき`;
+  //     } else {
+  //       type = rawType;
+  //     }
+  //   } else {
+  //     type = cleanId;
+  //   }
+  //   return { id: cleanId, label: cleanId, type, length };
+  // };
 
-  const sortGlobalBoltSizes = () => {
-    const typeOrderList = [
-      "M16",
-      "M16めっき",
-      "M20",
-      "M20めっき",
-      "M22",
-      "M22めっき",
-      "中ボ(Mネジ) M16",
-      "中ボ(Mネジ) M20",
-      "中ボ(Mネジ) M22",
-      "Dドブ12",
-      "Dユニ12",
-      "Dドブ16",
-      "Dユニ16",
-    ];
-    const typeOrder = {};
-    typeOrderList.forEach((t, i) => (typeOrder[t] = i));
+  // const sortGlobalBoltSizes = () => {
+  //   const typeOrderList = [
+  //     "M16",
+  //     "M16めっき",
+  //     "M20",
+  //     "M20めっき",
+  //     "M22",
+  //     "M22めっき",
+  //     "中ボ(Mネジ) M16",
+  //     "中ボ(Mネジ) M20",
+  //     "中ボ(Mネジ) M22",
+  //     "Dドブ12",
+  //     "Dユニ12",
+  //     "Dドブ16",
+  //     "Dユニ16",
+  //   ];
+  //   const typeOrder = {};
+  //   typeOrderList.forEach((t, i) => (typeOrder[t] = i));
 
-    state.globalBoltSizes.sort((a, b) => {
-      let orderA = typeOrder[a.type] !== undefined ? typeOrder[a.type] : 999;
-      let orderB = typeOrder[b.type] !== undefined ? typeOrder[b.type] : 999;
-      if (orderA !== orderB) return orderA - orderB;
-      if (a.type !== b.type) return a.type.localeCompare(b.type);
-      return a.length - b.length;
-    });
-  };
+  //   state.globalBoltSizes.sort((a, b) => {
+  //     let orderA = typeOrder[a.type] !== undefined ? typeOrder[a.type] : 999;
+  //     let orderB = typeOrder[b.type] !== undefined ? typeOrder[b.type] : 999;
+  //     if (orderA !== orderB) return orderA - orderB;
+  //     if (a.type !== b.type) return a.type.localeCompare(b.type);
+  //     return a.length - b.length;
+  //   });
+  // };
   // ▲▲▲ 追加ここまで ▲▲▲
 
   /**

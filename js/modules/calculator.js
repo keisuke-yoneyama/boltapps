@@ -7,7 +7,13 @@ import {
   F8T_WEIGHTS_G,
 } from "./config.js";
 
-import { updateProjectData } from "./db.js";
+import { saveGlobalBoltSizes } from "./firebase.js";
+
+import { showToast } from "./ui.js";
+
+import { state } from "./state.js";
+
+import { updateProjectData, getAllProjects } from "./db.js";
 export const getBoltWeight = (boltSize) => {
   // Mから始まらないボルト（D-Lock, 中ボルトなど）は重量計算の対象外
   if (!boltSize.startsWith("M")) {
@@ -995,4 +1001,120 @@ export const ensureProjectBoltSizes = async (project) => {
   }
 
   return project;
+};
+
+/**
+ * ヘルパー: グローバル設定用ID解析
+ */
+export const parseBoltIdForGlobal = (idString) => {
+  const cleanId = idString.trim().replace(/x/g, "×");
+  const separator = "×";
+  const isMekki = cleanId.endsWith("■");
+  const processingId = isMekki ? cleanId.replace("■", "") : cleanId;
+  const parts = processingId.split(separator);
+  let type = "Unknown";
+  let length = 0;
+
+  if (parts.length >= 2) {
+    const lenStr = parts.pop();
+    length = parseInt(lenStr) || 0;
+    let rawType = parts.join(separator);
+    if (rawType.startsWith("中ボ")) {
+      const sizePart = rawType.replace("中ボ", "");
+      type = `中ボ(Mネジ) ${sizePart}`;
+    } else if (isMekki) {
+      type = `${rawType}めっき`;
+    } else {
+      type = rawType;
+    }
+  } else {
+    type = cleanId;
+  }
+  return { id: cleanId, label: cleanId, type, length };
+};
+
+/**
+ * グローバルボルトサイズをソートする
+ */
+export const sortGlobalBoltSizes = () => {
+  if (!state.globalBoltSizes) return;
+
+  const typeOrderList = [
+    "M16",
+    "M16めっき",
+    "M20",
+    "M20めっき",
+    "M22",
+    "M22めっき",
+    "中ボ(Mネジ) M16",
+    "中ボ(Mネジ) M20",
+    "中ボ(Mネジ) M22",
+    "Dドブ12",
+    "Dユニ12",
+    "Dドブ16",
+    "Dユニ16",
+  ];
+  const typeOrder = {};
+  typeOrderList.forEach((t, i) => (typeOrder[t] = i));
+
+  state.globalBoltSizes.sort((a, b) => {
+    let orderA = typeOrder[a.type] !== undefined ? typeOrder[a.type] : 999;
+    let orderB = typeOrder[b.type] !== undefined ? typeOrder[b.type] : 999;
+    if (orderA !== orderB) return orderA - orderB;
+    if (a.type !== b.type) return a.type.localeCompare(b.type);
+    return a.length - b.length;
+  });
+};
+
+/**
+ * 既存プロジェクトからボルトサイズを吸い上げて移行する
+ */
+export const checkAndMigrateBoltSizes = async () => {
+  try {
+    // firebase.js から import した関数を使用
+    const allProjects = await getAllProjects();
+
+    if (allProjects.length === 0) {
+      state.globalBoltSizes = LEGACY_DEFAULT_BOLT_SIZES.map((label) =>
+        parseBoltIdForGlobal(label),
+      );
+      // firebase.js から import した関数を使用
+      await saveGlobalBoltSizes(state.globalBoltSizes);
+      return;
+    }
+
+    const allBoltSizesMap = new Map();
+
+    allProjects.forEach((project) => {
+      if (project.boltSizes && Array.isArray(project.boltSizes)) {
+        project.boltSizes.forEach((bolt) => {
+          const parsed = parseBoltIdForGlobal(bolt.id);
+          if (!allBoltSizesMap.has(parsed.id)) {
+            allBoltSizesMap.set(parsed.id, parsed);
+          }
+        });
+      }
+    });
+
+    if (allBoltSizesMap.size === 0) {
+      LEGACY_DEFAULT_BOLT_SIZES.forEach((label) => {
+        const parsed = parseBoltIdForGlobal(label);
+        allBoltSizesMap.set(parsed.id, parsed);
+      });
+    }
+
+    state.globalBoltSizes = Array.from(allBoltSizesMap.values());
+
+    sortGlobalBoltSizes();
+    await saveGlobalBoltSizes(state.globalBoltSizes);
+
+    console.log(
+      "Migration completed. Total global sizes:",
+      state.globalBoltSizes.length,
+    );
+    // ui.js から import した関数を使用
+    showToast("既存データからボルトサイズ設定を統合しました");
+  } catch (error) {
+    console.error("Migration failed:", error);
+  }
 };
