@@ -35,6 +35,8 @@ const BOLT_TYPE_ORDER = [
   "Dユニ16",
 ];
 
+// クイックナビゲーションの状態管理
+let isQuickNavOpen = false;
 // ▼▼▼ 追加: リスト描画用のコールバックを記憶する変数 ▼▼▼
 let savedListCallbacks = {};
 
@@ -5357,4 +5359,209 @@ export const updateColumnLockUI = (itemId, isLocked) => {
   inputs.forEach((input) => {
     input.disabled = isLocked;
   });
+};
+
+/**
+ * 部材一括登録用の入力欄を生成する
+ * @param {number} count - 生成する入力欄の数
+ * @param {Array<string>} currentValues - 現在入力されている部材名の配列 (再描画時の値保持用)
+ */
+export const renderBulkMemberInputs = (count, currentValues = []) => {
+  // HTML側に id="bulk-member-inputs-container" の要素が必要です
+  const container = document.getElementById("bulk-member-inputs-container");
+  if (!container) return;
+
+  const project = state.projects.find((p) => p.id === state.currentProjectId);
+  if (!project) return;
+
+  const levels = getProjectLevels(project); // 利用可能な階層を取得
+
+  // state.bulkMemberLevels が未定義の場合のガード
+  if (!state.bulkMemberLevels) {
+    state.bulkMemberLevels = [];
+  }
+
+  // キャッシュの長さを調整
+  while (state.bulkMemberLevels.length < count) {
+    state.bulkMemberLevels.push([]); // 新しい部材には空の配列（全階層）を割り当てる
+  }
+  // 配列を切り詰める（入力欄が減った場合）
+  state.bulkMemberLevels = state.bulkMemberLevels.slice(0, count);
+
+  container.innerHTML = "";
+
+  for (let i = 0; i < count; i++) {
+    const currentLevels = state.bulkMemberLevels[i];
+    const levelsText =
+      currentLevels.length === 0
+        ? "全階層"
+        : currentLevels.length > 3
+          ? `${currentLevels.length}フロア`
+          : currentLevels
+              .map((id) => levels.find((l) => l.id === id)?.label || id)
+              .join(", ");
+
+    // 既存の値（currentValues[i]）を取得し、inputタグにセット
+    const savedName = currentValues[i] || "";
+
+    const div = document.createElement("div");
+    div.className = "flex items-center gap-2 mb-2"; // mb-2を追加して少し隙間を空ける
+    div.innerHTML = `
+          <span class="text-sm text-slate-500 w-6 text-right">${i + 1}.</span>
+          <input type="text" data-index="${i}" class="bulk-member-name-input w-full bg-white dark:bg-slate-700 border border-gray-300 dark:border-slate-600 text-slate-900 dark:text-slate-100 rounded-md p-2 focus:ring-yellow-500 focus:border-yellow-500" placeholder="部材名" value="${savedName}">
+          <button type="button" data-index="${i}" class="open-bulk-level-selector text-xs whitespace-nowrap bg-blue-50 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300 px-3 py-2 rounded-md border border-blue-200 dark:border-blue-700 hover:bg-blue-100 dark:hover:bg-blue-800 transition-colors" title="使用階層の選択">
+              階層: ${levelsText}
+          </button>
+      `;
+    container.appendChild(div);
+  }
+
+  // 最初の入力欄にフォーカス (少し遅らせて実行)
+  setTimeout(() => {
+    const firstInput = container.querySelector("input");
+    if (firstInput) firstInput.focus();
+  }, 50);
+};
+/**
+ * クイックナビゲーションの開閉を切り替える
+ */
+export const toggleQuickNav = () => {
+  const quickNavMenu = document.getElementById("quick-nav-menu");
+  if (!quickNavMenu) return;
+
+  isQuickNavOpen = !isQuickNavOpen;
+
+  if (isQuickNavOpen) {
+    // メニューを開く時に中身を生成
+    updateQuickNavLinks();
+
+    quickNavMenu.classList.remove("hidden");
+
+    // アニメーション
+    requestAnimationFrame(() => {
+      quickNavMenu.classList.remove(
+        "scale-95",
+        "opacity-0",
+        "pointer-events-none",
+      );
+      quickNavMenu.classList.add(
+        "scale-100",
+        "opacity-100",
+        "pointer-events-auto",
+      );
+    });
+  } else {
+    // メニューを閉じる
+    quickNavMenu.classList.remove(
+      "scale-100",
+      "opacity-100",
+      "pointer-events-auto",
+    );
+    quickNavMenu.classList.add("scale-95", "opacity-0", "pointer-events-none");
+
+    setTimeout(() => {
+      if (!isQuickNavOpen) quickNavMenu.classList.add("hidden");
+    }, 200);
+  }
+};
+
+/**
+ * ナビゲーションリンクを生成する
+ */
+export const updateQuickNavLinks = () => {
+  const quickNavLinks = document.getElementById("quick-nav-links");
+  if (!quickNavLinks) return;
+
+  quickNavLinks.innerHTML = "";
+
+  // 1. ページトップへ
+  addQuickNavLink(
+    "▲ ページトップへ",
+    () => window.scrollTo({ top: 0, behavior: "smooth" }),
+    "bg-gray-100 dark:bg-slate-700 font-bold border-b border-gray-200 dark:border-slate-600",
+    quickNavLinks,
+  );
+
+  // 2. タブに応じて対象セクションを取得
+  let targets = [];
+  if (state.activeTab === "joints") {
+    targets = document.querySelectorAll(
+      '#joint-lists-container [id^="anchor-"], #member-lists-container [id^="anchor-"]',
+    );
+  } else if (state.activeTab === "tally") {
+    const tallyCard = document.getElementById("tally-card");
+    const resultSections = document.querySelectorAll(
+      "#results-card-content [data-section-title]",
+    );
+    if (tallyCard && !tallyCard.classList.contains("hidden")) {
+      targets = [tallyCard, ...resultSections];
+    }
+  }
+
+  if (targets.length > 0) {
+    targets.forEach((section) => {
+      const title = section.dataset.sectionTitle || "セクション";
+      const color = section.dataset.sectionColor || "gray";
+      const colorClass = `text-${color}-700 dark:text-${color}-300 hover:bg-${color}-50 dark:hover:bg-${color}-900/30`;
+
+      addQuickNavLink(
+        title,
+        () => {
+          section.scrollIntoView({ behavior: "smooth", block: "start" });
+        },
+        colorClass,
+        quickNavLinks,
+      );
+    });
+  } else {
+    const p = document.createElement("p");
+    p.textContent = "移動先がありません";
+    p.className = "text-xs text-gray-500 p-2";
+    quickNavLinks.appendChild(p);
+  }
+
+  // 3. ページ最下部へ
+  addQuickNavLink(
+    "▼ ページ最下部へ",
+    () =>
+      window.scrollTo({
+        top: document.body.scrollHeight,
+        behavior: "smooth",
+      }),
+    "bg-gray-100 dark:bg-slate-700 font-bold border-t border-gray-200 dark:border-slate-600 mt-1",
+    quickNavLinks,
+  );
+};
+
+// ヘルパー関数: リンクボタンの作成
+const addQuickNavLink = (text, onClick, extraClasses = "", container) => {
+  if (!container) return;
+  const btn = document.createElement("button");
+  btn.textContent = text;
+  btn.className = `text-left w-full px-4 py-3 text-sm font-medium rounded-md transition-colors ${extraClasses}`;
+
+  if (!extraClasses.includes("text-")) {
+    btn.classList.add(
+      "text-slate-700",
+      "dark:text-slate-200",
+      "hover:bg-slate-100",
+      "dark:hover:bg-slate-700",
+    );
+  }
+
+  btn.addEventListener("click", () => {
+    onClick();
+    toggleQuickNav(); // クリックしたら閉じる
+  });
+  container.appendChild(btn);
+};
+
+// 初期化用: FABのクリックイベント設定など
+export const setupQuickNav = () => {
+  const quickNavToggle = document.getElementById("quick-nav-toggle");
+  if (quickNavToggle) {
+    // 重複登録防止のため、一度削除してから追加するか、フラグ管理が必要
+    // ここではシンプルに追加のみ（initAppで一度だけ呼ばれる前提）
+    quickNavToggle.addEventListener("click", toggleQuickNav);
+  }
 };
