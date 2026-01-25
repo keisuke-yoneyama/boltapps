@@ -56,7 +56,6 @@ import {
   renderBulkMemberInputs,
   updateColumnLockUI,
   resetMemberForm,
-  renderBoltSizeSettings,
   setupBoltSettingsUI,
   updateDynamicInputs,
   switchTab,
