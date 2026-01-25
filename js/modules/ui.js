@@ -2371,10 +2371,13 @@ export function generateCustomInputFields(
   count,
   container,
   baseId,
-  cacheArray,
+  cacheArray = [], // ★修正1: デフォルト値を設定（これでエラーは消えます）
 ) {
   if (!container) return;
   container.innerHTML = "";
+
+  // cacheArray が万が一 null/undefined だった場合の安全策
+  const safeCache = Array.isArray(cacheArray) ? cacheArray : [];
 
   for (let i = 0; i < count; i++) {
     const wrapper = document.createElement("div");
@@ -2391,12 +2394,15 @@ export function generateCustomInputFields(
       "input-field flex-1 px-3 py-2 bg-slate-50 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all text-slate-800 dark:text-slate-100";
     input.placeholder = "名称を入力";
 
-    // キャッシュから値を復元
-    input.value = cacheArray[i] || "";
+    // キャッシュから値を復元 (safeCacheを使う)
+    input.value = safeCache[i] || "";
 
     // 入力時にキャッシュを更新
     input.addEventListener("input", (e) => {
-      cacheArray[i] = e.target.value;
+      // 呼び出し元が配列を渡していない場合、ここで記録しても保持されませんがエラーは防げます
+      if (Array.isArray(cacheArray)) {
+        cacheArray[i] = e.target.value;
+      }
     });
 
     wrapper.appendChild(label);
