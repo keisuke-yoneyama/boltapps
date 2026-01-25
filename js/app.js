@@ -50,6 +50,7 @@ import {
   // newComplexSplCache,
   // resetEditComplexSplCache,
   // resetNewComplexSplCache,
+  updateColumnLockUI,
   resetMemberForm,
   renderBoltSizeSettings,
   setupBoltSettingsUI,
@@ -6083,24 +6084,24 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   });
 
-  // 列のロック状態を即座にUIに反映させるためのヘルパー関数
-  const updateColumnLockUI = (itemId, isLocked) => {
-    const table = document.querySelector("#tally-sheet-container table");
-    if (!table) return;
+  // // 列のロック状態を即座にUIに反映させるためのヘルパー関数
+  // const updateColumnLockUI = (itemId, isLocked) => {
+  //   const table = document.querySelector("#tally-sheet-container table");
+  //   if (!table) return;
 
-    // data-column-id を使って列全体のセルと入力を選択
-    const cells = table.querySelectorAll(`[data-column-id="${itemId}"]`);
-    const inputs = table.querySelectorAll(
-      `input.tally-input[data-id="${itemId}"]`,
-    );
+  //   // data-column-id を使って列全体のセルと入力を選択
+  //   const cells = table.querySelectorAll(`[data-column-id="${itemId}"]`);
+  //   const inputs = table.querySelectorAll(
+  //     `input.tally-input[data-id="${itemId}"]`,
+  //   );
 
-    cells.forEach((cell) => {
-      cell.classList.toggle("locked-column", isLocked);
-    });
-    inputs.forEach((input) => {
-      input.disabled = isLocked;
-    });
-  };
+  //   cells.forEach((cell) => {
+  //     cell.classList.toggle("locked-column", isLocked);
+  //   });
+  //   inputs.forEach((input) => {
+  //     input.disabled = isLocked;
+  //   });
+  // };
 
   tallySheetContainer.addEventListener("change", (e) => {
     // ロック用チェックボックスが変更された時の処理

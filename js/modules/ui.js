@@ -5331,3 +5331,30 @@ export const resetMemberForm = () => {
   const levelCheckboxes = document.querySelectorAll(".static-level-checkbox");
   levelCheckboxes.forEach((cb) => (cb.checked = false));
 };
+/**
+ * 列のロック状態を即座にUIに反映させる
+ * @param {string} itemId - 対象の部材ID
+ * @param {boolean} isLocked - ロックするかどうか
+ */
+export const updateColumnLockUI = (itemId, isLocked) => {
+  const table = document.querySelector("#tally-sheet-container table");
+  if (!table) return;
+
+  // data-column-id を使って列全体のセルを取得
+  const cells = table.querySelectorAll(`[data-column-id="${itemId}"]`);
+
+  // input要素を取得
+  const inputs = table.querySelectorAll(
+    `input.tally-input[data-id="${itemId}"]`,
+  );
+
+  // 見た目の更新 (背景色など)
+  cells.forEach((cell) => {
+    cell.classList.toggle("locked-column", isLocked);
+  });
+
+  // 機能の更新 (入力不可)
+  inputs.forEach((input) => {
+    input.disabled = isLocked;
+  });
+};
