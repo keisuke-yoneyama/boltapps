@@ -4973,27 +4973,3 @@ export const resetJointForm = () => {
     updateJointFormUI(false);
   }
 };
-
-/**
- * カスタムレベル/エリア入力フィールドを生成する
- */
-export const generateCustomInputFields = (
-  count,
-  container,
-  prefix,
-  values = [],
-) => {
-  if (!container) return;
-  container.innerHTML = "";
-  for (let i = 0; i < count; i++) {
-    const input = document.createElement("input");
-    input.type = "text";
-    input.className = `custom-input w-full bg-white border border-gray-400 text-gray-900 rounded-md p-2 focus:ring-yellow-500 focus:border-yellow-500`;
-    input.placeholder = `${prefix.includes("level") ? "階層" : "エリア"} ${
-      i + 1
-    }`;
-    input.id = `${prefix}-${i}`;
-    input.value = values[i] || "";
-    container.appendChild(input);
-  }
-};
