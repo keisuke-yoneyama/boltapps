@@ -5021,3 +5021,80 @@ export const updateDynamicInputs = (
   // generateCustomInputFields は同じ ui.js 内にある前提
   generateCustomInputFields(newCount, inputsContainer, prefix, cache);
 };
+
+/**
+ * 継手選択モダルの内容を生成する
+ */
+export const populateJointSelectorModal = (project, currentJointId) => {
+  // DOM要素を取得（IDは HTML に合わせて確認してください。恐らく "joint-options-container" です）
+  const jointOptionsContainer = document.getElementById(
+    "joint-options-container",
+  );
+
+  if (!jointOptionsContainer || !project) return;
+
+  jointOptionsContainer.innerHTML = "";
+
+  const availableJoints = project.joints.filter((j) => !j.countAsMember);
+
+  const groupedJoints = availableJoints.reduce((acc, joint) => {
+    const typeName = {
+      girder: "大梁",
+      beam: "小梁",
+      column: "本柱",
+      stud: "間柱",
+      wall_girt: "胴縁",
+      roof_purlin: "母屋",
+      other: "その他",
+    }[joint.type];
+
+    const groupKey = joint.isPinJoint ? `${typeName} (ピン取り)` : typeName;
+    if (!acc[groupKey]) acc[groupKey] = [];
+    acc[groupKey].push(joint);
+    return acc;
+  }, {});
+
+  const desiredOrder = [
+    "大梁",
+    "大梁 (ピン取り)",
+    "小梁",
+    "小梁 (ピン取り)",
+    "間柱",
+    "間柱 (ピン取り)",
+    "本柱",
+    "胴縁",
+    "母屋",
+    "その他",
+    "その他 (ピン取り)",
+  ];
+
+  const groupOrder = Object.keys(groupedJoints).sort((a, b) => {
+    const indexA = desiredOrder.indexOf(a);
+    const indexB = desiredOrder.indexOf(b);
+    if (indexA === -1) return 1;
+    if (indexB === -1) return -1;
+    return indexA - indexB;
+  });
+
+  let html = "";
+  for (const group of groupOrder) {
+    html += `<h4 class="font-bold text-blue-800 border-b border-blue-200 pb-1 mb-2">${group}</h4>
+             <div class="grid grid-cols-2 sm-grid-cols-3 md-grid-cols-4 lg-grid-cols-5 gap-2 mb-4">`;
+
+    const sortedJoints = groupedJoints[group].sort((a, b) =>
+      a.name.localeCompare(b.name, "ja"),
+    );
+
+    for (const joint of sortedJoints) {
+      const isSelected = joint.id && joint.id === currentJointId;
+      const selectedClass = isSelected
+        ? "bg-yellow-400 dark:bg-yellow-600 font-bold"
+        : "bg-blue-50 dark:bg-slate-700";
+      const dataId = joint.id || "";
+
+      html += `<button data-id="${dataId}" data-name="${joint.name}" class="joint-option-btn text-sm p-2 border border-blue-200 rounded-md transition-transform duration-150 hover:scale-105 ${selectedClass}">${joint.name}</button>`;
+    }
+    html += `</div>`;
+  }
+  jointOptionsContainer.innerHTML = html;
+};

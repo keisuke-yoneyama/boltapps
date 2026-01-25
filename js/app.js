@@ -83,6 +83,7 @@ import {
   populateHugBoltSelector,
   resetJointForm,
   generateCustomInputFields,
+  populateJointSelectorModal,
 } from "./modules/ui.js";
 
 import {
@@ -1715,83 +1716,83 @@ document.addEventListener("DOMContentLoaded", () => {
   //   openModal(editProjectModal);
   // };
 
-  const populateJointSelectorModal = (project, currentJointId) => {
-    if (!project) return;
-    jointOptionsContainer.innerHTML = "";
+  // const populateJointSelectorModal = (project, currentJointId) => {
+  //   if (!project) return;
+  //   jointOptionsContainer.innerHTML = "";
 
-    const availableJoints = project.joints.filter((j) => !j.countAsMember);
+  //   const availableJoints = project.joints.filter((j) => !j.countAsMember);
 
-    const groupedJoints = availableJoints.reduce((acc, joint) => {
-      const typeName = {
-        girder: "大梁",
-        beam: "小梁",
-        column: "本柱",
-        stud: "間柱",
-        wall_girt: "胴縁",
-        roof_purlin: "母屋",
-        other: "その他",
-      }[joint.type];
+  //   const groupedJoints = availableJoints.reduce((acc, joint) => {
+  //     const typeName = {
+  //       girder: "大梁",
+  //       beam: "小梁",
+  //       column: "本柱",
+  //       stud: "間柱",
+  //       wall_girt: "胴縁",
+  //       roof_purlin: "母屋",
+  //       other: "その他",
+  //     }[joint.type];
 
-      const groupKey = joint.isPinJoint ? `${typeName} (ピン取り)` : typeName;
-      if (!acc[groupKey]) acc[groupKey] = [];
-      acc[groupKey].push(joint);
-      return acc;
-    }, {});
+  //     const groupKey = joint.isPinJoint ? `${typeName} (ピン取り)` : typeName;
+  //     if (!acc[groupKey]) acc[groupKey] = [];
+  //     acc[groupKey].push(joint);
+  //     return acc;
+  //   }, {});
 
-    const desiredOrder = [
-      "大梁",
-      "大梁 (ピン取り)",
-      "小梁",
-      "小梁 (ピン取り)",
-      "間柱",
-      "間柱 (ピン取り)",
-      "本柱",
-      "胴縁",
-      "母屋",
-      "その他",
-      "その他 (ピン取り)",
-    ];
+  //   const desiredOrder = [
+  //     "大梁",
+  //     "大梁 (ピン取り)",
+  //     "小梁",
+  //     "小梁 (ピン取り)",
+  //     "間柱",
+  //     "間柱 (ピン取り)",
+  //     "本柱",
+  //     "胴縁",
+  //     "母屋",
+  //     "その他",
+  //     "その他 (ピン取り)",
+  //   ];
 
-    const groupOrder = Object.keys(groupedJoints).sort((a, b) => {
-      const indexA = desiredOrder.indexOf(a);
-      const indexB = desiredOrder.indexOf(b);
-      if (indexA === -1) return 1;
-      if (indexB === -1) return -1;
-      return indexA - indexB;
-    });
+  //   const groupOrder = Object.keys(groupedJoints).sort((a, b) => {
+  //     const indexA = desiredOrder.indexOf(a);
+  //     const indexB = desiredOrder.indexOf(b);
+  //     if (indexA === -1) return 1;
+  //     if (indexB === -1) return -1;
+  //     return indexA - indexB;
+  //   });
 
-    let html = "";
-    // ▼ この外側のループが重要です
-    for (const group of groupOrder) {
-      // グループ名と、ボタンを囲む「箱」を開始します
-      html += `<h4 class="font-bold text-blue-800 border-b border-blue-200 pb-1 mb-2">${group}</h4>
-                 <div class="grid grid-cols-2 sm-grid-cols-3 md-grid-cols-4 lg-grid-cols-5 gap-2 mb-4">`;
+  //   let html = "";
+  //   // ▼ この外側のループが重要です
+  //   for (const group of groupOrder) {
+  //     // グループ名と、ボタンを囲む「箱」を開始します
+  //     html += `<h4 class="font-bold text-blue-800 border-b border-blue-200 pb-1 mb-2">${group}</h4>
+  //                <div class="grid grid-cols-2 sm-grid-cols-3 md-grid-cols-4 lg-grid-cols-5 gap-2 mb-4">`;
 
-      const sortedJoints = groupedJoints[group].sort((a, b) =>
-        a.name.localeCompare(b.name, "ja"),
-      );
+  //     const sortedJoints = groupedJoints[group].sort((a, b) =>
+  //       a.name.localeCompare(b.name, "ja"),
+  //     );
 
-      // ▼ 内側のループで各ボタンを生成します
-      for (const joint of sortedJoints) {
-        // 継手にIDが存在し、かつ、現在選択されているIDと一致する場合にのみtrueになります
-        const isSelected = joint.id && joint.id === currentJointId;
+  //     // ▼ 内側のループで各ボタンを生成します
+  //     for (const joint of sortedJoints) {
+  //       // 継手にIDが存在し、かつ、現在選択されているIDと一致する場合にのみtrueになります
+  //       const isSelected = joint.id && joint.id === currentJointId;
 
-        // isSelectedの結果に基づいてクラスを決定します
-        const selectedClass = isSelected
-          ? "bg-yellow-400 dark:bg-yellow-600 font-bold"
-          : "bg-blue-50 dark:bg-slate-700";
+  //       // isSelectedの結果に基づいてクラスを決定します
+  //       const selectedClass = isSelected
+  //         ? "bg-yellow-400 dark:bg-yellow-600 font-bold"
+  //         : "bg-blue-50 dark:bg-slate-700";
 
-        // data-idにも、IDがなければ空文字が入るようにします
-        const dataId = joint.id || "";
+  //       // data-idにも、IDがなければ空文字が入るようにします
+  //       const dataId = joint.id || "";
 
-        // ボタンの表示を継手名（joint.name）のみに戻します
-        html += `<button data-id="${dataId}" data-name="${joint.name}" class="joint-option-btn text-sm p-2 border border-blue-200 rounded-md transition-transform duration-150 hover:scale-105 ${selectedClass}">${joint.name}</button>`;
-      }
-      // 内側のループが終わった後で「箱」を閉じます
-      html += `</div>`;
-    }
-    jointOptionsContainer.innerHTML = html;
-  };
+  //       // ボタンの表示を継手名（joint.name）のみに戻します
+  //       html += `<button data-id="${dataId}" data-name="${joint.name}" class="joint-option-btn text-sm p-2 border border-blue-200 rounded-md transition-transform duration-150 hover:scale-105 ${selectedClass}">${joint.name}</button>`;
+  //     }
+  //     // 内側のループが終わった後で「箱」を閉じます
+  //     html += `</div>`;
+  //   }
+  //   jointOptionsContainer.innerHTML = html;
+  // };
 
   // const populateTempBoltMappingModal = (project) => {
   //   if (!project) return;
