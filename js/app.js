@@ -5418,6 +5418,7 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   // 閉じるボタンの処理
+  //とりあえずここに書いた
   const finalizeBoltSettings = () => {
     const project = state.projects.find((p) => p.id === state.currentProjectId);
     const boltSizeSettingsModal = document.getElementById(
