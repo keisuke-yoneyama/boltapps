@@ -14,6 +14,7 @@ import {
   calculateResults,
   calculateShopTempBoltResults,
   sortGlobalBoltSizes,
+  calculateAggregatedResults,
 } from "./calculator.js";
 
 import { saveGlobalBoltSizes } from "./firebase.js";
@@ -5564,4 +5565,125 @@ export const setupQuickNav = () => {
     // ここではシンプルに追加のみ（initAppで一度だけ呼ばれる前提）
     quickNavToggle.addEventListener("click", toggleQuickNav);
   }
+};
+
+/**
+ * プロジェクトリストの描画とアクション定義を行うラッパー関数
+ * (app.js から ui.js に移動)
+ */
+export const updateProjectListUI = () => {
+  // ui.js内の関数 renderProjectList を呼び出す
+  renderProjectList({
+    // --- 選択 ---
+    onSelect: (id) => {
+      console.log(`[DEBUG] onSelect called with ID: ${id}`);
+
+      // IDの型合わせと検索
+      const originalProject = state.projects.find((p) => p.id == id);
+
+      if (originalProject) {
+        state.currentProjectId = originalProject.id;
+      } else {
+        console.warn(`[DEBUG] Project NOT found for ID: ${id}`);
+        state.currentProjectId = id;
+      }
+
+      // フォームリセット & 画面切り替え (ui.js内の関数)
+      if (typeof resetMemberForm === "function") resetMemberForm();
+      state.sort = {};
+
+      if (typeof renderDetailView === "function") renderDetailView();
+      switchView("detail"); // ui.js内の関数
+    },
+
+    // --- 編集 ---
+    onEdit: (id) => {
+      const project = state.projects.find((p) => p.id === id);
+      // openEditProjectModal は ui.js 内にある前提
+      if (project && typeof openEditProjectModal === "function") {
+        openEditProjectModal(project);
+      } else {
+        console.error("openEditProjectModal is not defined.");
+      }
+    },
+
+    // --- 削除 ---
+    onDelete: (id) => {
+      // openConfirmDeleteModal は ui.js 内にある前提
+      if (typeof openConfirmDeleteModal === "function") {
+        openConfirmDeleteModal(id, "project");
+      }
+    },
+
+    // --- 複製 ---
+    onDuplicate: (id) => {
+      const project = state.projects.find((p) => p.id === id);
+      if (project) {
+        const copySourceIdInput = document.getElementById(
+          "copy-source-project-id",
+        );
+        const copyNewNameInput = document.getElementById(
+          "copy-new-project-name",
+        );
+        const copyProjectModal = document.getElementById("copy-project-modal");
+
+        if (copySourceIdInput && copyNewNameInput && copyProjectModal) {
+          copySourceIdInput.value = id;
+
+          // 名前生成ロジック
+          const sameGroupProjects = state.projects.filter(
+            (p) => p.propertyName === project.propertyName,
+          );
+          let baseName = project.name.replace(/\(\d+\)$/, "").trim();
+          let counter = 2;
+
+          while (
+            sameGroupProjects.some(
+              (p) =>
+                p.name ===
+                (counter === 1 ? baseName : `${baseName}(${counter})`),
+            )
+          ) {
+            counter++;
+          }
+          copyNewNameInput.value = `${baseName}(${counter})`;
+
+          const defaultRadio = document.querySelector(
+            'input[name="copy-mode"][value="with_master"]',
+          );
+          if (defaultRadio) defaultRadio.checked = true;
+
+          openModal(copyProjectModal); // ui.js内の関数
+          setTimeout(() => copyNewNameInput.select(), 100);
+        }
+      }
+    },
+
+    // --- グループ編集 ---
+    onGroupEdit: (propertyName) => {
+      const oldNameInput = document.getElementById("edit-group-old-name");
+      const newNameInput = document.getElementById("edit-group-new-name");
+      if (oldNameInput) oldNameInput.value = propertyName;
+      if (newNameInput) newNameInput.value = propertyName;
+
+      openModal(document.getElementById("edit-group-modal"));
+    },
+
+    // --- 集計表示 ---
+    onGroupAggregate: (propertyName) => {
+      const projectsInGroup = state.projects.filter(
+        (p) => p.propertyName === propertyName,
+      );
+      if (projectsInGroup.length > 0) {
+        // calculator.js からインポートした関数を使用
+        const aggregatedData = calculateAggregatedResults(projectsInGroup);
+
+        // ui.js 内の関数を使用
+        if (typeof renderAggregatedResults === "function") {
+          renderAggregatedResults(propertyName, aggregatedData);
+        }
+        openModal(document.getElementById("aggregated-results-modal"));
+      }
+    },
+  });
 };

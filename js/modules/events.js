@@ -22,11 +22,14 @@ import {
   resetMemberForm,
   renderBoltSizeSettings,
   showToast,
+  updateProjectData,
+  generateCustomInputFields,
+  updateProjectListUI,
 } from "./ui.js"; // ui.jsで作った関数を使う
 
 import { resetTempJointData, state } from "./state.js";
 
-import { updateProjectData } from "./db.js";
+import { updateProjectData, addProject } from "./db.js";
 
 import { BOLT_TYPES } from "./config.js";
 
@@ -981,4 +984,260 @@ function setupBoltSettingsEvents() {
   if (saveBoltSizeSettingsBtn) {
     saveBoltSizeSettingsBtn.addEventListener("click", handleFinalize);
   }
+}
+/**
+ * 工事データの登録・複製・削除などのアクション関連イベント
+ */
+function setupProjectActionEvents() {
+  // --- 新規登録用 ---
+  const addProjectBtn = document.getElementById("add-project-btn");
+  const projectNameInput = document.getElementById("project-name");
+  const propertyNameInput = document.getElementById("property-name");
+  const advancedSettingsToggle = document.getElementById(
+    "advanced-settings-toggle",
+  );
+  const simpleProjectSettings = document.getElementById(
+    "simple-project-settings",
+  );
+  const advancedProjectSettings = document.getElementById(
+    "advanced-project-settings",
+  );
+
+  const addCustomLevelsCountInput = document.getElementById(
+    "add-custom-levels-count",
+  );
+  const addCustomAreasCountInput = document.getElementById(
+    "add-custom-areas-count",
+  );
+  const customLevelsContainer = document.getElementById(
+    "custom-levels-container",
+  );
+  const customAreasContainer = document.getElementById(
+    "custom-areas-container",
+  );
+
+  const projectFloorsInput = document.getElementById("project-floors");
+  const projectSectionsInput = document.getElementById("project-sections");
+  const projectHasPhInput = document.getElementById("project-has-ph");
+
+  // --- 複製用 ---
+  const executeCopyBtn = document.getElementById("execute-copy-btn");
+  const copySourceIdInput = document.getElementById("copy-source-project-id");
+  const copyNewNameInput = document.getElementById("copy-new-project-name");
+  const copyProjectModal = document.getElementById("copy-project-modal");
+  const closeCopyModalBtn = document.getElementById("close-copy-modal-btn");
+  const cancelCopyBtn = document.getElementById("cancel-copy-btn");
+
+  // 1. 新規工事登録
+  if (addProjectBtn) {
+    addProjectBtn.addEventListener("click", async () => {
+      // (中略: 元のロジックをここにコピー)
+      // 注意: showCustomAlert, updateProjectListUI などの関数呼び出しが
+      // インポートされていることを確認してください。
+
+      const name = projectNameInput.value.trim();
+      const propertyName = propertyNameInput
+        ? propertyNameInput.value.trim()
+        : ""; // nullチェック推奨
+
+      if (!name)
+        return showCustomAlert("工事名を入力してください。", {
+          invalidElements: [projectNameInput],
+        });
+
+      let newProjectData;
+      if (advancedSettingsToggle.checked) {
+        const levelsCount = parseInt(addCustomLevelsCountInput.value),
+          areasCount = parseInt(addCustomAreasCountInput.value);
+        if (isNaN(levelsCount) || levelsCount < 1)
+          return showCustomAlert("階層数は1以上の数値を入力してください。", {
+            invalidElements: [addCustomLevelsCountInput], // 変数名注意
+          });
+        if (isNaN(areasCount) || areasCount < 1)
+          return showCustomAlert("エリア数は1以上の数値を入力してください。", {
+            invalidElements: [addCustomAreasCountInput], // 変数名注意
+          });
+
+        const customLevels = Array.from(
+          document.querySelectorAll("#custom-levels-container input"),
+        ).map((input) => input.value.trim());
+        const customAreas = Array.from(
+          document.querySelectorAll("#custom-areas-container input"),
+        ).map((input) => input.value.trim());
+
+        if (
+          customLevels.some((l) => l === "") ||
+          customAreas.some((a) => a === "")
+        )
+          return showCustomAlert(
+            "すべての階層名とエリア名を入力してください。",
+          );
+        newProjectData = {
+          name,
+          propertyName,
+          mode: "advanced",
+          customLevels,
+          customAreas,
+        };
+      } else {
+        const floors = parseInt(projectFloorsInput.value),
+          sections = parseInt(projectSectionsInput.value);
+        if (isNaN(sections) || sections < 1)
+          return showCustomAlert("工区数を正しく入力してください。", {
+            invalidElements: [projectSectionsInput],
+          });
+        if (isNaN(floors) || floors <= 1)
+          return showCustomAlert("階数は2以上の数値を入力してください。", {
+            invalidElements: [projectFloorsInput],
+          });
+        newProjectData = {
+          name,
+          propertyName,
+          mode: "simple",
+          floors,
+          sections,
+          hasPH: projectHasPhInput.checked,
+        };
+      }
+
+      const newProject = {
+        ...newProjectData,
+        joints: [],
+        members: [],
+        tally: {},
+        isTallySheetGenerated: false,
+        tempBoltMap: {},
+        tallyLocks: {},
+      };
+
+      try {
+        const docRef = await addProject(newProject);
+
+        const createdProject = { ...newProject, id: docRef.id };
+        state.projects.push(createdProject);
+
+        state.projects.sort((a, b) => a.name.localeCompare(b.name));
+
+        updateProjectListUI();
+        showToast("新しい工事を登録しました。");
+      } catch (err) {
+        console.error(err);
+        showCustomAlert("工事の追加に失敗しました。");
+        return;
+      }
+
+      // フォームのリセット (state.newLevelNameCache もリセット)
+      projectNameInput.value = "";
+      if (propertyNameInput) propertyNameInput.value = "";
+      projectFloorsInput.value = "";
+      projectSectionsInput.value = "";
+      projectHasPhInput.checked = false;
+      advancedSettingsToggle.checked = false;
+      simpleProjectSettings.classList.remove("hidden");
+      advancedProjectSettings.classList.add("hidden");
+      addCustomLevelsCountInput.value = "1";
+      addCustomAreasCountInput.value = "1";
+
+      // stateキャッシュのリセット (importしたstateを直接操作)
+      state.newLevelNameCache = [];
+      state.newAreaNameCache = [];
+
+      customLevelsContainer.innerHTML = "";
+      customAreasContainer.innerHTML = "";
+      generateCustomInputFields(
+        1,
+        customLevelsContainer,
+        "custom-level",
+        state.newLevelNameCache,
+      );
+      generateCustomInputFields(
+        1,
+        customAreasContainer,
+        "custom-area",
+        state.newAreaNameCache,
+      );
+    });
+  }
+
+  // 2. 複製実行
+  if (executeCopyBtn) {
+    executeCopyBtn.addEventListener("click", async () => {
+      // 連打防止
+      executeCopyBtn.disabled = true;
+      executeCopyBtn.classList.add("opacity-50", "cursor-not-allowed");
+      executeCopyBtn.textContent = "処理中...";
+
+      try {
+        const sourceId = copySourceIdInput.value;
+        const newName = copyNewNameInput.value.trim();
+        const modeElement = document.querySelector(
+          'input[name="copy-mode"]:checked',
+        );
+        const mode = modeElement ? modeElement.value : "with_master";
+
+        if (!newName) throw new Error("工事名を入力してください。");
+
+        const sourceProject = state.projects.find((p) => p.id === sourceId);
+        if (!sourceProject) throw new Error("コピー元の工事が見つかりません。");
+
+        // 重複チェック
+        const isDuplicate = state.projects.some(
+          (p) =>
+            p.propertyName === sourceProject.propertyName && p.name === newName,
+        );
+
+        if (isDuplicate) {
+          throw new Error(
+            `物件「${
+              sourceProject.propertyName || "(未設定)"
+            }」内に、工事名「${newName}」は既に存在します。\n別の名前を指定してください。`,
+          );
+        }
+
+        const newProject = JSON.parse(JSON.stringify(sourceProject));
+
+        newProject.name = newName;
+        delete newProject.id;
+
+        if (mode === "settings_only") {
+          newProject.joints = [];
+          newProject.members = [];
+          newProject.tally = {};
+          newProject.tempBoltMap = {};
+          newProject.isTallySheetGenerated = false;
+          newProject.tallyLocks = {};
+        } else if (mode === "with_master") {
+          newProject.tally = {};
+          newProject.isTallySheetGenerated = false;
+          newProject.tallyLocks = {};
+        } else if (mode === "full") {
+          if (!newProject.tallyLocks) newProject.tallyLocks = {};
+        }
+
+        const docRef = await addProject(newProject);
+
+        const createdProject = { ...newProject, id: docRef.id };
+        state.projects.push(createdProject);
+        state.projects.sort((a, b) => a.name.localeCompare(b.name));
+
+        updateProjectListUI();
+        if (copyProjectModal) closeModal(copyProjectModal);
+        showToast("工事を複製しました。");
+      } catch (err) {
+        console.error("複製エラー:", err);
+        showCustomAlert(err.message || "工事の複製に失敗しました。");
+      } finally {
+        executeCopyBtn.disabled = false;
+        executeCopyBtn.classList.remove("opacity-50", "cursor-not-allowed");
+        executeCopyBtn.textContent = "複製する";
+      }
+    });
+  }
+
+  // 3. 複製モーダルを閉じる
+  [closeCopyModalBtn, cancelCopyBtn].forEach((btn) => {
+    if (btn) {
+      btn.addEventListener("click", () => closeModal(copyProjectModal));
+    }
+  });
 }
