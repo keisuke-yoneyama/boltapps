@@ -367,12 +367,12 @@ document.addEventListener("DOMContentLoaded", () => {
   // );
   // --- ここまで追加 ---
   // ▼▼▼ 追加：複製機能のロジック ▼▼▼
-  const copyProjectModal = document.getElementById("copy-project-modal");
-  const copySourceIdInput = document.getElementById("copy-source-project-id");
-  const copyNewNameInput = document.getElementById("copy-new-project-name");
-  const executeCopyBtn = document.getElementById("execute-copy-btn");
-  const closeCopyModalBtn = document.getElementById("close-copy-modal-btn");
-  const cancelCopyBtn = document.getElementById("cancel-copy-btn");
+  // const copyProjectModal = document.getElementById("copy-project-modal");
+  // const copySourceIdInput = document.getElementById("copy-source-project-id");
+  // const copyNewNameInput = document.getElementById("copy-new-project-name");
+  // const executeCopyBtn = document.getElementById("execute-copy-btn");
+  // const closeCopyModalBtn = document.getElementById("close-copy-modal-btn");
+  // const cancelCopyBtn = document.getElementById("cancel-copy-btn");
   // ▼▼▼ 追加：カラー関連の変数と関数 ▼▼▼
   // 変数定義
   const editJointColorInput = document.getElementById("edit-joint-color");
@@ -393,15 +393,15 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // 新規追加: ボルト設定関連のDOM要素
   // const btnBoltSizeSettings = document.getElementById("btn-bolt-size-settings");
-  const boltSizeSettingsModal = document.getElementById(
-    "bolt-size-settings-modal",
-  );
-  const closeBoltSizeModalBtn = document.getElementById(
-    "close-bolt-size-modal-btn",
-  );
-  const saveBoltSizeSettingsBtn = document.getElementById(
-    "save-bolt-size-settings-btn",
-  );
+  // const boltSizeSettingsModal = document.getElementById(
+  //   "bolt-size-settings-modal",
+  // );
+  // const closeBoltSizeModalBtn = document.getElementById(
+  //   "close-bolt-size-modal-btn",
+  // );
+  // const saveBoltSizeSettingsBtn = document.getElementById(
+  //   "save-bolt-size-settings-btn",
+  // );
   // const newBoltTypeSelect = document.getElementById("new-bolt-type-select");
   // const newBoltLengthInput = document.getElementById("new-bolt-length-input");
   // const addBoltSizeBtn = document.getElementById("add-bolt-size-btn");
