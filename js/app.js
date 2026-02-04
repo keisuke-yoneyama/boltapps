@@ -2358,46 +2358,46 @@ document.addEventListener("DOMContentLoaded", () => {
     // ▲▲▲ ここまでが修正箇所 ▲▲▲
   });
 
-  advancedSettingsToggle.addEventListener("change", (e) => {
-    simpleProjectSettings.classList.toggle("hidden", e.target.checked);
-    advancedProjectSettings.classList.toggle("hidden", !e.target.checked);
-  });
-  addDecrementLevelsBtn.addEventListener("click", () =>
-    updateDynamicInputs(
-      addCustomLevelsCountInput,
-      customLevelsContainer,
-      newLevelNameCache,
-      "custom-level",
-      -1,
-    ),
-  );
-  addIncrementLevelsBtn.addEventListener("click", () =>
-    updateDynamicInputs(
-      addCustomLevelsCountInput,
-      customLevelsContainer,
-      newLevelNameCache,
-      "custom-level",
-      1,
-    ),
-  );
-  addDecrementAreasBtn.addEventListener("click", () =>
-    updateDynamicInputs(
-      addCustomAreasCountInput,
-      customAreasContainer,
-      newAreaNameCache,
-      "custom-area",
-      -1,
-    ),
-  );
-  addIncrementAreasBtn.addEventListener("click", () =>
-    updateDynamicInputs(
-      addCustomAreasCountInput,
-      customAreasContainer,
-      newAreaNameCache,
-      "custom-area",
-      1,
-    ),
-  );
+  // advancedSettingsToggle.addEventListener("change", (e) => {
+  //   simpleProjectSettings.classList.toggle("hidden", e.target.checked);
+  //   advancedProjectSettings.classList.toggle("hidden", !e.target.checked);
+  // });
+  // addDecrementLevelsBtn.addEventListener("click", () =>
+  //   updateDynamicInputs(
+  //     addCustomLevelsCountInput,
+  //     customLevelsContainer,
+  //     newLevelNameCache,
+  //     "custom-level",
+  //     -1,
+  //   ),
+  // );
+  // addIncrementLevelsBtn.addEventListener("click", () =>
+  //   updateDynamicInputs(
+  //     addCustomLevelsCountInput,
+  //     customLevelsContainer,
+  //     newLevelNameCache,
+  //     "custom-level",
+  //     1,
+  //   ),
+  // );
+  // addDecrementAreasBtn.addEventListener("click", () =>
+  //   updateDynamicInputs(
+  //     addCustomAreasCountInput,
+  //     customAreasContainer,
+  //     newAreaNameCache,
+  //     "custom-area",
+  //     -1,
+  //   ),
+  // );
+  // addIncrementAreasBtn.addEventListener("click", () =>
+  //   updateDynamicInputs(
+  //     addCustomAreasCountInput,
+  //     customAreasContainer,
+  //     newAreaNameCache,
+  //     "custom-area",
+  //     1,
+  //   ),
+  // );
 
   confirmMemberDeletionBtn.addEventListener("click", () => {
     if (state.pendingUpdateData) {
@@ -2416,50 +2416,50 @@ document.addEventListener("DOMContentLoaded", () => {
     state.pendingUpdateData = null;
   });
 
-  [editCustomLevelsCountInput, editCustomAreasCountInput].forEach((input) => {
-    input.addEventListener("keydown", (e) => {
-      if (e.key === "Backspace" || e.key === "Delete") {
-        e.preventDefault();
-      }
-    });
-  });
+  // [editCustomLevelsCountInput, editCustomAreasCountInput].forEach((input) => {
+  //   input.addEventListener("keydown", (e) => {
+  //     if (e.key === "Backspace" || e.key === "Delete") {
+  //       e.preventDefault();
+  //     }
+  //   });
+  // });
 
-  decrementLevelsBtn.addEventListener("click", () =>
-    updateDynamicInputs(
-      editCustomLevelsCountInput,
-      editCustomLevelsContainer,
-      levelNameCache,
-      "edit-level",
-      -1,
-    ),
-  );
-  incrementLevelsBtn.addEventListener("click", () =>
-    updateDynamicInputs(
-      editCustomLevelsCountInput,
-      editCustomLevelsContainer,
-      levelNameCache,
-      "edit-level",
-      1,
-    ),
-  );
-  decrementAreasBtn.addEventListener("click", () =>
-    updateDynamicInputs(
-      editCustomAreasCountInput,
-      editCustomAreasContainer,
-      areaNameCache,
-      "edit-area",
-      -1,
-    ),
-  );
-  incrementAreasBtn.addEventListener("click", () =>
-    updateDynamicInputs(
-      editCustomAreasCountInput,
-      editCustomAreasContainer,
-      areaNameCache,
-      "edit-area",
-      1,
-    ),
-  );
+  // decrementLevelsBtn.addEventListener("click", () =>
+  //   updateDynamicInputs(
+  //     editCustomLevelsCountInput,
+  //     editCustomLevelsContainer,
+  //     levelNameCache,
+  //     "edit-level",
+  //     -1,
+  //   ),
+  // );
+  // incrementLevelsBtn.addEventListener("click", () =>
+  //   updateDynamicInputs(
+  //     editCustomLevelsCountInput,
+  //     editCustomLevelsContainer,
+  //     levelNameCache,
+  //     "edit-level",
+  //     1,
+  //   ),
+  // );
+  // decrementAreasBtn.addEventListener("click", () =>
+  //   updateDynamicInputs(
+  //     editCustomAreasCountInput,
+  //     editCustomAreasContainer,
+  //     areaNameCache,
+  //     "edit-area",
+  //     -1,
+  //   ),
+  // );
+  // incrementAreasBtn.addEventListener("click", () =>
+  //   updateDynamicInputs(
+  //     editCustomAreasCountInput,
+  //     editCustomAreasContainer,
+  //     areaNameCache,
+  //     "edit-area",
+  //     1,
+  //   ),
+  // );
 
   confirmActionBtn.addEventListener("click", () => {
     if (typeof state.pendingAction === "function") {

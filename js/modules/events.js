@@ -14,6 +14,7 @@ import {
   openTempBoltSettingsModal,
   populateGlobalBoltSelectorModal,
   openModal,
+  updateDynamicInputs,
 } from "./ui.js"; // ui.jsで作った関数を使う
 
 import { resetTempJointData, state } from "./state.js";
@@ -40,6 +41,8 @@ export function setupEventListeners() {
   setupFloatingFABBottunEvents(); //登録用フローティングボタン
 
   setupBoltSizeInputClicked(); //ボルトサイズ選択モーダルの起動イベント
+
+  setupProjectFormEvents(); // 工事登録フォーム関係のイベント
 
   // ▼▼▼ 追加: 編集モーダル複合スプライス入力の監視 (4セット分) ▼▼▼
   for (let i = 1; i <= 4; i++) {
@@ -440,3 +443,187 @@ function setupBoltSizeInputClicked() {
     }
   });
 }
+
+/**
+ * 工事登録・編集フォーム関連のイベント
+ */
+const setupProjectFormEvents = () => {
+  // --- 1. 新規工事登録フォームの要素 ---
+  const advancedSettingsToggle = document.getElementById(
+    "advanced-settings-toggle",
+  );
+  const simpleProjectSettings = document.getElementById(
+    "simple-project-settings",
+  );
+  const advancedProjectSettings = document.getElementById(
+    "advanced-project-settings",
+  );
+
+  const addCustomLevelsCountInput = document.getElementById(
+    "add-custom-levels-count",
+  );
+  const customLevelsContainer = document.getElementById(
+    "custom-levels-container",
+  );
+  const addDecrementLevelsBtn = document.getElementById(
+    "add-decrement-levels-btn",
+  );
+  const addIncrementLevelsBtn = document.getElementById(
+    "add-increment-levels-btn",
+  );
+
+  const addCustomAreasCountInput = document.getElementById(
+    "add-custom-areas-count",
+  );
+  const customAreasContainer = document.getElementById(
+    "custom-areas-container",
+  );
+  const addDecrementAreasBtn = document.getElementById(
+    "add-decrement-areas-btn",
+  );
+  const addIncrementAreasBtn = document.getElementById(
+    "add-increment-areas-btn",
+  );
+
+  // --- 2. 工事編集モーダルの要素 ---
+  const editCustomLevelsCountInput = document.getElementById(
+    "edit-custom-levels-count",
+  );
+  const editCustomLevelsContainer = document.getElementById(
+    "edit-custom-levels-container",
+  );
+  const decrementLevelsBtn = document.getElementById("decrement-levels-btn");
+  const incrementLevelsBtn = document.getElementById("increment-levels-btn");
+
+  const editCustomAreasCountInput = document.getElementById(
+    "edit-custom-areas-count",
+  );
+  const editCustomAreasContainer = document.getElementById(
+    "edit-custom-areas-container",
+  );
+  const decrementAreasBtn = document.getElementById("decrement-areas-btn");
+  const incrementAreasBtn = document.getElementById("increment-areas-btn");
+
+  // ▼▼▼ 新規登録フォームのイベント ▼▼▼
+
+  // 詳細設定トグル
+  if (
+    advancedSettingsToggle &&
+    simpleProjectSettings &&
+    advancedProjectSettings
+  ) {
+    advancedSettingsToggle.addEventListener("change", (e) => {
+      simpleProjectSettings.classList.toggle("hidden", e.target.checked);
+      advancedProjectSettings.classList.toggle("hidden", !e.target.checked);
+    });
+  }
+
+  // 階層数 (新規)
+  if (addDecrementLevelsBtn) {
+    addDecrementLevelsBtn.addEventListener("click", () =>
+      updateDynamicInputs(
+        addCustomLevelsCountInput,
+        customLevelsContainer,
+        state.newLevelNameCache, // stateから参照
+        "custom-level",
+        -1,
+      ),
+    );
+  }
+  if (addIncrementLevelsBtn) {
+    addIncrementLevelsBtn.addEventListener("click", () =>
+      updateDynamicInputs(
+        addCustomLevelsCountInput,
+        customLevelsContainer,
+        state.newLevelNameCache, // stateから参照
+        "custom-level",
+        1,
+      ),
+    );
+  }
+
+  // エリア数 (新規)
+  if (addDecrementAreasBtn) {
+    addDecrementAreasBtn.addEventListener("click", () =>
+      updateDynamicInputs(
+        addCustomAreasCountInput,
+        customAreasContainer,
+        state.newAreaNameCache, // stateから参照
+        "custom-area",
+        -1,
+      ),
+    );
+  }
+  if (addIncrementAreasBtn) {
+    addIncrementAreasBtn.addEventListener("click", () =>
+      updateDynamicInputs(
+        addCustomAreasCountInput,
+        customAreasContainer,
+        state.newAreaNameCache, // stateから参照
+        "custom-area",
+        1,
+      ),
+    );
+  }
+
+  // ▼▼▼ 工事編集モーダルのイベント ▼▼▼
+
+  // 手入力防止 (Backspace/Delete無効化)
+  [editCustomLevelsCountInput, editCustomAreasCountInput].forEach((input) => {
+    if (input) {
+      input.addEventListener("keydown", (e) => {
+        if (e.key === "Backspace" || e.key === "Delete") {
+          e.preventDefault();
+        }
+      });
+    }
+  });
+
+  // 階層数 (編集)
+  if (decrementLevelsBtn) {
+    decrementLevelsBtn.addEventListener("click", () =>
+      updateDynamicInputs(
+        editCustomLevelsCountInput,
+        editCustomLevelsContainer,
+        state.levelNameCache, // stateから参照
+        "edit-level",
+        -1,
+      ),
+    );
+  }
+  if (incrementLevelsBtn) {
+    incrementLevelsBtn.addEventListener("click", () =>
+      updateDynamicInputs(
+        editCustomLevelsCountInput,
+        editCustomLevelsContainer,
+        state.levelNameCache, // stateから参照
+        "edit-level",
+        1,
+      ),
+    );
+  }
+
+  // エリア数 (編集)
+  if (decrementAreasBtn) {
+    decrementAreasBtn.addEventListener("click", () =>
+      updateDynamicInputs(
+        editCustomAreasCountInput,
+        editCustomAreasContainer,
+        state.areaNameCache, // stateから参照
+        "edit-area",
+        -1,
+      ),
+    );
+  }
+  if (incrementAreasBtn) {
+    incrementAreasBtn.addEventListener("click", () =>
+      updateDynamicInputs(
+        editCustomAreasCountInput,
+        editCustomAreasContainer,
+        state.areaNameCache, // stateから参照
+        "edit-area",
+        1,
+      ),
+    );
+  }
+};

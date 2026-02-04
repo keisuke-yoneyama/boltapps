@@ -35,6 +35,14 @@ export const state = {
     currentIndex: -1,
   },
   isUndoRedoOperation: false,
+  // ▼▼▼ 追加: フォーム入力用の一時キャッシュ ▼▼▼
+  // 新規登録用
+  newLevelNameCache: [],
+  newAreaNameCache: [],
+
+  // 編集用
+  levelNameCache: [],
+  areaNameCache: [],
 };
 
 // 定数もここでexportしておくと便利です
