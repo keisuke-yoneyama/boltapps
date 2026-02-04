@@ -88,10 +88,10 @@ import { state } from "./modules/state.js";
 let unsubscribeProjects;
 let history = { stack: [], currentIndex: -1 };
 let isUndoRedoOperation = false;
-let levelNameCache = []; //★Ui.jsに移動中
-let areaNameCache = []; //★Ui.jsに移動中
-let newLevelNameCache = [];
-let newAreaNameCache = [];
+// let levelNameCache = []; //★Ui.jsに移動中
+// let areaNameCache = []; //★Ui.jsに移動中
+// let newLevelNameCache = [];
+// let newAreaNameCache = [];
 
 let dragSourceElement = null;
 
@@ -158,11 +158,11 @@ document.addEventListener("DOMContentLoaded", () => {
     "bulk-level-options-container",
   );
 
-  const navTabJoints = document.getElementById("nav-tab-joints");
-  const navTabTally = document.getElementById("nav-tab-tally");
+  // const navTabJoints = document.getElementById("nav-tab-joints");
+  // const navTabTally = document.getElementById("nav-tab-tally");
 
-  const hamburgerBtn = document.getElementById("hamburger-btn");
-  const mobileMenu = document.getElementById("mobile-menu");
+  // const hamburgerBtn = document.getElementById("hamburger-btn");
+  // const mobileMenu = document.getElementById("mobile-menu");
 
   const projectNameInput = document.getElementById("project-name");
   const projectFloorsInput = document.getElementById("project-floors");
@@ -189,21 +189,21 @@ document.addEventListener("DOMContentLoaded", () => {
   const addCustomLevelsCountInput = document.getElementById(
     "add-custom-levels-count",
   );
-  const addDecrementLevelsBtn = document.getElementById(
-    "add-decrement-levels-btn",
-  );
-  const addIncrementLevelsBtn = document.getElementById(
-    "add-increment-levels-btn",
-  );
-  const addCustomAreasCountInput = document.getElementById(
-    "add-custom-areas-count",
-  );
-  const addDecrementAreasBtn = document.getElementById(
-    "add-decrement-areas-btn",
-  );
-  const addIncrementAreasBtn = document.getElementById(
-    "add-increment-areas-btn",
-  );
+  // const addDecrementLevelsBtn = document.getElementById(
+  //   "add-decrement-levels-btn",
+  // );
+  // const addIncrementLevelsBtn = document.getElementById(
+  //   "add-increment-levels-btn",
+  // );
+  // const addCustomAreasCountInput = document.getElementById(
+  //   "add-custom-areas-count",
+  // );
+  // const addDecrementAreasBtn = document.getElementById(
+  //   "add-decrement-areas-btn",
+  // );
+  // const addIncrementAreasBtn = document.getElementById(
+  //   "add-increment-areas-btn",
+  // );
   const jointTypeInput = document.getElementById("joint-type");
   const jointNameInput = document.getElementById("joint-name");
   const flangeSizeInput = document.getElementById("flange-size");
@@ -257,18 +257,18 @@ document.addEventListener("DOMContentLoaded", () => {
   );
   const editProjectHasPhInput = document.getElementById("edit-project-has-ph");
 
-  const editCustomLevelsCountInput = document.getElementById(
-    "edit-custom-levels-count",
-  );
-  const editCustomLevelsContainer = document.getElementById(
-    "edit-custom-levels-container",
-  );
-  const editCustomAreasCountInput = document.getElementById(
-    "edit-custom-areas-count",
-  );
-  const editCustomAreasContainer = document.getElementById(
-    "edit-custom-areas-container",
-  );
+  // const editCustomLevelsCountInput = document.getElementById(
+  //   "edit-custom-levels-count",
+  // );
+  // const editCustomLevelsContainer = document.getElementById(
+  //   "edit-custom-levels-container",
+  // );
+  // const editCustomAreasCountInput = document.getElementById(
+  //   "edit-custom-areas-count",
+  // );
+  // const editCustomAreasContainer = document.getElementById(
+  //   "edit-custom-areas-container",
+  // );
   // const confirmDeleteModal = document.getElementById("confirm-delete-modal");
   const confirmDeleteBtn = document.getElementById("confirm-delete-btn");
   // const cancelDeleteBtn = document.getElementById("cancel-delete-btn");
@@ -335,16 +335,16 @@ document.addEventListener("DOMContentLoaded", () => {
   const confirmMemberDeletionMessage = document.getElementById(
     "confirm-member-deletion-message",
   );
-  const confirmMemberDeletionBtn = document.getElementById(
-    "confirm-member-deletion-btn",
-  );
-  const cancelMemberDeletionBtn = document.getElementById(
-    "cancel-member-deletion-btn",
-  );
-  const decrementLevelsBtn = document.getElementById("decrement-levels-btn");
-  const incrementLevelsBtn = document.getElementById("increment-levels-btn");
-  const decrementAreasBtn = document.getElementById("decrement-areas-btn");
-  const incrementAreasBtn = document.getElementById("increment-areas-btn");
+  // const confirmMemberDeletionBtn = document.getElementById(
+  //   "confirm-member-deletion-btn",
+  // );
+  // const cancelMemberDeletionBtn = document.getElementById(
+  //   "cancel-member-deletion-btn",
+  // );
+  // const decrementLevelsBtn = document.getElementById("decrement-levels-btn");
+  // const incrementLevelsBtn = document.getElementById("increment-levels-btn");
+  // const decrementAreasBtn = document.getElementById("decrement-areas-btn");
+  // const incrementAreasBtn = document.getElementById("increment-areas-btn");
   const confirmActionModal = document.getElementById("confirm-action-modal");
   const confirmActionMessage = document.getElementById(
     "confirm-action-message",
@@ -379,19 +379,19 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // ▼▼▼ 追加：常設フォーム用カラー関連変数 ▼▼▼
   const jointColorToggle = document.getElementById("joint-color-toggle");
-  const jointColorSection = document.getElementById("joint-color-section");
+  // const jointColorSection = document.getElementById("joint-color-section");
   const jointColorInput = document.getElementById("joint-color-input");
-  const staticClearJointColorBtn = document.getElementById(
-    "static-clear-joint-color-btn",
-  );
-  const staticColorPaletteContainer = document.getElementById(
-    "static-color-palette-container",
-  );
+  // const staticClearJointColorBtn = document.getElementById(
+  //   "static-clear-joint-color-btn",
+  // );
+  // const staticColorPaletteContainer = document.getElementById(
+  //   "static-color-palette-container",
+  // );
   // ▲▲▲ 追加ここまで ▲▲▲
   // ▼▼▼ 修正：Excel風プリセットカラー定義（蛍光色追加） ▼▼▼
 
   // 新規追加: ボルト設定関連のDOM要素
-  const btnBoltSizeSettings = document.getElementById("btn-bolt-size-settings");
+  // const btnBoltSizeSettings = document.getElementById("btn-bolt-size-settings");
   const boltSizeSettingsModal = document.getElementById(
     "bolt-size-settings-modal",
   );
@@ -411,65 +411,65 @@ document.addEventListener("DOMContentLoaded", () => {
   const isBundledWithColumnInput = document.getElementById(
     "is-bundled-with-column",
   );
-  const bundleColumnGroup = document.getElementById("bundle-column-group");
+  // const bundleColumnGroup = document.getElementById("bundle-column-group");
 
   const editIsBundledWithColumnInput = document.getElementById(
     "edit-is-bundled-with-column",
   );
-  const editBundleColumnGroup = document.getElementById(
-    "edit-bundle-column-group",
-  );
+  // const editBundleColumnGroup = document.getElementById(
+  //   "edit-bundle-column-group",
+  // );
 
-  // イベントリスナー：標準ピッカーで色が選ばれた時
-  if (editJointColorInput) {
-    editJointColorInput.addEventListener("input", (e) => {
-      editJointColorInput.dataset.isNull = "false";
-      // パレットの選択解除
-      document
-        .querySelectorAll(".color-swatch")
-        .forEach((el) => el.classList.remove("selected"));
-    });
-  }
+  // // イベントリスナー：標準ピッカーで色が選ばれた時
+  // if (editJointColorInput) {
+  //   editJointColorInput.addEventListener("input", (e) => {
+  //     editJointColorInput.dataset.isNull = "false";
+  //     // パレットの選択解除
+  //     document
+  //       .querySelectorAll(".color-swatch")
+  //       .forEach((el) => el.classList.remove("selected"));
+  //   });
+  // }
 
-  // イベントリスナー：設定なしボタン
-  if (clearJointColorBtn) {
-    clearJointColorBtn.addEventListener("click", () => {
-      editJointColorInput.value = "#ffffff";
-      editJointColorInput.dataset.isNull = "true";
-      document
-        .querySelectorAll(".color-swatch")
-        .forEach((el) => el.classList.remove("selected"));
-    });
-  }
+  // // イベントリスナー：設定なしボタン
+  // if (clearJointColorBtn) {
+  //   clearJointColorBtn.addEventListener("click", () => {
+  //     editJointColorInput.value = "#ffffff";
+  //     editJointColorInput.dataset.isNull = "true";
+  //     document
+  //       .querySelectorAll(".color-swatch")
+  //       .forEach((el) => el.classList.remove("selected"));
+  //   });
+  // }
 
   // 初期化時にパレット生成（デフォルト選択なし）
   renderColorPalette(null);
 
-  // トグルスイッチの制御
-  if (jointColorToggle) {
-    jointColorToggle.addEventListener("change", (e) => {
-      jointColorSection.classList.toggle("hidden", !e.target.checked);
-    });
-  }
+  // // トグルスイッチの制御
+  // if (jointColorToggle) {
+  //   jointColorToggle.addEventListener("change", (e) => {
+  //     jointColorSection.classList.toggle("hidden", !e.target.checked);
+  //   });
+  // }
 
-  // 標準ピッカー
-  if (jointColorInput) {
-    jointColorInput.addEventListener("input", () => {
-      staticColorPaletteContainer
-        .querySelectorAll(".color-swatch")
-        .forEach((el) => el.classList.remove("selected"));
-    });
-  }
+  // // 標準ピッカー
+  // if (jointColorInput) {
+  //   jointColorInput.addEventListener("input", () => {
+  //     staticColorPaletteContainer
+  //       .querySelectorAll(".color-swatch")
+  //       .forEach((el) => el.classList.remove("selected"));
+  //   });
+  // }
 
-  // 解除ボタン
-  if (staticClearJointColorBtn) {
-    staticClearJointColorBtn.addEventListener("click", () => {
-      jointColorInput.value = "#ffffff";
-      staticColorPaletteContainer
-        .querySelectorAll(".color-swatch")
-        .forEach((el) => el.classList.remove("selected"));
-    });
-  }
+  // // 解除ボタン
+  // if (staticClearJointColorBtn) {
+  //   staticClearJointColorBtn.addEventListener("click", () => {
+  //     jointColorInput.value = "#ffffff";
+  //     staticColorPaletteContainer
+  //       .querySelectorAll(".color-swatch")
+  //       .forEach((el) => el.classList.remove("selected"));
+  //   });
+  // }
 
   // 初期化
   renderStaticColorPalette(null);

@@ -79,6 +79,8 @@ export function setupEventListeners() {
   }
 
   setupUndoRedoEvents(); //undo,redo
+
+  setupColorControlEvents(); //カラーピッカー、トグル、クリアボタン
 }
 
 //登録用フローティングボタンイベント
@@ -771,5 +773,80 @@ function setupNavigationEvents() {
   }
   if (backBtnMobile) {
     backBtnMobile.addEventListener("click", handleBackToList);
+  }
+}
+
+/**
+ * カラー設定（ピッカー、クリアボタン、トグル）関連のイベント
+ */
+function setupColorControlEvents() {
+  // --- 1. 編集モーダル用の要素 ---
+  const editJointColorInput = document.getElementById("edit-joint-color");
+  const clearJointColorBtn = document.getElementById("clear-joint-color-btn"); // ID要確認
+
+  // イベントリスナー：標準ピッカーで色が選ばれた時 (編集)
+  if (editJointColorInput) {
+    editJointColorInput.addEventListener("input", (e) => {
+      editJointColorInput.dataset.isNull = "false";
+      // 全てのパレットの選択解除（編集モーダル内のものを対象にするのが理想ですが、現状は全体でも動作します）
+      document
+        .querySelectorAll(".color-swatch")
+        .forEach((el) => el.classList.remove("selected"));
+    });
+  }
+
+  // イベントリスナー：設定なしボタン (編集)
+  if (clearJointColorBtn) {
+    clearJointColorBtn.addEventListener("click", () => {
+      if (editJointColorInput) {
+        editJointColorInput.value = "#ffffff";
+        editJointColorInput.dataset.isNull = "true";
+      }
+      document
+        .querySelectorAll(".color-swatch")
+        .forEach((el) => el.classList.remove("selected"));
+    });
+  }
+
+  // --- 2. 新規登録(常設)フォーム用の要素 ---
+  const jointColorToggle = document.getElementById("joint-color-toggle");
+  const jointColorSection = document.getElementById("joint-color-section");
+  const jointColorInput = document.getElementById("joint-color");
+  const staticClearJointColorBtn = document.getElementById(
+    "static-clear-joint-color-btn",
+  ); // ID要確認
+  const staticColorPaletteContainer = document.getElementById(
+    "static-color-palette-container",
+  );
+
+  // トグルスイッチの制御
+  if (jointColorToggle && jointColorSection) {
+    jointColorToggle.addEventListener("change", (e) => {
+      jointColorSection.classList.toggle("hidden", !e.target.checked);
+    });
+  }
+
+  // 標準ピッカー (常設)
+  if (jointColorInput) {
+    jointColorInput.addEventListener("input", () => {
+      if (staticColorPaletteContainer) {
+        staticColorPaletteContainer
+          .querySelectorAll(".color-swatch")
+          .forEach((el) => el.classList.remove("selected"));
+      }
+    });
+  }
+
+  // 解除ボタン (常設)
+  if (staticClearJointColorBtn) {
+    staticClearJointColorBtn.addEventListener("click", () => {
+      if (jointColorInput) jointColorInput.value = "#ffffff";
+
+      if (staticColorPaletteContainer) {
+        staticColorPaletteContainer
+          .querySelectorAll(".color-swatch")
+          .forEach((el) => el.classList.remove("selected"));
+      }
+    });
   }
 }
