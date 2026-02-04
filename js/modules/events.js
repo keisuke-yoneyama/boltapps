@@ -20,7 +20,7 @@ import {
 
 import { resetTempJointData, state } from "./state.js";
 
-import { updateProjectData } from "./firebase.js";
+import { updateProjectData } from "./db.js";
 
 /**
  * アプリ全体のイベントリスナーを設定する関数
