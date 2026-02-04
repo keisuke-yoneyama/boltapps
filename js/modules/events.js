@@ -16,6 +16,10 @@ import {
   openModal,
   updateDynamicInputs,
   showCustomAlert,
+  performHistoryAction,
+  switchTab,
+  switchView,
+  resetMemberForm,
 } from "./ui.js"; // ui.jsで作った関数を使う
 
 import { resetTempJointData, state } from "./state.js";
@@ -50,6 +54,8 @@ export function setupEventListeners() {
 
   setupConfirmMemberDeletionEvents(); //部材削除確認モーダルのイベント
 
+  setupNavigationEvents(); // ナビゲーションボタン設定
+
   // ▼▼▼ 追加: 編集モーダル複合スプライス入力の監視 (4セット分) ▼▼▼
   for (let i = 1; i <= 4; i++) {
     const suffix = i > 1 ? `-${i}` : "";
@@ -71,6 +77,8 @@ export function setupEventListeners() {
       });
     }
   }
+
+  setupUndoRedoEvents(); //undo,redo
 }
 
 //登録用フローティングボタンイベント
@@ -675,5 +683,93 @@ function setupConfirmMemberDeletionEvents() {
       if (confirmMemberDeletionModal) closeModal(confirmMemberDeletionModal);
       state.pendingUpdateData = null;
     });
+  }
+}
+
+/**
+ * Undo/Redoボタンのイベント設定
+ */
+function setupUndoRedoEvents() {
+  const undoBtn = document.getElementById("undo-btn");
+  const redoBtn = document.getElementById("redo-btn");
+  const mobileUndoBtn = document.getElementById("mobile-undo-btn");
+  const mobileRedoBtn = document.getElementById("mobile-redo-btn");
+
+  // Undoボタン (PC / Mobile)
+  [undoBtn, mobileUndoBtn].forEach((btn) => {
+    if (btn) {
+      btn.addEventListener("click", () => performHistoryAction("undo"));
+    }
+  });
+
+  // Redoボタン (PC / Mobile)
+  [redoBtn, mobileRedoBtn].forEach((btn) => {
+    if (btn) {
+      btn.addEventListener("click", () => performHistoryAction("redo"));
+    }
+  });
+}
+
+/**
+ * ナビゲーションバー関連のイベント設定
+ * (タブ切り替え、ハンバーガーメニュー、戻るボタン)
+ */
+function setupNavigationEvents() {
+  // DOM要素の取得
+  const navTabJoints = document.getElementById("nav-tab-joints");
+  const navTabTally = document.getElementById("nav-tab-tally");
+  const mobileNavTabJoints = document.getElementById("mobile-nav-tab-joints");
+  const mobileNavTabTally = document.getElementById("mobile-nav-tab-tally");
+  const hamburgerBtn = document.getElementById("hamburger-btn");
+  const mobileMenu = document.getElementById("mobile-menu");
+
+  const backBtnDesktop = document.getElementById("nav-back-to-list-btn");
+  const backBtnMobile = document.getElementById("mobile-nav-back-to-list-btn");
+
+  // 1. タブ切り替えボタン (PC & Mobile)
+  const tabs = [
+    navTabJoints,
+    navTabTally,
+    mobileNavTabJoints,
+    mobileNavTabTally,
+  ];
+
+  tabs.forEach((tab) => {
+    // 要素が存在する場合のみイベント登録
+    if (tab) {
+      tab.addEventListener("click", (e) => {
+        // data-tab属性を取得
+        const tabName = e.target.dataset.tab;
+        if (tabName) {
+          switchTab(tabName);
+        }
+
+        // モバイル表示時、メニューを閉じる
+        if (window.innerWidth < 768 && mobileMenu) {
+          mobileMenu.classList.add("hidden");
+        }
+      });
+    }
+  });
+
+  // 2. ハンバーガーメニューの開閉
+  if (hamburgerBtn && mobileMenu) {
+    hamburgerBtn.addEventListener("click", () => {
+      mobileMenu.classList.toggle("hidden");
+    });
+  }
+
+  // 3. 「物件一覧に戻る」ボタン (PC & Mobile 共通処理)
+  const handleBackToList = () => {
+    state.currentProjectId = null;
+    resetMemberForm(); // フォームをリセット
+    switchView("list");
+  };
+
+  if (backBtnDesktop) {
+    backBtnDesktop.addEventListener("click", handleBackToList);
+  }
+  if (backBtnMobile) {
+    backBtnMobile.addEventListener("click", handleBackToList);
   }
 }

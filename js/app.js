@@ -2211,62 +2211,62 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   });
 
-  [
-    navTabJoints,
-    navTabTally,
-    document.getElementById("mobile-nav-tab-joints"),
-    document.getElementById("mobile-nav-tab-tally"),
-  ].forEach((tab) => {
-    tab.addEventListener("click", (e) => {
-      switchTab(e.target.dataset.tab);
-      if (window.innerWidth < 768) {
-        mobileMenu.classList.add("hidden");
-      }
-    });
-  });
+  // [
+  //   navTabJoints,
+  //   navTabTally,
+  //   document.getElementById("mobile-nav-tab-joints"),
+  //   document.getElementById("mobile-nav-tab-tally"),
+  // ].forEach((tab) => {
+  //   tab.addEventListener("click", (e) => {
+  //     switchTab(e.target.dataset.tab);
+  //     if (window.innerWidth < 768) {
+  //       mobileMenu.classList.add("hidden");
+  //     }
+  //   });
+  // });
 
-  hamburgerBtn.addEventListener("click", () => {
-    mobileMenu.classList.toggle("hidden");
-  });
+  // hamburgerBtn.addEventListener("click", () => {
+  //   mobileMenu.classList.toggle("hidden");
+  // });
 
-  // デスクトップ用「物件一覧に戻る」ボタンのイベントリスナー
-  document
-    .getElementById("nav-back-to-list-btn")
-    .addEventListener("click", () => {
-      state.currentProjectId = null;
+  // // デスクトップ用「物件一覧に戻る」ボタンのイベントリスナー
+  // document
+  //   .getElementById("nav-back-to-list-btn")
+  //   .addEventListener("click", () => {
+  //     state.currentProjectId = null;
 
-      // ▼▼▼ 修正箇所 ▼▼▼
-      resetMemberForm(); // フォームをリセット
-      // ▲▲▲ 修正ここまで ▲▲▲
+  //     // ▼▼▼ 修正箇所 ▼▼▼
+  //     resetMemberForm(); // フォームをリセット
+  //     // ▲▲▲ 修正ここまで ▲▲▲
 
-      switchView("list");
-    });
-  // モバイル用「物件一覧に戻る」ボタンのイベントリスナー
-  document
-    .getElementById("mobile-nav-back-to-list-btn")
-    .addEventListener("click", () => {
-      state.currentProjectId = null;
+  //     switchView("list");
+  //   });
+  // // モバイル用「物件一覧に戻る」ボタンのイベントリスナー
+  // document
+  //   .getElementById("mobile-nav-back-to-list-btn")
+  //   .addEventListener("click", () => {
+  //     state.currentProjectId = null;
 
-      // ▼▼▼ 修正箇所 ▼▼▼
-      resetMemberForm(); // フォームをリセット
-      // ▲▲▲ 修正ここまで ▲▲▲
+  //     // ▼▼▼ 修正箇所 ▼▼▼
+  //     resetMemberForm(); // フォームをリセット
+  //     // ▲▲▲ 修正ここまで ▲▲▲
 
-      switchView("list");
-    });
+  //     switchView("list");
+  //   });
 
-  // ▼▼▼ Undo/Redoボタンのイベントリスナー ▼▼▼
-  //とりあえず以前の場所に記載、あとで改善の余地あり
-  const undoBtn = document.getElementById("undo-btn");
-  const redoBtn = document.getElementById("redo-btn");
-  const mobileUndoBtn = document.getElementById("mobile-undo-btn");
-  const mobileRedoBtn = document.getElementById("mobile-redo-btn");
+  // // ▼▼▼ Undo/Redoボタンのイベントリスナー ▼▼▼
+  // //とりあえず以前の場所に記載、あとで改善の余地あり
+  // const undoBtn = document.getElementById("undo-btn");
+  // const redoBtn = document.getElementById("redo-btn");
+  // const mobileUndoBtn = document.getElementById("mobile-undo-btn");
+  // const mobileRedoBtn = document.getElementById("mobile-redo-btn");
 
-  [undoBtn, mobileUndoBtn].forEach((btn) => {
-    if (btn) btn.addEventListener("click", () => performHistoryAction("undo"));
-  });
-  [redoBtn, mobileRedoBtn].forEach((btn) => {
-    if (btn) btn.addEventListener("click", () => performHistoryAction("redo"));
-  });
+  // [undoBtn, mobileUndoBtn].forEach((btn) => {
+  //   if (btn) btn.addEventListener("click", () => performHistoryAction("undo"));
+  // });
+  // [redoBtn, mobileRedoBtn].forEach((btn) => {
+  //   if (btn) btn.addEventListener("click", () => performHistoryAction("redo"));
+  // });
 
   // 「▼」ボタンがクリックされた時の処理
   openJointSelectorBtn.addEventListener("click", () => {
