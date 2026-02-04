@@ -20,12 +20,22 @@ import {
   switchTab,
   switchView,
   resetMemberForm,
+  renderBoltSizeSettings,
+  showToast,
 } from "./ui.js"; // ui.jsで作った関数を使う
 
 import { resetTempJointData, state } from "./state.js";
 
 import { updateProjectData } from "./db.js";
 
+import { BOLT_TYPES } from "./config.js";
+
+import { saveGlobalBoltSizes } from "./firebase.js";
+
+import {
+  sortGlobalBoltSizes,
+  cleanupAndSaveBoltSettings,
+} from "./calculator.js";
 /**
  * アプリ全体のイベントリスナーを設定する関数
  */
@@ -81,6 +91,8 @@ export function setupEventListeners() {
   setupUndoRedoEvents(); //undo,redo
 
   setupColorControlEvents(); //カラーピッカー、トグル、クリアボタン
+
+  setupBoltSettingsEvents(); // ★ボルトサイズ設定画面イベント
 }
 
 //登録用フローティングボタンイベント
@@ -848,5 +860,125 @@ function setupColorControlEvents() {
           .forEach((el) => el.classList.remove("selected"));
       }
     });
+  }
+}
+
+/**
+ * ボルトサイズ設定画面（グローバル設定）のイベント設定
+ */
+function setupBoltSettingsEvents() {
+  const navBtnBoltSettings = document.getElementById("nav-btn-bolt-settings");
+  const boltSizeSettingsModal = document.getElementById(
+    "bolt-size-settings-modal",
+  );
+  const newBoltTypeSelect = document.getElementById("new-bolt-type");
+  const addBoltSizeBtn = document.getElementById("add-bolt-size-btn");
+  const newBoltLengthInput = document.getElementById("new-bolt-length");
+  const boltSizeList = document.getElementById("bolt-size-list");
+
+  const closeBoltSizeModalBtn = document.getElementById(
+    "close-bolt-size-modal-btn",
+  );
+  const saveBoltSizeSettingsBtn = document.getElementById(
+    "save-bolt-size-settings-btn",
+  );
+
+  // 1. タブ切り替え
+  document.querySelectorAll(".bolt-tab-btn").forEach((btn) => {
+    btn.addEventListener("click", (e) => {
+      // ui.js の render 関数にタブ名を渡して描画更新
+      // (ui.js側で activeBoltTab を更新して描画する実装になっている前提)
+      renderBoltSizeSettings(e.target.dataset.tab);
+    });
+  });
+
+  // 2. 設定モーダルを開く (NAVボタン)
+  if (navBtnBoltSettings) {
+    navBtnBoltSettings.classList.remove("hidden");
+    navBtnBoltSettings.addEventListener("click", () => {
+      // 種類セレクトボックスの生成
+      if (newBoltTypeSelect) {
+        newBoltTypeSelect.innerHTML = "";
+        BOLT_TYPES.forEach((type) => {
+          const opt = document.createElement("option");
+          opt.value = type;
+          opt.textContent = type;
+          newBoltTypeSelect.appendChild(opt);
+        });
+        newBoltTypeSelect.value = "M16";
+      }
+
+      renderBoltSizeSettings(); // 初期描画
+      if (boltSizeSettingsModal) openModal(boltSizeSettingsModal);
+    });
+  }
+
+  // 3. 新規追加ボタン
+  if (addBoltSizeBtn) {
+    addBoltSizeBtn.addEventListener("click", async () => {
+      const type = newBoltTypeSelect.value;
+      const length = parseInt(newBoltLengthInput.value);
+
+      if (!length || length <= 0) {
+        showToast("長さを正しく入力してください");
+        return;
+      }
+
+      const newId = `${type}×${length}`;
+
+      // 重複チェック
+      if (state.globalBoltSizes.some((b) => b.id === newId)) {
+        showToast("このサイズは既に登録されています");
+        return;
+      }
+
+      // 追加
+      state.globalBoltSizes.push({
+        id: newId,
+        label: newId,
+        type: type,
+        length: length,
+      });
+
+      // 保存・再描画プロセス
+      sortGlobalBoltSizes();
+      renderBoltSizeSettings(); // 現在のタブで再描画
+      populateGlobalBoltSelectorModal(); // セレクタの更新
+      await saveGlobalBoltSizes(state.globalBoltSizes);
+
+      // 入力クリア
+      newBoltLengthInput.value = "";
+      newBoltLengthInput.focus();
+
+      // スクロール処理
+      setTimeout(() => {
+        if (boltSizeList) {
+          const newItem = Array.from(boltSizeList.children).find((li) =>
+            li.innerHTML.includes(newId),
+          );
+          if (newItem)
+            newItem.scrollIntoView({ behavior: "smooth", block: "center" });
+        }
+      }, 100);
+    });
+  }
+
+  // 4. 閉じるボタンの処理 (finalizeBoltSettings)
+  const handleFinalize = () => {
+    const project = state.projects.find((p) => p.id === state.currentProjectId);
+
+    // プロジェクトが開かれている場合、復元フラグのクリーンアップと保存を行う
+    if (project) {
+      cleanupAndSaveBoltSettings(project);
+    }
+
+    if (boltSizeSettingsModal) closeModal(boltSizeSettingsModal);
+  };
+
+  if (closeBoltSizeModalBtn) {
+    closeBoltSizeModalBtn.addEventListener("click", handleFinalize);
+  }
+  if (saveBoltSizeSettingsBtn) {
+    saveBoltSizeSettingsBtn.addEventListener("click", handleFinalize);
   }
 }

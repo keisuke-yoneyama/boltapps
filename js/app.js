@@ -602,80 +602,80 @@ document.addEventListener("DOMContentLoaded", () => {
   // 現在選択されているタブ（デフォルトはすべて）
   // ▼▼▼ ボルトサイズ設定のタブ管理と描画ロジック (グローバル対応) ▼▼▼
 
-  let activeBoltTab = "all";
+  // let activeBoltTab = "all";
 
-  document.querySelectorAll(".bolt-tab-btn").forEach((btn) => {
-    btn.addEventListener("click", (e) => {
-      activeBoltTab = e.target.dataset.tab;
-      renderBoltSizeSettings(); // No arg
-    });
-  });
+  // document.querySelectorAll(".bolt-tab-btn").forEach((btn) => {
+  //   btn.addEventListener("click", (e) => {
+  //     activeBoltTab = e.target.dataset.tab;
+  //     renderBoltSizeSettings(); // No arg
+  //   });
+  // });
 
   // 1. 設定モーダルを開く (NAVボタン)
   // nav-btn-bolt-settings 要素の取得とイベント設定
-  const navBtnBoltSettings = document.getElementById("nav-btn-bolt-settings");
-  if (navBtnBoltSettings) {
-    navBtnBoltSettings.classList.remove("hidden"); // ボタンを表示
-    navBtnBoltSettings.addEventListener("click", () => {
-      // 種類セレクトボックスの選択肢生成
-      newBoltTypeSelect.innerHTML = "";
-      BOLT_TYPES.forEach((type) => {
-        const opt = document.createElement("option");
-        opt.value = type;
-        opt.textContent = type;
-        newBoltTypeSelect.appendChild(opt);
-      });
-      newBoltTypeSelect.value = "M16";
+  // const navBtnBoltSettings = document.getElementById("nav-btn-bolt-settings");
+  // if (navBtnBoltSettings) {
+  //   navBtnBoltSettings.classList.remove("hidden"); // ボタンを表示
+  //   navBtnBoltSettings.addEventListener("click", () => {
+  //     // 種類セレクトボックスの選択肢生成
+  //     newBoltTypeSelect.innerHTML = "";
+  //     BOLT_TYPES.forEach((type) => {
+  //       const opt = document.createElement("option");
+  //       opt.value = type;
+  //       opt.textContent = type;
+  //       newBoltTypeSelect.appendChild(opt);
+  //     });
+  //     newBoltTypeSelect.value = "M16";
 
-      renderBoltSizeSettings(); // Global
-      openModal(boltSizeSettingsModal);
-    });
-  }
+  //     renderBoltSizeSettings(); // Global
+  //     openModal(boltSizeSettingsModal);
+  //   });
+  // }
 
-  // 2. 新規追加ボタン
-  addBoltSizeBtn.addEventListener("click", async () => {
-    const type = newBoltTypeSelect.value;
-    const length = parseInt(newBoltLengthInput.value);
+  // // 2. 新規追加ボタン
+  // addBoltSizeBtn.addEventListener("click", async () => {
+  //   const type = newBoltTypeSelect.value;
+  //   const length = parseInt(newBoltLengthInput.value);
 
-    if (!length || length <= 0) {
-      showToast("長さを正しく入力してください");
-      return;
-    }
+  //   if (!length || length <= 0) {
+  //     showToast("長さを正しく入力してください");
+  //     return;
+  //   }
 
-    const newId = `${type}×${length}`;
+  //   const newId = `${type}×${length}`;
 
-    // 重複チェック
-    if (state.globalBoltSizes.some((b) => b.id === newId)) {
-      showToast("このサイズは既に登録されています");
-      return;
-    }
+  //   // 重複チェック
+  //   if (state.globalBoltSizes.some((b) => b.id === newId)) {
+  //     showToast("このサイズは既に登録されています");
+  //     return;
+  //   }
 
-    // 追加
-    state.globalBoltSizes.push({
-      id: newId,
-      label: newId,
-      type: type,
-      length: length,
-    });
+  //   // 追加
+  //   state.globalBoltSizes.push({
+  //     id: newId,
+  //     label: newId,
+  //     type: type,
+  //     length: length,
+  //   });
 
-    // 再描画（ソート含む）
-    sortGlobalBoltSizes();
-    renderBoltSizeSettings();
-    populateGlobalBoltSelectorModal(); // Update selector
-    await saveGlobalBoltSizes();
+  //   // 再描画（ソート含む）
+  //   sortGlobalBoltSizes();
+  //   renderBoltSizeSettings();
+  //   populateGlobalBoltSelectorModal(); // Update selector
+  //   await saveGlobalBoltSizes();
 
-    // 入力クリア
-    newBoltLengthInput.value = "";
-    newBoltLengthInput.focus();
+  //   // 入力クリア
+  //   newBoltLengthInput.value = "";
+  //   newBoltLengthInput.focus();
 
-    setTimeout(() => {
-      const newItem = Array.from(boltSizeList.children).find((li) =>
-        li.innerHTML.includes(newId),
-      );
-      if (newItem)
-        newItem.scrollIntoView({ behavior: "smooth", block: "center" });
-    }, 100);
-  });
+  //   setTimeout(() => {
+  //     const newItem = Array.from(boltSizeList.children).find((li) =>
+  //       li.innerHTML.includes(newId),
+  //     );
+  //     if (newItem)
+  //       newItem.scrollIntoView({ behavior: "smooth", block: "center" });
+  //   }, 100);
+  // });
 
   // 閉じるボタンの処理
   //とりあえずここに書いた
@@ -694,11 +694,11 @@ document.addEventListener("DOMContentLoaded", () => {
     closeModal(boltSizeSettingsModal);
   };
 
-  //とりあえずここに書く。app.jsの移動はあとでやる
-  if (closeBoltSizeModalBtn)
-    closeBoltSizeModalBtn.addEventListener("click", finalizeBoltSettings);
-  if (saveBoltSizeSettingsBtn)
-    saveBoltSizeSettingsBtn.addEventListener("click", finalizeBoltSettings);
+  // //とりあえずここに書く。app.jsの移動はあとでやる
+  // if (closeBoltSizeModalBtn)
+  //   closeBoltSizeModalBtn.addEventListener("click", finalizeBoltSettings);
+  // if (saveBoltSizeSettingsBtn)
+  //   saveBoltSizeSettingsBtn.addEventListener("click", finalizeBoltSettings);
 
   // --- Event Listeners ---
   // ★ 修正版：新規工事登録（即時反映対応）
