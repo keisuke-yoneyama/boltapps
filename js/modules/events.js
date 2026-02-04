@@ -22,7 +22,6 @@ import {
   resetMemberForm,
   renderBoltSizeSettings,
   showToast,
-  updateProjectData,
   generateCustomInputFields,
   updateProjectListUI,
 } from "./ui.js"; // ui.jsで作った関数を使う
