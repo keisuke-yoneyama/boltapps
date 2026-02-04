@@ -95,6 +95,8 @@ export function setupEventListeners() {
   setupColorControlEvents(); //カラーピッカー、トグル、クリアボタン
 
   setupBoltSettingsEvents(); // ★ボルトサイズ設定画面イベント
+
+  setupProjectActionEvents(); // 工事登録、複製アクション
 }
 
 //登録用フローティングボタンイベント
