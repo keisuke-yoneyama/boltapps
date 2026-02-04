@@ -2399,22 +2399,22 @@ document.addEventListener("DOMContentLoaded", () => {
   //   ),
   // );
 
-  confirmMemberDeletionBtn.addEventListener("click", () => {
-    if (state.pendingUpdateData) {
-      updateProjectData(state.currentProjectId, state.pendingUpdateData).catch(
-        (err) => {
-          // 万が一失敗した時だけアラートを出す
-          console.error(err);
-          showCustomAlert("保存に失敗しました。リロードしてください。");
-        },
-      );
-    }
-  });
+  // confirmMemberDeletionBtn.addEventListener("click", () => {
+  //   if (state.pendingUpdateData) {
+  //     updateProjectData(state.currentProjectId, state.pendingUpdateData).catch(
+  //       (err) => {
+  //         // 万が一失敗した時だけアラートを出す
+  //         console.error(err);
+  //         showCustomAlert("保存に失敗しました。リロードしてください。");
+  //       },
+  //     );
+  //   }
+  // });
 
-  cancelMemberDeletionBtn.addEventListener("click", () => {
-    closeModal(confirmMemberDeletionModal);
-    state.pendingUpdateData = null;
-  });
+  // cancelMemberDeletionBtn.addEventListener("click", () => {
+  //   closeModal(confirmMemberDeletionModal);
+  //   state.pendingUpdateData = null;
+  // });
 
   // [editCustomLevelsCountInput, editCustomAreasCountInput].forEach((input) => {
   //   input.addEventListener("keydown", (e) => {

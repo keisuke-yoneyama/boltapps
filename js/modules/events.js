@@ -15,9 +15,13 @@ import {
   populateGlobalBoltSelectorModal,
   openModal,
   updateDynamicInputs,
+  showCustomAlert,
 } from "./ui.js"; // ui.jsで作った関数を使う
 
 import { resetTempJointData, state } from "./state.js";
+
+import { updateProjectData } from "./firebase.js";
+
 /**
  * アプリ全体のイベントリスナーを設定する関数
  */
@@ -43,6 +47,8 @@ export function setupEventListeners() {
   setupBoltSizeInputClicked(); //ボルトサイズ選択モーダルの起動イベント
 
   setupProjectFormEvents(); // 工事登録フォーム関係のイベント
+
+  setupConfirmMemberDeletionEvents(); //部材削除確認モーダルのイベント
 
   // ▼▼▼ 追加: 編集モーダル複合スプライス入力の監視 (4セット分) ▼▼▼
   for (let i = 1; i <= 4; i++) {
@@ -627,3 +633,47 @@ const setupProjectFormEvents = () => {
     );
   }
 };
+
+/**
+ * 部材削除確認モーダルのイベント設定
+ */
+function setupConfirmMemberDeletionEvents() {
+  // HTMLのIDを取得（index.htmlのIDと一致しているか確認してください）
+  const confirmMemberDeletionBtn = document.getElementById(
+    "confirm-member-deletion-btn",
+  );
+  const cancelMemberDeletionBtn = document.getElementById(
+    "cancel-member-deletion-btn",
+  );
+  const confirmMemberDeletionModal = document.getElementById(
+    "confirm-member-deletion-modal",
+  );
+
+  // 確定ボタン (削除実行)
+  if (confirmMemberDeletionBtn) {
+    confirmMemberDeletionBtn.addEventListener("click", () => {
+      if (state.pendingUpdateData) {
+        updateProjectData(state.currentProjectId, state.pendingUpdateData)
+          .then(() => {
+            // ★保存成功したらモーダルを閉じてデータをクリア
+            // (元のコードには明記されていませんでしたが、ここで閉じるのが自然です)
+            if (confirmMemberDeletionModal)
+              closeModal(confirmMemberDeletionModal);
+            state.pendingUpdateData = null;
+          })
+          .catch((err) => {
+            console.error(err);
+            showCustomAlert("保存に失敗しました。リロードしてください。");
+          });
+      }
+    });
+  }
+
+  // キャンセルボタン
+  if (cancelMemberDeletionBtn) {
+    cancelMemberDeletionBtn.addEventListener("click", () => {
+      if (confirmMemberDeletionModal) closeModal(confirmMemberDeletionModal);
+      state.pendingUpdateData = null;
+    });
+  }
+}
