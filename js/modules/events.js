@@ -10,10 +10,13 @@ import {
   toggleFab,
   closeFabIfOutside,
   openNewJointModal,
+  openConfirmDeleteModal,
   openNewMemberModal,
   openTempBoltSettingsModal,
   populateGlobalBoltSelectorModal,
   openModal,
+  openEditModal,
+  openEditMemberModal,
   updateDynamicInputs,
   showCustomAlert,
   performHistoryAction,
@@ -29,7 +32,12 @@ import {
 
 import { resetTempJointData, state } from "./state.js";
 
-import { updateProjectData, addProject } from "./db.js";
+import {
+  updateProjectData,
+  addProject,
+  deleteProject,
+  updateProjectData,
+} from "./db.js";
 
 import { BOLT_TYPES } from "./config.js";
 
@@ -100,6 +108,10 @@ export function setupEventListeners() {
   setupProjectActionEvents(); // 工事登録、複製アクション
 
   setupMemberActionEvents(); //部材の保存関係
+
+  setupListActionEvents();
+
+  setupDeleteExecutionEvents();
 }
 
 //登録用フローティングボタンイベント
@@ -1537,6 +1549,181 @@ function setupMemberActionEvents() {
         showCustomAlert("部材の保存に失敗しました。");
         console.error("保存失敗: ", err);
       });
+    });
+  }
+}
+
+/**
+ * リスト表示（継手・部材）内のボタンアクション（編集・削除）イベント
+ */
+function setupListActionEvents() {
+  const jointListsContainer = document.getElementById("joint-lists-container");
+  const memberListsContainer = document.getElementById(
+    "member-lists-container",
+  );
+
+  // --- 1. 継手リストのクリック処理 ---
+  if (jointListsContainer) {
+    jointListsContainer.addEventListener("click", (e) => {
+      // ボタン要素を取得（アイコンをクリックした場合も考慮）
+      const target = e.target.closest("button");
+      if (!target) return;
+
+      const jointId = target.dataset.id;
+      const project = state.projects.find(
+        (p) => p.id === state.currentProjectId,
+      );
+      if (!project) return;
+
+      // --- 削除ボタン ---
+      if (target.classList.contains("delete-joint-btn")) {
+        // ui.js からインポートした関数を使用
+        openConfirmDeleteModal(jointId, "joint");
+        return;
+      }
+
+      // --- 編集ボタン ---
+      if (target.classList.contains("edit-joint-btn")) {
+        const joint = project.joints.find((j) => j.id === jointId);
+        if (joint) {
+          // タイトルを「編集」に戻す
+          const modalTitle = document.querySelector("#edit-joint-modal h3");
+          if (modalTitle) modalTitle.textContent = "継手の編集";
+
+          // 編集モーダルを開く (ui.js)
+          openEditModal(joint);
+        }
+        return;
+      }
+    });
+  }
+
+  // --- 2. 部材リストのクリック処理 ---
+  if (memberListsContainer) {
+    memberListsContainer.addEventListener("click", (e) => {
+      const target = e.target.closest("button");
+      if (!target) return;
+
+      // --- 削除ボタン ---
+      if (target.classList.contains("delete-member-btn")) {
+        openConfirmDeleteModal(target.dataset.id, "member");
+      }
+      // --- 部材編集ボタン ---
+      else if (target.classList.contains("edit-member-btn")) {
+        // タイトルを「編集」に戻す
+        const modalTitle = document.querySelector("#edit-member-modal h3");
+        if (modalTitle) modalTitle.textContent = "部材の編集";
+
+        openEditMemberModal(target.dataset.id);
+      }
+      // --- 部材リスト内の継手ボタン（詳細確認用） ---
+      else if (target.classList.contains("edit-joint-btn")) {
+        const jointId = target.dataset.jointId;
+        const project = state.projects.find(
+          (p) => p.id === state.currentProjectId,
+        );
+        const joint = project?.joints.find((j) => j.id === jointId);
+
+        if (joint) {
+          // ここでもタイトルをリセットしておくと親切
+          const modalTitle = document.querySelector("#edit-joint-modal h3");
+          if (modalTitle) modalTitle.textContent = "継手の編集";
+
+          openEditModal(joint);
+        }
+      }
+    });
+  }
+}
+
+/**
+ * 削除実行（確定）ボタンのイベント設定
+ */
+function setupDeleteExecutionEvents() {
+  const confirmDeleteBtn = document.getElementById("confirm-delete-btn");
+  const deleteIdInput = document.getElementById("delete-id");
+  const deleteTypeInput = document.getElementById("delete-type");
+  const confirmDeleteModal = document.getElementById("confirm-delete-modal");
+
+  if (confirmDeleteBtn) {
+    confirmDeleteBtn.addEventListener("click", () => {
+      // DOM要素の取得チェック
+      if (!deleteIdInput || !deleteTypeInput || !confirmDeleteModal) return;
+
+      const id = deleteIdInput.value;
+      const type = deleteTypeInput.value;
+      const projectId = state.currentProjectId;
+
+      // ▼ パターン1：プロジェクト自体の削除
+      if (type === "project") {
+        deleteProject(id)
+          .then(() => {
+            // プロジェクト削除時はリスナー側で画面更新（リストから除外）が必要な場合がありますが
+            // 通常はリアルタイムリスナーか、または手動でリスト更新を呼び出すと良いです。
+            // ここではエラー時のアラートのみ実装されています。
+          })
+          .catch((err) => {
+            console.error(err);
+            showCustomAlert("工事の削除に失敗しました。");
+          });
+
+        closeModal(confirmDeleteModal);
+        return;
+      }
+
+      // ▼ パターン2：継手・部材の削除 (楽観的UI)
+      const projectIndex = state.projects.findIndex((p) => p.id === projectId);
+      if (projectIndex === -1) {
+        closeModal(confirmDeleteModal);
+        return;
+      }
+
+      let updateData = {};
+      let deletedItemName = "";
+
+      if (type === "joint") {
+        const joint = state.projects[projectIndex].joints.find(
+          (j) => j.id === id,
+        );
+        if (joint) deletedItemName = joint.name;
+
+        // 手順A: ローカルデータの書き換え
+        const updatedJoints = state.projects[projectIndex].joints.filter(
+          (j) => j.id !== id,
+        );
+        state.projects[projectIndex].joints = updatedJoints;
+        updateData = { joints: updatedJoints };
+        showToast(`継手「${deletedItemName}」を削除しました。`);
+      } else if (type === "member") {
+        const member = state.projects[projectIndex].members.find(
+          (m) => m.id === id,
+        );
+        if (member) deletedItemName = member.name;
+
+        // 手順A: ローカルデータの書き換え
+        const updatedMembers = (
+          state.projects[projectIndex].members || []
+        ).filter((m) => m.id !== id);
+        state.projects[projectIndex].members = updatedMembers;
+        updateData = { members: updatedMembers };
+        showToast(`部材「${deletedItemName}」を削除しました。`);
+      }
+
+      // 手順B: 画面再描画 (ui.jsからインポート)
+      renderDetailView();
+
+      // 手順C: モーダルを閉じる
+      closeModal(confirmDeleteModal);
+
+      // 手順D: DB保存処理
+      if (Object.keys(updateData).length > 0) {
+        updateProjectData(projectId, updateData).catch((err) => {
+          showCustomAlert(
+            "削除に失敗しました。ページをリロードして確認してください。",
+          );
+          console.error("削除に失敗:", err);
+        });
+      }
     });
   }
 }

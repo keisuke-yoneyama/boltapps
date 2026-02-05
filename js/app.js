@@ -1194,56 +1194,56 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   // ★ 修正版：継手リストのクリック処理（統合・完全版）
-  jointListsContainer.addEventListener("click", (e) => {
-    // ボタン要素を取得（アイコンをクリックした場合も考慮してclosestを使う）
-    const target = e.target.closest("button");
-    if (!target) return;
+  // jointListsContainer.addEventListener("click", (e) => {
+  //   // ボタン要素を取得（アイコンをクリックした場合も考慮してclosestを使う）
+  //   const target = e.target.closest("button");
+  //   if (!target) return;
 
-    const jointId = target.dataset.id;
-    const project = state.projects.find((p) => p.id === state.currentProjectId);
-    if (!project) return;
+  //   const jointId = target.dataset.id;
+  //   const project = state.projects.find((p) => p.id === state.currentProjectId);
+  //   if (!project) return;
 
-    // --- 削除ボタン ---
-    if (target.classList.contains("delete-joint-btn")) {
-      openConfirmDeleteModal(jointId, "joint");
-      return;
-    }
+  //   // --- 削除ボタン ---
+  //   if (target.classList.contains("delete-joint-btn")) {
+  //     openConfirmDeleteModal(jointId, "joint");
+  //     return;
+  //   }
 
-    // --- 編集ボタン ---
-    if (target.classList.contains("edit-joint-btn")) {
-      const joint = project.joints.find((j) => j.id === jointId);
-      if (joint) {
-        // タイトルを「編集」に戻す（新規登録ボタンで書き換わっている可能性があるため）
-        const modalTitle = document.querySelector("#edit-joint-modal h3");
-        if (modalTitle) modalTitle.textContent = "継手の編集";
+  //   // --- 編集ボタン ---
+  //   if (target.classList.contains("edit-joint-btn")) {
+  //     const joint = project.joints.find((j) => j.id === jointId);
+  //     if (joint) {
+  //       // タイトルを「編集」に戻す（新規登録ボタンで書き換わっている可能性があるため）
+  //       const modalTitle = document.querySelector("#edit-joint-modal h3");
+  //       if (modalTitle) modalTitle.textContent = "継手の編集";
 
-        // 編集モーダルを開く
-        openEditModal(joint);
-      }
-      return;
-    }
-  });
+  //       // 編集モーダルを開く
+  //       openEditModal(joint);
+  //     }
+  //     return;
+  //   }
+  // });
 
-  memberListsContainer.addEventListener("click", (e) => {
-    const target = e.target.closest("button");
-    if (!target) return;
-    if (target.classList.contains("delete-member-btn")) {
-      openConfirmDeleteModal(target.dataset.id, "member");
-    } else if (target.classList.contains("edit-member-btn")) {
-      // ▼▼▼ 追加：タイトルを「編集」に戻す ▼▼▼
-      document.querySelector("#edit-member-modal h3").textContent =
-        "部材の編集";
+  // memberListsContainer.addEventListener("click", (e) => {
+  //   const target = e.target.closest("button");
+  //   if (!target) return;
+  //   if (target.classList.contains("delete-member-btn")) {
+  //     openConfirmDeleteModal(target.dataset.id, "member");
+  //   } else if (target.classList.contains("edit-member-btn")) {
+  //     // ▼▼▼ 追加：タイトルを「編集」に戻す ▼▼▼
+  //     document.querySelector("#edit-member-modal h3").textContent =
+  //       "部材の編集";
 
-      openEditMemberModal(target.dataset.id);
-    } else if (target.classList.contains("edit-joint-btn")) {
-      const jointId = target.dataset.jointId;
-      const project = state.projects.find(
-        (p) => p.id === state.currentProjectId,
-      );
-      const joint = project?.joints.find((j) => j.id === jointId);
-      if (joint) openEditModal(joint);
-    }
-  });
+  //     openEditMemberModal(target.dataset.id);
+  //   } else if (target.classList.contains("edit-joint-btn")) {
+  //     const jointId = target.dataset.jointId;
+  //     const project = state.projects.find(
+  //       (p) => p.id === state.currentProjectId,
+  //     );
+  //     const joint = project?.joints.find((j) => j.id === jointId);
+  //     if (joint) openEditModal(joint);
+  //   }
+  // });
 
   // // 列のロック状態を即座にUIに反映させるためのヘルパー関数
   // const updateColumnLockUI = (itemId, isLocked) => {
@@ -1672,77 +1672,77 @@ document.addEventListener("DOMContentLoaded", () => {
   //   });
   // });
   // ▼▼▼【ここに新しいコードを貼り付け】▼▼▼
-  confirmDeleteBtn.addEventListener("click", () => {
-    const id = deleteIdInput.value;
-    const type = deleteTypeInput.value;
-    const projectId = state.currentProjectId;
-    const confirmDeleteModal = document.getElementById("confirm-delete-modal");
-    // ▼ パターン1：プロジェクト自体の削除
-    if (type === "project") {
-      // ★ db.js の関数を使う（パス指定が不要になりスッキリ！）
-      deleteProject(id).catch((err) =>
-        showCustomAlert("工事の削除に失敗しました。"),
-      );
+  // confirmDeleteBtn.addEventListener("click", () => {
+  //   const id = deleteIdInput.value;
+  //   const type = deleteTypeInput.value;
+  //   const projectId = state.currentProjectId;
+  //   const confirmDeleteModal = document.getElementById("confirm-delete-modal");
+  //   // ▼ パターン1：プロジェクト自体の削除
+  //   if (type === "project") {
+  //     // ★ db.js の関数を使う（パス指定が不要になりスッキリ！）
+  //     deleteProject(id).catch((err) =>
+  //       showCustomAlert("工事の削除に失敗しました。"),
+  //     );
 
-      closeModal(confirmDeleteModal);
-      return;
-    }
+  //     closeModal(confirmDeleteModal);
+  //     return;
+  //   }
 
-    const projectIndex = state.projects.findIndex((p) => p.id === projectId);
-    if (projectIndex === -1) {
-      closeModal(confirmDeleteModal);
-      return;
-    }
-    let updateData = {};
-    let deletedItemName = "";
+  //   const projectIndex = state.projects.findIndex((p) => p.id === projectId);
+  //   if (projectIndex === -1) {
+  //     closeModal(confirmDeleteModal);
+  //     return;
+  //   }
+  //   let updateData = {};
+  //   let deletedItemName = "";
 
-    // --- ここからが楽観的UIのロジックです ---
+  //   // --- ここからが楽観的UIのロジックです ---
 
-    if (type === "joint") {
-      const joint = state.projects[projectIndex].joints.find(
-        (j) => j.id === id,
-      );
-      if (joint) deletedItemName = joint.name;
+  //   if (type === "joint") {
+  //     const joint = state.projects[projectIndex].joints.find(
+  //       (j) => j.id === id,
+  //     );
+  //     if (joint) deletedItemName = joint.name;
 
-      // 手順A: ブラウザ内のデータ（state）を先に書き換えます
-      const updatedJoints = state.projects[projectIndex].joints.filter(
-        (j) => j.id !== id,
-      );
-      state.projects[projectIndex].joints = updatedJoints;
-      updateData = { joints: updatedJoints };
-      showToast(`継手「${deletedItemName}」を削除しました。`);
-    } else if (type === "member") {
-      const member = state.projects[projectIndex].members.find(
-        (m) => m.id === id,
-      );
-      if (member) deletedItemName = member.name;
+  //     // 手順A: ブラウザ内のデータ（state）を先に書き換えます
+  //     const updatedJoints = state.projects[projectIndex].joints.filter(
+  //       (j) => j.id !== id,
+  //     );
+  //     state.projects[projectIndex].joints = updatedJoints;
+  //     updateData = { joints: updatedJoints };
+  //     showToast(`継手「${deletedItemName}」を削除しました。`);
+  //   } else if (type === "member") {
+  //     const member = state.projects[projectIndex].members.find(
+  //       (m) => m.id === id,
+  //     );
+  //     if (member) deletedItemName = member.name;
 
-      // 手順A: ブラウザ内のデータ（state）を先に書き換えます
-      const updatedMembers = (
-        state.projects[projectIndex].members || []
-      ).filter((m) => m.id !== id);
-      state.projects[projectIndex].members = updatedMembers;
-      updateData = { members: updatedMembers };
-      showToast(`部材「${deletedItemName}」を削除しました。`);
-    }
+  //     // 手順A: ブラウザ内のデータ（state）を先に書き換えます
+  //     const updatedMembers = (
+  //       state.projects[projectIndex].members || []
+  //     ).filter((m) => m.id !== id);
+  //     state.projects[projectIndex].members = updatedMembers;
+  //     updateData = { members: updatedMembers };
+  //     showToast(`部材「${deletedItemName}」を削除しました。`);
+  //   }
 
-    // 手順B: 書き換えたデータで、画面を即座に再描画します
-    renderDetailView();
-    // 手順C: モーダルを閉じます
-    closeModal(confirmDeleteModal);
+  //   // 手順B: 書き換えたデータで、画面を即座に再描画します
+  //   renderDetailView();
+  //   // 手順C: モーダルを閉じます
+  //   closeModal(confirmDeleteModal);
 
-    // 手順D: 裏側で、データベースへの保存処理を実行します
-    // ▼ パターン2：データベースへの保存処理
-    if (Object.keys(updateData).length > 0) {
-      // ★ db.js の関数を使う
-      updateProjectData(projectId, updateData).catch((err) => {
-        showCustomAlert(
-          "削除に失敗しました。ページをリロードして確認してください。",
-        );
-        console.error("削除に失敗:", err);
-      });
-    }
-  });
+  //   // 手順D: 裏側で、データベースへの保存処理を実行します
+  //   // ▼ パターン2：データベースへの保存処理
+  //   if (Object.keys(updateData).length > 0) {
+  //     // ★ db.js の関数を使う
+  //     updateProjectData(projectId, updateData).catch((err) => {
+  //       showCustomAlert(
+  //         "削除に失敗しました。ページをリロードして確認してください。",
+  //       );
+  //       console.error("削除に失敗:", err);
+  //     });
+  //   }
+  // });
   // ▲▲▲【新しいコードはここまで】▲▲▲
 
   resultsCard.addEventListener("click", (e) => {
