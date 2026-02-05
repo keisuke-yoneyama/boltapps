@@ -904,294 +904,294 @@ document.addEventListener("DOMContentLoaded", () => {
   // });
   // // ▲▲▲ 追加ここまで ▲▲▲
 
-  addJointBtn.addEventListener("click", () => {
-    const project = state.projects.find((p) => p.id === state.currentProjectId);
-    if (!project) return;
-    const name = jointNameInput.value.trim();
-    if (!name)
-      return showCustomAlert("継手名を入力してください。", {
-        invalidElements: [jointNameInput],
-      });
+  // addJointBtn.addEventListener("click", () => {
+  //   const project = state.projects.find((p) => p.id === state.currentProjectId);
+  //   if (!project) return;
+  //   const name = jointNameInput.value.trim();
+  //   if (!name)
+  //     return showCustomAlert("継手名を入力してください。", {
+  //       invalidElements: [jointNameInput],
+  //     });
 
-    const type = jointTypeInput.value;
-    const isPin = isPinJointInput.checked;
-    const isDoubleShear = isDoubleShearInput.checked;
-    const tempSetting = tempBoltSettingInput.value;
-    const hasShopSpl = hasShopSplInput.checked;
-    const isComplexSpl = isComplexSplInput.checked;
+  //   const type = jointTypeInput.value;
+  //   const isPin = isPinJointInput.checked;
+  //   const isDoubleShear = isDoubleShearInput.checked;
+  //   const tempSetting = tempBoltSettingInput.value;
+  //   const hasShopSpl = hasShopSplInput.checked;
+  //   const isComplexSpl = isComplexSplInput.checked;
 
-    const showSingle =
-      type === "column" ||
-      (isPin && isDoubleShear && tempSetting === "none" && hasShopSpl);
-    const showDual =
-      !isPin && tempSetting === "none" && hasShopSpl && type !== "column";
+  //   const showSingle =
+  //     type === "column" ||
+  //     (isPin && isDoubleShear && tempSetting === "none" && hasShopSpl);
+  //   const showDual =
+  //     !isPin && tempSetting === "none" && hasShopSpl && type !== "column";
 
-    if (showSingle) {
-      const size = document.getElementById("shop-temp-bolt-size").value;
-      const countInput = document.getElementById("shop-temp-bolt-count");
-      const count = parseInt(countInput.value, 10);
-      if ((count > 0 && !size) || (size && !count)) {
-        return showCustomAlert(
-          "手動指定の仮ボルトは、サイズと本数を両方入力してください。",
-          {
-            invalidElements: [
-              size
-                ? countInput
-                : document.getElementById("shop-temp-bolt-size"),
-            ],
-          },
-        );
-      }
-    } else if (showDual) {
-      const sizeF = document.getElementById("shop-temp-bolt-size-f").value;
-      const countFInput = document.getElementById("shop-temp-bolt-count-f");
-      const countF = parseInt(countFInput.value, 10);
-      if ((countF > 0 && !sizeF) || (sizeF && !countF)) {
-        return showCustomAlert(
-          "工場用F仮ボルトは、サイズと本数を両方入力してください。",
-          {
-            invalidElements: [
-              sizeF
-                ? countFInput
-                : document.getElementById("shop-temp-bolt-size-f"),
-            ],
-          },
-        );
-      }
+  //   if (showSingle) {
+  //     const size = document.getElementById("shop-temp-bolt-size").value;
+  //     const countInput = document.getElementById("shop-temp-bolt-count");
+  //     const count = parseInt(countInput.value, 10);
+  //     if ((count > 0 && !size) || (size && !count)) {
+  //       return showCustomAlert(
+  //         "手動指定の仮ボルトは、サイズと本数を両方入力してください。",
+  //         {
+  //           invalidElements: [
+  //             size
+  //               ? countInput
+  //               : document.getElementById("shop-temp-bolt-size"),
+  //           ],
+  //         },
+  //       );
+  //     }
+  //   } else if (showDual) {
+  //     const sizeF = document.getElementById("shop-temp-bolt-size-f").value;
+  //     const countFInput = document.getElementById("shop-temp-bolt-count-f");
+  //     const countF = parseInt(countFInput.value, 10);
+  //     if ((countF > 0 && !sizeF) || (sizeF && !countF)) {
+  //       return showCustomAlert(
+  //         "工場用F仮ボルトは、サイズと本数を両方入力してください。",
+  //         {
+  //           invalidElements: [
+  //             sizeF
+  //               ? countFInput
+  //               : document.getElementById("shop-temp-bolt-size-f"),
+  //           ],
+  //         },
+  //       );
+  //     }
 
-      const sizeW = document.getElementById("shop-temp-bolt-size-w").value;
-      const countWInput = document.getElementById("shop-temp-bolt-count-w");
-      const countW = parseInt(countWInput.value, 10);
-      if ((countW > 0 && !sizeW) || (sizeW && !countW)) {
-        return showCustomAlert(
-          "工場用W仮ボルトは、サイズと本数を両方入力してください。",
-          {
-            invalidElements: [
-              sizeW
-                ? countWInput
-                : document.getElementById("shop-temp-bolt-size-w"),
-            ],
-          },
-        );
-      }
-    }
-    // --- ここまで修正 ---
+  //     const sizeW = document.getElementById("shop-temp-bolt-size-w").value;
+  //     const countWInput = document.getElementById("shop-temp-bolt-count-w");
+  //     const countW = parseInt(countWInput.value, 10);
+  //     if ((countW > 0 && !sizeW) || (sizeW && !countW)) {
+  //       return showCustomAlert(
+  //         "工場用W仮ボルトは、サイズと本数を両方入力してください。",
+  //         {
+  //           invalidElements: [
+  //             sizeW
+  //               ? countWInput
+  //               : document.getElementById("shop-temp-bolt-size-w"),
+  //           ],
+  //         },
+  //       );
+  //     }
+  //   }
+  //   // --- ここまで修正 ---
 
-    const isCounted = countAsMemberInput.checked;
-    let flangeSize = flangeSizeInput.value;
-    let flangeCountStr = flangeCountInput.value;
-    let webSize = webSizeInput.value;
-    let webCountStr = webCountInput.value;
-    const invalidElements = [];
-    const twoBoltTypes = ["girder", "beam", "other", "stud"];
-    const oneBoltTypes = ["column", "wall_girt", "roof_purlin"];
+  //   const isCounted = countAsMemberInput.checked;
+  //   let flangeSize = flangeSizeInput.value;
+  //   let flangeCountStr = flangeCountInput.value;
+  //   let webSize = webSizeInput.value;
+  //   let webCountStr = webCountInput.value;
+  //   const invalidElements = [];
+  //   const twoBoltTypes = ["girder", "beam", "other", "stud"];
+  //   const oneBoltTypes = ["column", "wall_girt", "roof_purlin"];
 
-    if (twoBoltTypes.includes(type)) {
-      if (isPin) {
-        if (!webSize) invalidElements.push(webSizeInput.parentElement);
-        if (webCountStr === "") invalidElements.push(webCountInput);
-      } else {
-        if (!flangeSize) invalidElements.push(flangeSizeInput.parentElement);
-        if (flangeCountStr === "") invalidElements.push(flangeCountInput);
-        if (!webSize) invalidElements.push(webSizeInput.parentElement);
-        if (webCountStr === "") invalidElements.push(webCountInput);
-      }
-    } else if (oneBoltTypes.includes(type)) {
-      if (!flangeSize) invalidElements.push(flangeSizeInput.parentElement);
-      if (flangeCountStr === "") invalidElements.push(flangeCountInput);
-    }
+  //   if (twoBoltTypes.includes(type)) {
+  //     if (isPin) {
+  //       if (!webSize) invalidElements.push(webSizeInput.parentElement);
+  //       if (webCountStr === "") invalidElements.push(webCountInput);
+  //     } else {
+  //       if (!flangeSize) invalidElements.push(flangeSizeInput.parentElement);
+  //       if (flangeCountStr === "") invalidElements.push(flangeCountInput);
+  //       if (!webSize) invalidElements.push(webSizeInput.parentElement);
+  //       if (webCountStr === "") invalidElements.push(webCountInput);
+  //     }
+  //   } else if (oneBoltTypes.includes(type)) {
+  //     if (!flangeSize) invalidElements.push(flangeSizeInput.parentElement);
+  //     if (flangeCountStr === "") invalidElements.push(flangeCountInput);
+  //   }
 
-    if (invalidElements.length > 0)
-      return showCustomAlert("必須項目をすべて入力してください。", {
-        invalidElements,
-      });
+  //   if (invalidElements.length > 0)
+  //     return showCustomAlert("必須項目をすべて入力してください。", {
+  //       invalidElements,
+  //     });
 
-    let flangeCount = parseInt(flangeCountStr) || 0;
-    let webCount = parseInt(webCountStr) || 0;
-    const complexSplCount = parseInt(complexSplCountInput.value);
-    let webInputsData = null;
+  //   let flangeCount = parseInt(flangeCountStr) || 0;
+  //   let webCount = parseInt(webCountStr) || 0;
+  //   const complexSplCount = parseInt(complexSplCountInput.value);
+  //   let webInputsData = null;
 
-    if (isComplexSpl) {
-      webInputsData = [];
-      for (let i = 1; i <= complexSplCount; i++) {
-        const suffix = i > 1 ? `-${i}` : "";
-        const sizeVal = document.getElementById(`web-size${suffix}`).value;
-        const countVal = document.getElementById(`web-count${suffix}`).value;
-        webInputsData.push({ size: sizeVal, count: parseInt(countVal) || 0 });
-      }
-      // 複合SPLの場合、ルートのwebSize/Countは空にする
-      webSize = "";
-      webCount = 0;
-    }
-    // ▲▲▲ ここまでが修正箇所 ▲▲▲
-    else {
-      // isComplexSplでない場合の既存ロジック
-      if (isPin) {
-        flangeSize = "";
-        flangeCount = 0;
-      }
-      const oneBoltTypes = ["column", "wall_girt", "roof_purlin"];
-      if (oneBoltTypes.includes(type)) {
-        webSize = "";
-        webCount = 0;
-      }
-    }
+  //   if (isComplexSpl) {
+  //     webInputsData = [];
+  //     for (let i = 1; i <= complexSplCount; i++) {
+  //       const suffix = i > 1 ? `-${i}` : "";
+  //       const sizeVal = document.getElementById(`web-size${suffix}`).value;
+  //       const countVal = document.getElementById(`web-count${suffix}`).value;
+  //       webInputsData.push({ size: sizeVal, count: parseInt(countVal) || 0 });
+  //     }
+  //     // 複合SPLの場合、ルートのwebSize/Countは空にする
+  //     webSize = "";
+  //     webCount = 0;
+  //   }
+  //   // ▲▲▲ ここまでが修正箇所 ▲▲▲
+  //   else {
+  //     // isComplexSplでない場合の既存ロジック
+  //     if (isPin) {
+  //       flangeSize = "";
+  //       flangeCount = 0;
+  //     }
+  //     const oneBoltTypes = ["column", "wall_girt", "roof_purlin"];
+  //     if (oneBoltTypes.includes(type)) {
+  //       webSize = "";
+  //       webCount = 0;
+  //     }
+  //   }
 
-    const newJoint = {
-      id: `joint_${Date.now()}`,
-      type,
-      name,
-      // ▼▼▼ 追加：色が有効なら値を保存、無効ならnull ▼▼▼
-      color: jointColorToggle.checked ? jointColorInput.value : null,
-      // ▲▲▲ 追加ここまで ▲▲▲
-      flangeSize,
-      flangeCount,
-      webSize: webSize,
-      webCount: webCount,
-      isComplexSpl: isComplexSpl,
-      complexSplCount: isComplexSpl ? complexSplCount : null,
-      webInputs: webInputsData,
-      isPinJoint: isPin,
-      isDoubleShear: isDoubleShearInput.checked,
-      hasShopSpl:
-        isPin && !isDoubleShearInput.checked ? false : hasShopSplInput.checked,
-      hasBoltCorrection:
-        isPin && !isDoubleShearInput.checked
-          ? false
-          : hasShopSplInput.checked && hasBoltCorrectionInput.checked,
-      countAsMember: isCounted,
-      tempBoltSetting: type === "column" ? "none" : tempBoltSettingInput.value,
-      // ★追加: 本柱以外、かつチェックが入っている場合に true
-      isBundledWithColumn:
-        type !== "column" &&
-        isBundledWithColumnInput &&
-        isBundledWithColumnInput.checked,
-      shopTempBoltCount:
-        parseInt(document.getElementById("shop-temp-bolt-count").value) || null,
-      shopTempBoltSize:
-        document.getElementById("shop-temp-bolt-size").value || null,
-      shopTempBoltCount_F:
-        parseInt(document.getElementById("shop-temp-bolt-count-f").value) ||
-        null,
-      shopTempBoltSize_F:
-        document.getElementById("shop-temp-bolt-size-f").value || null,
-      shopTempBoltCount_W:
-        parseInt(document.getElementById("shop-temp-bolt-count-w").value) ||
-        null,
-      shopTempBoltSize_W:
-        document.getElementById("shop-temp-bolt-size-w").value || null,
-    };
+  //   const newJoint = {
+  //     id: `joint_${Date.now()}`,
+  //     type,
+  //     name,
+  //     // ▼▼▼ 追加：色が有効なら値を保存、無効ならnull ▼▼▼
+  //     color: jointColorToggle.checked ? jointColorInput.value : null,
+  //     // ▲▲▲ 追加ここまで ▲▲▲
+  //     flangeSize,
+  //     flangeCount,
+  //     webSize: webSize,
+  //     webCount: webCount,
+  //     isComplexSpl: isComplexSpl,
+  //     complexSplCount: isComplexSpl ? complexSplCount : null,
+  //     webInputs: webInputsData,
+  //     isPinJoint: isPin,
+  //     isDoubleShear: isDoubleShearInput.checked,
+  //     hasShopSpl:
+  //       isPin && !isDoubleShearInput.checked ? false : hasShopSplInput.checked,
+  //     hasBoltCorrection:
+  //       isPin && !isDoubleShearInput.checked
+  //         ? false
+  //         : hasShopSplInput.checked && hasBoltCorrectionInput.checked,
+  //     countAsMember: isCounted,
+  //     tempBoltSetting: type === "column" ? "none" : tempBoltSettingInput.value,
+  //     // ★追加: 本柱以外、かつチェックが入っている場合に true
+  //     isBundledWithColumn:
+  //       type !== "column" &&
+  //       isBundledWithColumnInput &&
+  //       isBundledWithColumnInput.checked,
+  //     shopTempBoltCount:
+  //       parseInt(document.getElementById("shop-temp-bolt-count").value) || null,
+  //     shopTempBoltSize:
+  //       document.getElementById("shop-temp-bolt-size").value || null,
+  //     shopTempBoltCount_F:
+  //       parseInt(document.getElementById("shop-temp-bolt-count-f").value) ||
+  //       null,
+  //     shopTempBoltSize_F:
+  //       document.getElementById("shop-temp-bolt-size-f").value || null,
+  //     shopTempBoltCount_W:
+  //       parseInt(document.getElementById("shop-temp-bolt-count-w").value) ||
+  //       null,
+  //     shopTempBoltSize_W:
+  //       document.getElementById("shop-temp-bolt-size-w").value || null,
+  //   };
 
-    // データベースに継手を追加し、成功したらトーストを表示する関数
-    // ▼▼▼以下のコードに置き換え▼▼▼
-    const addJointAndShowToast = (jointData) => {
-      // 手順A: ブラウザ内のデータ（state）を先に書き換えます
-      const projectIndex = state.projects.findIndex(
-        (p) => p.id === state.currentProjectId,
-      );
-      if (projectIndex === -1) return;
-      const updatedJoints = [...state.projects[projectIndex].joints, jointData];
-      state.projects[projectIndex].joints = updatedJoints;
+  //   // データベースに継手を追加し、成功したらトーストを表示する関数
+  //   // ▼▼▼以下のコードに置き換え▼▼▼
+  //   const addJointAndShowToast = (jointData) => {
+  //     // 手順A: ブラウザ内のデータ（state）を先に書き換えます
+  //     const projectIndex = state.projects.findIndex(
+  //       (p) => p.id === state.currentProjectId,
+  //     );
+  //     if (projectIndex === -1) return;
+  //     const updatedJoints = [...state.projects[projectIndex].joints, jointData];
+  //     state.projects[projectIndex].joints = updatedJoints;
 
-      // 手順B: 書き換えたデータで、画面を即座に再描画します
-      renderDetailView();
+  //     // 手順B: 書き換えたデータで、画面を即座に再描画します
+  //     renderDetailView();
 
-      // 手順C: フォームをリセットし、ユーザーに完了を通知します
-      let boltInfo = "";
-      if (jointData.isComplexSpl && jointData.webInputs)
-        boltInfo = jointData.webInputs
-          .map((w) => `${w.size}/${w.count}本`)
-          .join(", ");
-      else if (jointData.isPinJoint)
-        boltInfo = `${jointData.webSize} / ${jointData.webCount}本`;
-      else if (["column", "wall_girt", "roof_purlin"].includes(jointData.type))
-        boltInfo = `${jointData.flangeSize} / ${jointData.flangeCount}本`;
-      else
-        boltInfo = `F:${jointData.flangeSize}/${jointData.flangeCount}本, W:${jointData.webSize}/${jointData.webCount}本`;
-      showToast(`継手「${jointData.name}」を登録しました (${boltInfo})`);
-      resetJointForm();
-      jointNameInput.focus();
+  //     // 手順C: フォームをリセットし、ユーザーに完了を通知します
+  //     let boltInfo = "";
+  //     if (jointData.isComplexSpl && jointData.webInputs)
+  //       boltInfo = jointData.webInputs
+  //         .map((w) => `${w.size}/${w.count}本`)
+  //         .join(", ");
+  //     else if (jointData.isPinJoint)
+  //       boltInfo = `${jointData.webSize} / ${jointData.webCount}本`;
+  //     else if (["column", "wall_girt", "roof_purlin"].includes(jointData.type))
+  //       boltInfo = `${jointData.flangeSize} / ${jointData.flangeCount}本`;
+  //     else
+  //       boltInfo = `F:${jointData.flangeSize}/${jointData.flangeCount}本, W:${jointData.webSize}/${jointData.webCount}本`;
+  //     showToast(`継手「${jointData.name}」を登録しました (${boltInfo})`);
+  //     resetJointForm();
+  //     jointNameInput.focus();
 
-      // 手順D: 裏側で、データベースへの保存処理を実行します
-      updateProjectData(state.currentProjectId, {
-        joints: updatedJoints,
-      }).catch((err) => {
-        // エラー時の処理（ユーザーへの通知）
-        showCustomAlert(
-          "継手の追加に失敗しました。ページをリロードしてデータを確認してください。",
-        );
-        console.error("継手の追加に失敗: ", err);
-      });
-    };
+  //     // 手順D: 裏側で、データベースへの保存処理を実行します
+  //     updateProjectData(state.currentProjectId, {
+  //       joints: updatedJoints,
+  //     }).catch((err) => {
+  //       // エラー時の処理（ユーザーへの通知）
+  //       showCustomAlert(
+  //         "継手の追加に失敗しました。ページをリロードしてデータを確認してください。",
+  //       );
+  //       console.error("継手の追加に失敗: ", err);
+  //     });
+  //   };
 
-    // 既存の継手名チェック
-    const existingJoint = project.joints.find((j) => j.name === name);
-    if (existingJoint) {
-      state.tempJointData = newJoint; // newJointは元のコードの入力チェック部分で作成
-      confirmAddMessage.textContent = `継手名「${name}」は既に登録されています。このまま登録しますか？`;
-      openModal(confirmAddModal);
-    } else {
-      addJointAndShowToast(newJoint); // newJointは元のコードの入力チェック部分で作成
-    }
-  });
+  //   // 既存の継手名チェック
+  //   const existingJoint = project.joints.find((j) => j.name === name);
+  //   if (existingJoint) {
+  //     state.tempJointData = newJoint; // newJointは元のコードの入力チェック部分で作成
+  //     confirmAddMessage.textContent = `継手名「${name}」は既に登録されています。このまま登録しますか？`;
+  //     openModal(confirmAddModal);
+  //   } else {
+  //     addJointAndShowToast(newJoint); // newJointは元のコードの入力チェック部分で作成
+  //   }
+  // });
 
-  // ★ 修正版：部材追加ボタン（即時反映・階層情報対応版）
-  addMemberBtn.addEventListener("click", () => {
-    const project = state.projects.find((p) => p.id === state.currentProjectId);
-    if (!project) return;
-    const name = memberNameInput.value.trim();
-    const jointId = memberJointSelectId.value;
-    if (!name)
-      return showCustomAlert("部材名を入力してください。", {
-        invalidElements: [memberNameInput],
-      });
-    if (!jointId)
-      return showCustomAlert("使用する継手を選択してください。", {
-        invalidElements: [memberJointSelectInput],
-      });
+  // // ★ 修正版：部材追加ボタン（即時反映・階層情報対応版）
+  // addMemberBtn.addEventListener("click", () => {
+  //   const project = state.projects.find((p) => p.id === state.currentProjectId);
+  //   if (!project) return;
+  //   const name = memberNameInput.value.trim();
+  //   const jointId = memberJointSelectId.value;
+  //   if (!name)
+  //     return showCustomAlert("部材名を入力してください。", {
+  //       invalidElements: [memberNameInput],
+  //     });
+  //   if (!jointId)
+  //     return showCustomAlert("使用する継手を選択してください。", {
+  //       invalidElements: [memberJointSelectInput],
+  //     });
 
-    // チェックされた階層を取得
-    const checkedLevels = Array.from(
-      document.querySelectorAll(".static-level-checkbox:checked"),
-    ).map((cb) => cb.value);
+  //   // チェックされた階層を取得
+  //   const checkedLevels = Array.from(
+  //     document.querySelectorAll(".static-level-checkbox:checked"),
+  //   ).map((cb) => cb.value);
 
-    // 新しい部材データを作成
-    const newMember = {
-      id: `member_${Date.now()}`,
-      name,
-      jointId,
-      targetLevels: checkedLevels,
-    };
+  //   // 新しい部材データを作成
+  //   const newMember = {
+  //     id: `member_${Date.now()}`,
+  //     name,
+  //     jointId,
+  //     targetLevels: checkedLevels,
+  //   };
 
-    // ▼▼▼ 修正：ここから楽観的UI処理 ▼▼▼
+  //   // ▼▼▼ 修正：ここから楽観的UI処理 ▼▼▼
 
-    // 1. ローカルのstateを即座に更新
-    if (!project.members) project.members = [];
-    project.members.push(newMember);
+  //   // 1. ローカルのstateを即座に更新
+  //   if (!project.members) project.members = [];
+  //   project.members.push(newMember);
 
-    // 2. 画面を再描画して即座にリストに反映
-    renderDetailView();
+  //   // 2. 画面を再描画して即座にリストに反映
+  //   renderDetailView();
 
-    // 3. フォームのリセットと通知
-    memberNameInput.value = "";
-    document
-      .querySelectorAll(".static-level-checkbox")
-      .forEach((cb) => (cb.checked = false));
+  //   // 3. フォームのリセットと通知
+  //   memberNameInput.value = "";
+  //   document
+  //     .querySelectorAll(".static-level-checkbox")
+  //     .forEach((cb) => (cb.checked = false));
 
-    const jointName = memberJointSelectInput.value;
-    showToast(`部材「${name}」を登録しました (使用継手: ${jointName})`);
-    memberNameInput.focus();
+  //   const jointName = memberJointSelectInput.value;
+  //   showToast(`部材「${name}」を登録しました (使用継手: ${jointName})`);
+  //   memberNameInput.focus();
 
-    // 4. 裏側でデータベースに保存
-    updateProjectData(state.currentProjectId, {
-      members: project.members,
-    }).catch((err) => {
-      console.error("部材の追加に失敗: ", err);
-      showCustomAlert(
-        "部材の追加に失敗しました。ページをリロードして確認してください。",
-      );
-    });
-  });
+  //   // 4. 裏側でデータベースに保存
+  //   updateProjectData(state.currentProjectId, {
+  //     members: project.members,
+  //   }).catch((err) => {
+  //     console.error("部材の追加に失敗: ", err);
+  //     showCustomAlert(
+  //       "部材の追加に失敗しました。ページをリロードして確認してください。",
+  //     );
+  //   });
+  // });
 
   // ★ 修正版：継手リストのクリック処理（統合・完全版）
   // jointListsContainer.addEventListener("click", (e) => {
