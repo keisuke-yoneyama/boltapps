@@ -32,12 +32,7 @@ import {
 
 import { resetTempJointData, state } from "./state.js";
 
-import {
-  updateProjectData,
-  addProject,
-  deleteProject,
-  updateProjectData,
-} from "./db.js";
+import { updateProjectData, addProject, deleteProject } from "./db.js";
 
 import { BOLT_TYPES } from "./config.js";
 
