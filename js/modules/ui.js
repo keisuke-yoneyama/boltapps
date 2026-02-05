@@ -5687,3 +5687,108 @@ export const updateProjectListUI = () => {
     },
   });
 };
+
+/**
+ * グループ集計結果をモーダルに描画する関数
+ * (app.js から ui.js に移動)
+ */
+export const renderAggregatedResults = (propertyName, aggregatedData) => {
+  const titleEl = document.getElementById("aggregated-results-title");
+  const contentEl = document.getElementById("aggregated-results-content");
+
+  // 安全のため要素の存在チェック
+  if (!titleEl || !contentEl) return;
+
+  titleEl.textContent = `「${propertyName}」集計結果`;
+  let html = "";
+
+  // 1. 本ボルトの表
+  const sortedFinalSizes = Object.keys(aggregatedData.finalBolts).sort();
+  if (sortedFinalSizes.length > 0) {
+    html += `<h4 class="text-xl font-bold text-slate-800 dark:text-slate-200">本ボルト 合計本数</h4>
+             <div class="overflow-x-auto custom-scrollbar"><table class="w-auto text-sm border-collapse">
+             <thead class="bg-slate-200 dark:bg-slate-700"><tr>
+                <th class="px-3 py-2 border border-slate-300 dark:border-slate-600">ボルトサイズ</th>
+                <th class="px-3 py-2 border border-slate-300 dark:border-slate-600">合計本数</th>
+             </tr></thead><tbody>`;
+
+    sortedFinalSizes.forEach((size) => {
+      const data = aggregatedData.finalBolts[size];
+      // ツールチップ用テキスト
+      const tooltipText = Object.entries(data.joints)
+        .map(([name, count]) => `${name}: ${count.toLocaleString()}本`)
+        .join("\n");
+
+      // モバイルタップ詳細表示用の属性
+      const detailsJson = JSON.stringify(data.joints);
+      const detailsClass =
+        "has-details cursor-pointer hover:bg-yellow-100 dark:hover:bg-yellow-800/50 transition-colors";
+      const dataAttribute = `data-details='${detailsJson}'`;
+
+      html += `<tr class="hover:bg-slate-50 dark:hover:bg-slate-800/50">
+                    <td class="px-3 py-2 border border-slate-200 dark:border-slate-700">${size}</td>
+                    <td class="px-3 py-2 border border-slate-200 dark:border-slate-700 text-center ${detailsClass}" title="${tooltipText}" ${dataAttribute}>
+                        ${data.total.toLocaleString()}
+                    </td>
+                </tr>`;
+    });
+    html += `</tbody></table></div>`;
+  } else {
+    html += `<h4 class="text-xl font-bold text-slate-800 dark:text-slate-200">本ボルト 合計本数</h4>
+             <p class="text-slate-500">集計対象の本ボルトはありません。</p>`;
+  }
+
+  // 2. 仮ボルトの表
+  const sortedTempSizes = Object.keys(aggregatedData.tempBolts).sort();
+  if (sortedTempSizes.length > 0) {
+    html += `<h4 class="text-xl font-bold text-slate-800 dark:text-slate-200 mt-6">現場使用 仮ボルト 合計本数</h4>
+           <div class="overflow-x-auto custom-scrollbar"><table class="w-auto text-sm border-collapse">
+           <thead class="bg-slate-200 dark:bg-slate-700"><tr>
+              <th class="px-3 py-2 border border-slate-300 dark:border-slate-600">ボルトサイズ</th>
+              <th class="px-3 py-2 border border-slate-300 dark:border-slate-600">合計本数</th>
+           </tr></thead><tbody>`;
+    sortedTempSizes.forEach((size) => {
+      const data = aggregatedData.tempBolts[size];
+      const tooltipText = Object.entries(data.joints)
+        .map(([name, count]) => `${name}: ${count.toLocaleString()}本`)
+        .join("\n");
+
+      const detailsJson = JSON.stringify(data.joints);
+      const detailsClass =
+        "has-details cursor-pointer hover:bg-yellow-100 dark:hover:bg-yellow-800/50 transition-colors";
+      const dataAttribute = `data-details='${detailsJson}'`;
+
+      html += `<tr class="hover:bg-slate-50 dark:hover:bg-slate-800/50">
+                  <td class="px-3 py-2 border border-slate-200 dark:border-slate-700">${size}</td>
+                  <td class="px-3 py-2 border border-slate-200 dark:border-slate-700 text-center ${detailsClass}" title="${tooltipText}" ${dataAttribute}>
+                      ${data.total.toLocaleString()}
+                  </td>
+              </tr>`;
+    });
+    html += `</tbody></table></div>`;
+  }
+
+  // 3. 工場用仮ボルトの表
+  const sortedShopSizes = Object.keys(aggregatedData.shopTempBolts).sort();
+  if (sortedShopSizes.length > 0) {
+    html += `<h4 class="text-xl font-bold text-slate-800 dark:text-slate-200 mt-6">工場使用 仮ボルト 合計本数</h4>
+             <div class="overflow-x-auto custom-scrollbar"><table class="w-auto text-sm border-collapse">
+             <thead class="bg-slate-200 dark:bg-slate-700"><tr>
+                <th class="px-3 py-2 border border-slate-300 dark:border-slate-600">ボルトサイズ</th>
+                <th class="px-3 py-2 border border-slate-300 dark:border-slate-600">合計本数</th>
+                <th class="px-3 py-2 border border-slate-300 dark:border-slate-600">関連継手</th>
+             </tr></thead><tbody>`;
+    sortedShopSizes.forEach((size) => {
+      const data = aggregatedData.shopTempBolts[size];
+      const jointNames = Array.from(data.joints).join(", ");
+      html += `<tr class="hover:bg-slate-50 dark:hover:bg-slate-800/50">
+                    <td class="px-3 py-2 border border-slate-200 dark:border-slate-700">${size}</td>
+                    <td class="px-3 py-2 border border-slate-200 dark:border-slate-700 text-center">${data.total.toLocaleString()}</td>
+                    <td class="px-3 py-2 border border-slate-200 dark:border-slate-700">${jointNames}</td>
+                </tr>`;
+    });
+    html += `</tbody></table></div>`;
+  }
+
+  contentEl.innerHTML = html;
+};

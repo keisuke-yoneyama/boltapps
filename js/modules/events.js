@@ -21,6 +21,7 @@ import {
   switchView,
   resetMemberForm,
   renderBoltSizeSettings,
+  renderDetailView,
   showToast,
   generateCustomInputFields,
   updateProjectListUI,
@@ -97,6 +98,8 @@ export function setupEventListeners() {
   setupBoltSettingsEvents(); // ★ボルトサイズ設定画面イベント
 
   setupProjectActionEvents(); // 工事登録、複製アクション
+
+  setupMemberActionEvents(); //部材の保存関係
 }
 
 //登録用フローティングボタンイベント
@@ -1434,6 +1437,106 @@ function setupProjectActionEvents() {
       }
 
       performUpdate(updatedProjectData);
+    });
+  }
+}
+
+/**
+ * 部材の保存（新規登録・更新）に関するイベント
+ */
+function setupMemberActionEvents() {
+  const saveMemberBtn = document.getElementById("save-member-btn"); // ID確認
+  const editMemberModal = document.getElementById("edit-member-modal");
+
+  const editMemberIdInput = document.getElementById("edit-member-id");
+  const editMemberNameInput = document.getElementById("edit-member-name");
+  const editMemberJointSelect = document.getElementById(
+    "edit-member-joint-select",
+  ); // ID確認
+
+  if (saveMemberBtn) {
+    saveMemberBtn.addEventListener("click", () => {
+      const project = state.projects.find(
+        (p) => p.id === state.currentProjectId,
+      );
+      // 入力要素が取得できていない場合のガード
+      if (!editMemberIdInput || !editMemberNameInput || !editMemberJointSelect)
+        return;
+
+      const memberId = editMemberIdInput.value; // 空なら新規
+      if (!project) return;
+
+      const newName = editMemberNameInput.value.trim();
+      const newJointId = editMemberJointSelect.value;
+
+      if (!newName)
+        return showCustomAlert("部材名を入力してください。", {
+          invalidElements: [editMemberNameInput],
+        });
+      if (!newJointId)
+        return showCustomAlert("使用する継手を選択してください。", {
+          invalidElements: [editMemberJointSelect],
+        });
+
+      // チェックされた階層を取得
+      const checkedLevels = Array.from(
+        document.querySelectorAll(".level-checkbox:checked"),
+      ).map((cb) => cb.value);
+
+      // 手順A: ローカルデータの更新
+      let newMembersList;
+
+      if (memberId) {
+        // --- 更新 ---
+        const member = project.members.find((m) => m.id === memberId);
+        if (member) {
+          member.name = newName;
+          member.jointId = newJointId;
+          member.targetLevels = checkedLevels; // 保存
+        }
+        newMembersList = project.members;
+      } else {
+        // --- 新規登録 ---
+        const newMember = {
+          id: `member_${Date.now()}`,
+          name: newName,
+          jointId: newJointId,
+          targetLevels: checkedLevels, // 保存
+        };
+        newMembersList = [...(project.members || []), newMember];
+
+        const projectIndex = state.projects.findIndex(
+          (p) => p.id === state.currentProjectId,
+        );
+        if (projectIndex !== -1)
+          state.projects[projectIndex].members = newMembersList;
+      }
+
+      // UI反映
+      renderDetailView();
+
+      const actionWord = memberId ? "更新" : "登録";
+      showToast(`部材「${newName}」を${actionWord}しました`);
+
+      // モーダル制御
+      if (memberId) {
+        // 編集モード：閉じる
+        if (editMemberModal) closeModal(editMemberModal);
+      } else {
+        // 新規登録モード：リセットして継続
+        editMemberNameInput.value = "";
+
+        // 名前入力欄にフォーカスを戻す（連続入力用）
+        editMemberNameInput.focus();
+      }
+
+      // DB保存
+      updateProjectData(state.currentProjectId, {
+        members: newMembersList,
+      }).catch((err) => {
+        showCustomAlert("部材の保存に失敗しました。");
+        console.error("保存失敗: ", err);
+      });
     });
   }
 }

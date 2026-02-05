@@ -1587,90 +1587,90 @@ document.addEventListener("DOMContentLoaded", () => {
 
     performUpdate(updatedDataPayload);
   });
-  // ★ 修正版：部材の保存処理（新規・編集 両対応）
-  // ★ 修正版：部材保存（階層情報保存対応）
-  // ★ 修正版：部材の保存処理（新規登録時の連続入力対応）
-  saveMemberBtn.addEventListener("click", () => {
-    const project = state.projects.find((p) => p.id === state.currentProjectId);
-    const memberId = editMemberIdInput.value; // 空なら新規
-    if (!project) return;
+  // // ★ 修正版：部材の保存処理（新規・編集 両対応）
+  // // ★ 修正版：部材保存（階層情報保存対応）
+  // // ★ 修正版：部材の保存処理（新規登録時の連続入力対応）
+  // saveMemberBtn.addEventListener("click", () => {
+  //   const project = state.projects.find((p) => p.id === state.currentProjectId);
+  //   const memberId = editMemberIdInput.value; // 空なら新規
+  //   if (!project) return;
 
-    const newName = editMemberNameInput.value.trim();
-    const newJointId = editMemberJointSelect.value;
-    if (!newName)
-      return showCustomAlert("部材名を入力してください。", {
-        invalidElements: [editMemberNameInput],
-      });
-    if (!newJointId)
-      return showCustomAlert("使用する継手を選択してください。", {
-        invalidElements: [editMemberJointSelect],
-      });
+  //   const newName = editMemberNameInput.value.trim();
+  //   const newJointId = editMemberJointSelect.value;
+  //   if (!newName)
+  //     return showCustomAlert("部材名を入力してください。", {
+  //       invalidElements: [editMemberNameInput],
+  //     });
+  //   if (!newJointId)
+  //     return showCustomAlert("使用する継手を選択してください。", {
+  //       invalidElements: [editMemberJointSelect],
+  //     });
 
-    // チェックされた階層を取得
-    const checkedLevels = Array.from(
-      document.querySelectorAll(".level-checkbox:checked"),
-    ).map((cb) => cb.value);
+  //   // チェックされた階層を取得
+  //   const checkedLevels = Array.from(
+  //     document.querySelectorAll(".level-checkbox:checked"),
+  //   ).map((cb) => cb.value);
 
-    // 手順A: ローカルデータの更新
-    let newMembersList;
-    if (memberId) {
-      // 更新
-      const member = project.members.find((m) => m.id === memberId);
-      if (member) {
-        member.name = newName;
-        member.jointId = newJointId;
-        member.targetLevels = checkedLevels; // 保存
-      }
-      newMembersList = project.members;
-    } else {
-      // 新規登録
-      const newMember = {
-        id: `member_${Date.now()}`,
-        name: newName,
-        jointId: newJointId,
-        targetLevels: checkedLevels, // 保存
-      };
-      newMembersList = [...(project.members || []), newMember];
-      const projectIndex = state.projects.findIndex(
-        (p) => p.id === state.currentProjectId,
-      );
-      if (projectIndex !== -1)
-        state.projects[projectIndex].members = newMembersList;
-    }
+  //   // 手順A: ローカルデータの更新
+  //   let newMembersList;
+  //   if (memberId) {
+  //     // 更新
+  //     const member = project.members.find((m) => m.id === memberId);
+  //     if (member) {
+  //       member.name = newName;
+  //       member.jointId = newJointId;
+  //       member.targetLevels = checkedLevels; // 保存
+  //     }
+  //     newMembersList = project.members;
+  //   } else {
+  //     // 新規登録
+  //     const newMember = {
+  //       id: `member_${Date.now()}`,
+  //       name: newName,
+  //       jointId: newJointId,
+  //       targetLevels: checkedLevels, // 保存
+  //     };
+  //     newMembersList = [...(project.members || []), newMember];
+  //     const projectIndex = state.projects.findIndex(
+  //       (p) => p.id === state.currentProjectId,
+  //     );
+  //     if (projectIndex !== -1)
+  //       state.projects[projectIndex].members = newMembersList;
+  //   }
 
-    renderDetailView();
+  //   renderDetailView();
 
-    const actionWord = memberId ? "更新" : "登録";
-    showToast(`部材「${newName}」を${actionWord}しました`);
+  //   const actionWord = memberId ? "更新" : "登録";
+  //   showToast(`部材「${newName}」を${actionWord}しました`);
 
-    // ▼▼▼ 修正：新規登録時はモーダルを閉じずにリセット ▼▼▼
-    if (memberId) {
-      // 編集モード：閉じる
-      closeModal(editMemberModal);
-    } else {
-      // 新規登録モード：リセットして継続
-      editMemberNameInput.value = "";
+  //   // ▼▼▼ 修正：新規登録時はモーダルを閉じずにリセット ▼▼▼
+  //   if (memberId) {
+  //     // 編集モード：閉じる
+  //     closeModal(editMemberModal);
+  //   } else {
+  //     // 新規登録モード：リセットして継続
+  //     editMemberNameInput.value = "";
 
-      // 連続入力の利便性を考慮し、継手選択と階層チェックは維持します。
-      // 名前だけ変えて次々登録するケースが多いためです。
-      // もし全てリセットしたい場合は以下のコメントアウトを外してください。
-      /*
-            editMemberJointSelect.value = ''; 
-            document.querySelectorAll('.level-checkbox').forEach(cb => cb.checked = false);
-            */
+  //     // 連続入力の利便性を考慮し、継手選択と階層チェックは維持します。
+  //     // 名前だけ変えて次々登録するケースが多いためです。
+  //     // もし全てリセットしたい場合は以下のコメントアウトを外してください。
+  //     /*
+  //           editMemberJointSelect.value = '';
+  //           document.querySelectorAll('.level-checkbox').forEach(cb => cb.checked = false);
+  //           */
 
-      // 名前入力欄にフォーカスを戻す
-      editMemberNameInput.focus();
-    }
-    // ▲▲▲ 修正ここまで ▲▲▲
+  //     // 名前入力欄にフォーカスを戻す
+  //     editMemberNameInput.focus();
+  //   }
+  //   // ▲▲▲ 修正ここまで ▲▲▲
 
-    updateProjectData(state.currentProjectId, {
-      members: newMembersList,
-    }).catch((err) => {
-      showCustomAlert("部材の保存に失敗しました。");
-      console.error("保存失敗: ", err);
-    });
-  });
+  //   updateProjectData(state.currentProjectId, {
+  //     members: newMembersList,
+  //   }).catch((err) => {
+  //     showCustomAlert("部材の保存に失敗しました。");
+  //     console.error("保存失敗: ", err);
+  //   });
+  // });
   // ▼▼▼【ここに新しいコードを貼り付け】▼▼▼
   confirmDeleteBtn.addEventListener("click", () => {
     const id = deleteIdInput.value;
@@ -2478,103 +2478,103 @@ document.addEventListener("DOMContentLoaded", () => {
   // グループ集計結果をモーダルに描画する関数
   // --- 修正後の renderAggregatedResults 関数 ---
 
-  const renderAggregatedResults = (propertyName, aggregatedData) => {
-    document.getElementById("aggregated-results-title").textContent =
-      `「${propertyName}」集計結果`;
-    const contentEl = document.getElementById("aggregated-results-content");
-    let html = "";
+  // const renderAggregatedResults = (propertyName, aggregatedData) => {
+  //   document.getElementById("aggregated-results-title").textContent =
+  //     `「${propertyName}」集計結果`;
+  //   const contentEl = document.getElementById("aggregated-results-content");
+  //   let html = "";
 
-    // 1. 本ボルトの表
-    const sortedFinalSizes = Object.keys(aggregatedData.finalBolts).sort();
-    if (sortedFinalSizes.length > 0) {
-      html += `<h4 class="text-xl font-bold text-slate-800 dark:text-slate-200">本ボルト 合計本数</h4>
-                 <div class="overflow-x-auto custom-scrollbar"><table class="w-auto text-sm border-collapse">
-                 <thead class="bg-slate-200 dark:bg-slate-700"><tr>
-                    <th class="px-3 py-2 border border-slate-300 dark:border-slate-600">ボルトサイズ</th>
-                    <th class="px-3 py-2 border border-slate-300 dark:border-slate-600">合計本数</th>
-                 </tr></thead><tbody>`;
-      sortedFinalSizes.forEach((size) => {
-        const data = aggregatedData.finalBolts[size];
-        const tooltipText = Object.entries(data.joints)
-          .map(([name, count]) => `${name}: ${count.toLocaleString()}本`)
-          .join("\n");
+  //   // 1. 本ボルトの表
+  //   const sortedFinalSizes = Object.keys(aggregatedData.finalBolts).sort();
+  //   if (sortedFinalSizes.length > 0) {
+  //     html += `<h4 class="text-xl font-bold text-slate-800 dark:text-slate-200">本ボルト 合計本数</h4>
+  //                <div class="overflow-x-auto custom-scrollbar"><table class="w-auto text-sm border-collapse">
+  //                <thead class="bg-slate-200 dark:bg-slate-700"><tr>
+  //                   <th class="px-3 py-2 border border-slate-300 dark:border-slate-600">ボルトサイズ</th>
+  //                   <th class="px-3 py-2 border border-slate-300 dark:border-slate-600">合計本数</th>
+  //                </tr></thead><tbody>`;
+  //     sortedFinalSizes.forEach((size) => {
+  //       const data = aggregatedData.finalBolts[size];
+  //       const tooltipText = Object.entries(data.joints)
+  //         .map(([name, count]) => `${name}: ${count.toLocaleString()}本`)
+  //         .join("\n");
 
-        // --- 変更点: モバイルタップ用のクラスとデータ属性を追加 ---
-        const detailsJson = JSON.stringify(data.joints);
-        const detailsClass =
-          "has-details cursor-pointer hover:bg-yellow-100 dark:hover:bg-yellow-800/50 transition-colors";
-        const dataAttribute = `data-details='${detailsJson}'`;
+  //       // --- 変更点: モバイルタップ用のクラスとデータ属性を追加 ---
+  //       const detailsJson = JSON.stringify(data.joints);
+  //       const detailsClass =
+  //         "has-details cursor-pointer hover:bg-yellow-100 dark:hover:bg-yellow-800/50 transition-colors";
+  //       const dataAttribute = `data-details='${detailsJson}'`;
 
-        html += `<tr class="hover:bg-slate-50 dark:hover:bg-slate-800/50">
-                        <td class="px-3 py-2 border border-slate-200 dark:border-slate-700">${size}</td>
-                        <td class="px-3 py-2 border border-slate-200 dark:border-slate-700 text-center ${detailsClass}" title="${tooltipText}" ${dataAttribute}>
-                            ${data.total.toLocaleString()}
-                        </td>
-                    </tr>`;
-      });
-      html += `</tbody></table></div>`;
-    } else {
-      html += `<h4 class="text-xl font-bold text-slate-800 dark:text-slate-200">本ボルト 合計本数</h4>
-                 <p class="text-slate-500">集計対象の本ボルトはありません。</p>`;
-    }
+  //       html += `<tr class="hover:bg-slate-50 dark:hover:bg-slate-800/50">
+  //                       <td class="px-3 py-2 border border-slate-200 dark:border-slate-700">${size}</td>
+  //                       <td class="px-3 py-2 border border-slate-200 dark:border-slate-700 text-center ${detailsClass}" title="${tooltipText}" ${dataAttribute}>
+  //                           ${data.total.toLocaleString()}
+  //                       </td>
+  //                   </tr>`;
+  //     });
+  //     html += `</tbody></table></div>`;
+  //   } else {
+  //     html += `<h4 class="text-xl font-bold text-slate-800 dark:text-slate-200">本ボルト 合計本数</h4>
+  //                <p class="text-slate-500">集計対象の本ボルトはありません。</p>`;
+  //   }
 
-    // 2. 仮ボルトの表 (こちらは元々数値のみなので大きな変更はなし)
-    // --- renderAggregatedResults 関数内、"// 2. 仮ボルトの表" の部分を差し替え ---
+  //   // 2. 仮ボルトの表 (こちらは元々数値のみなので大きな変更はなし)
+  //   // --- renderAggregatedResults 関数内、"// 2. 仮ボルトの表" の部分を差し替え ---
 
-    // 2. 仮ボルトの表
-    const sortedTempSizes = Object.keys(aggregatedData.tempBolts).sort();
-    if (sortedTempSizes.length > 0) {
-      html += `<h4 class="text-xl font-bold text-slate-800 dark:text-slate-200 mt-6">現場使用 仮ボルト 合計本数</h4>
-             <div class="overflow-x-auto custom-scrollbar"><table class="w-auto text-sm border-collapse">
-             <thead class="bg-slate-200 dark:bg-slate-700"><tr>
-                <th class="px-3 py-2 border border-slate-300 dark:border-slate-600">ボルトサイズ</th>
-                <th class="px-3 py-2 border border-slate-300 dark:border-slate-600">合計本数</th>
-             </tr></thead><tbody>`;
-      sortedTempSizes.forEach((size) => {
-        const data = aggregatedData.tempBolts[size];
-        const tooltipText = Object.entries(data.joints)
-          .map(([name, count]) => `${name}: ${count.toLocaleString()}本`)
-          .join("\n");
+  //   // 2. 仮ボルトの表
+  //   const sortedTempSizes = Object.keys(aggregatedData.tempBolts).sort();
+  //   if (sortedTempSizes.length > 0) {
+  //     html += `<h4 class="text-xl font-bold text-slate-800 dark:text-slate-200 mt-6">現場使用 仮ボルト 合計本数</h4>
+  //            <div class="overflow-x-auto custom-scrollbar"><table class="w-auto text-sm border-collapse">
+  //            <thead class="bg-slate-200 dark:bg-slate-700"><tr>
+  //               <th class="px-3 py-2 border border-slate-300 dark:border-slate-600">ボルトサイズ</th>
+  //               <th class="px-3 py-2 border border-slate-300 dark:border-slate-600">合計本数</th>
+  //            </tr></thead><tbody>`;
+  //     sortedTempSizes.forEach((size) => {
+  //       const data = aggregatedData.tempBolts[size];
+  //       const tooltipText = Object.entries(data.joints)
+  //         .map(([name, count]) => `${name}: ${count.toLocaleString()}本`)
+  //         .join("\n");
 
-        const detailsJson = JSON.stringify(data.joints);
-        const detailsClass =
-          "has-details cursor-pointer hover:bg-yellow-100 dark:hover:bg-yellow-800/50 transition-colors";
-        const dataAttribute = `data-details='${detailsJson}'`;
+  //       const detailsJson = JSON.stringify(data.joints);
+  //       const detailsClass =
+  //         "has-details cursor-pointer hover:bg-yellow-100 dark:hover:bg-yellow-800/50 transition-colors";
+  //       const dataAttribute = `data-details='${detailsJson}'`;
 
-        html += `<tr class="hover:bg-slate-50 dark:hover:bg-slate-800/50">
-                    <td class="px-3 py-2 border border-slate-200 dark:border-slate-700">${size}</td>
-                    <td class="px-3 py-2 border border-slate-200 dark:border-slate-700 text-center ${detailsClass}" title="${tooltipText}" ${dataAttribute}>
-                        ${data.total.toLocaleString()}
-                    </td>
-                </tr>`;
-      });
-      html += `</tbody></table></div>`;
-    }
+  //       html += `<tr class="hover:bg-slate-50 dark:hover:bg-slate-800/50">
+  //                   <td class="px-3 py-2 border border-slate-200 dark:border-slate-700">${size}</td>
+  //                   <td class="px-3 py-2 border border-slate-200 dark:border-slate-700 text-center ${detailsClass}" title="${tooltipText}" ${dataAttribute}>
+  //                       ${data.total.toLocaleString()}
+  //                   </td>
+  //               </tr>`;
+  //     });
+  //     html += `</tbody></table></div>`;
+  //   }
 
-    // 3. 工場用仮ボルトの表
-    const sortedShopSizes = Object.keys(aggregatedData.shopTempBolts).sort();
-    if (sortedShopSizes.length > 0) {
-      html += `<h4 class="text-xl font-bold text-slate-800 dark:text-slate-200 mt-6">工場使用 仮ボルト 合計本数</h4>
-                 <div class="overflow-x-auto custom-scrollbar"><table class="w-auto text-sm border-collapse">
-                 <thead class="bg-slate-200 dark:bg-slate-700"><tr>
-                    <th class="px-3 py-2 border border-slate-300 dark:border-slate-600">ボルトサイズ</th>
-                    <th class="px-3 py-2 border border-slate-300 dark:border-slate-600">合計本数</th>
-                    <th class="px-3 py-2 border border-slate-300 dark:border-slate-600">関連継手</th>
-                 </tr></thead><tbody>`;
-      sortedShopSizes.forEach((size) => {
-        const data = aggregatedData.shopTempBolts[size];
-        const jointNames = Array.from(data.joints).join(", ");
-        html += `<tr class="hover:bg-slate-50 dark:hover:bg-slate-800/50">
-                        <td class="px-3 py-2 border border-slate-200 dark:border-slate-700">${size}</td>
-                        <td class="px-3 py-2 border border-slate-200 dark:border-slate-700 text-center">${data.total.toLocaleString()}</td>
-                        <td class="px-3 py-2 border border-slate-200 dark:border-slate-700">${jointNames}</td>
-                    </tr>`;
-      });
-      html += `</tbody></table></div>`;
-    }
+  //   // 3. 工場用仮ボルトの表
+  //   const sortedShopSizes = Object.keys(aggregatedData.shopTempBolts).sort();
+  //   if (sortedShopSizes.length > 0) {
+  //     html += `<h4 class="text-xl font-bold text-slate-800 dark:text-slate-200 mt-6">工場使用 仮ボルト 合計本数</h4>
+  //                <div class="overflow-x-auto custom-scrollbar"><table class="w-auto text-sm border-collapse">
+  //                <thead class="bg-slate-200 dark:bg-slate-700"><tr>
+  //                   <th class="px-3 py-2 border border-slate-300 dark:border-slate-600">ボルトサイズ</th>
+  //                   <th class="px-3 py-2 border border-slate-300 dark:border-slate-600">合計本数</th>
+  //                   <th class="px-3 py-2 border border-slate-300 dark:border-slate-600">関連継手</th>
+  //                </tr></thead><tbody>`;
+  //     sortedShopSizes.forEach((size) => {
+  //       const data = aggregatedData.shopTempBolts[size];
+  //       const jointNames = Array.from(data.joints).join(", ");
+  //       html += `<tr class="hover:bg-slate-50 dark:hover:bg-slate-800/50">
+  //                       <td class="px-3 py-2 border border-slate-200 dark:border-slate-700">${size}</td>
+  //                       <td class="px-3 py-2 border border-slate-200 dark:border-slate-700 text-center">${data.total.toLocaleString()}</td>
+  //                       <td class="px-3 py-2 border border-slate-200 dark:border-slate-700">${jointNames}</td>
+  //                   </tr>`;
+  //     });
+  //     html += `</tbody></table></div>`;
+  //   }
 
-    contentEl.innerHTML = html;
-  };
+  //   contentEl.innerHTML = html;
+  // };
   // 物件名一括保存ボタンの処理
   // 物件名一括保存ボタンの処理 (楽観的UIを適用)
   document
