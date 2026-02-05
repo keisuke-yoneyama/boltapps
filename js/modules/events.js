@@ -1292,7 +1292,9 @@ function setupProjectActionEvents() {
 
         updateProjectListUI(); // 画面更新
 
-        updateProjectData(state.currentProjectId, projectData).catch((err) => {
+        // ▼▼▼ 修正: state.currentProjectId ではなく projectId を使う ▼▼▼
+        // updateProjectData(state.currentProjectId, projectData).catch((err) => {  <-- これがエラーの原因
+        updateProjectData(projectId, projectData).catch((err) => {
           console.error("工事情報の保存に失敗:", err);
           showCustomAlert("工事情報の保存に失敗しました。");
         });
