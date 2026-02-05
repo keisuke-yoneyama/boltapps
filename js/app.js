@@ -2300,64 +2300,65 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   });
 
-  openTempBoltMappingBtn.addEventListener("click", () => {
-    const project = state.projects.find((p) => p.id === state.currentProjectId);
-    populateTempBoltMappingModal(project);
-    openModal(tempBoltMappingModal);
-  });
+  // openTempBoltMappingBtn.addEventListener("click", () => {
+  //   const project = state.projects.find((p) => p.id === state.currentProjectId);
+  //   populateTempBoltMappingModal(project);
+  //   openModal(tempBoltMappingModal);
+  // });
 
-  closeTempBoltMappingModalBtn.addEventListener("click", () =>
-    closeModal(tempBoltMappingModal),
-  );
-  cancelTempBoltMappingBtn.addEventListener("click", () =>
-    closeModal(tempBoltMappingModal),
-  );
+  // closeTempBoltMappingModalBtn.addEventListener("click", () =>
+  //   closeModal(tempBoltMappingModal),
+  // );
 
-  const saveTempBoltMappingBtn = document.getElementById(
-    "save-temp-bolt-mapping-btn",
-  );
-  saveTempBoltMappingBtn.addEventListener("click", () => {
-    const newMap = {};
-    const selects = tempBoltMappingContainer.querySelectorAll(
-      ".temp-bolt-map-select",
-    );
+  // cancelTempBoltMappingBtn.addEventListener("click", () =>
+  //   closeModal(tempBoltMappingModal),
+  // );
 
-    selects.forEach((select) => {
-      const finalBolt = select.dataset.finalBolt;
-      const tempBolt = select.value;
-      if (finalBolt && tempBolt) {
-        newMap[finalBolt] = tempBolt;
-      }
-    });
+  // const saveTempBoltMappingBtn = document.getElementById(
+  //   "save-temp-bolt-mapping-btn",
+  // );
+  // saveTempBoltMappingBtn.addEventListener("click", () => {
+  //   const newMap = {};
+  //   const selects = tempBoltMappingContainer.querySelectorAll(
+  //     ".temp-bolt-map-select",
+  //   );
 
-    // ▼▼▼ ここからが修正箇所 ▼▼▼
+  //   selects.forEach((select) => {
+  //     const finalBolt = select.dataset.finalBolt;
+  //     const tempBolt = select.value;
+  //     if (finalBolt && tempBolt) {
+  //       newMap[finalBolt] = tempBolt;
+  //     }
+  //   });
 
-    // 1. ローカルのstate（アプリが保持しているデータ）を即座に更新する
-    const project = state.projects.find((p) => p.id === state.currentProjectId);
-    if (project) {
-      project.tempBoltMap = newMap;
-    }
+  //   // ▼▼▼ ここからが修正箇所 ▼▼▼
 
-    // 2. 更新されたローカルstateを使って、UI（見た目）を即座に再描画する
-    renderDetailView();
+  //   // 1. ローカルのstate（アプリが保持しているデータ）を即座に更新する
+  //   const project = state.projects.find((p) => p.id === state.currentProjectId);
+  //   if (project) {
+  //     project.tempBoltMap = newMap;
+  //   }
 
-    // 3. UIの操作（モーダルを閉じる、通知を出す）を完了させる
-    closeModal(tempBoltMappingModal);
-    showToast("仮ボルト設定を保存しました。"); // 操作を妨げないトースト通知に変更
+  //   // 2. 更新されたローカルstateを使って、UI（見た目）を即座に再描画する
+  //   renderDetailView();
 
-    // 4. 裏側で、データベースへの実際の保存処理を実行する
-    updateProjectData(state.currentProjectId, { tempBoltMap: newMap }).catch(
-      (err) => {
-        // 万が一失敗した時だけアラートを出す
-        console.error("仮ボルト設定の保存に失敗しました: ", err);
-        showCustomAlert(
-          "設定の保存に失敗しました。エラーが発生したため、リロードが必要な場合があります。",
-        );
-      },
-    );
+  //   // 3. UIの操作（モーダルを閉じる、通知を出す）を完了させる
+  //   closeModal(tempBoltMappingModal);
+  //   showToast("仮ボルト設定を保存しました。"); // 操作を妨げないトースト通知に変更
 
-    // ▲▲▲ ここまでが修正箇所 ▲▲▲
-  });
+  //   // 4. 裏側で、データベースへの実際の保存処理を実行する
+  //   updateProjectData(state.currentProjectId, { tempBoltMap: newMap }).catch(
+  //     (err) => {
+  //       // 万が一失敗した時だけアラートを出す
+  //       console.error("仮ボルト設定の保存に失敗しました: ", err);
+  //       showCustomAlert(
+  //         "設定の保存に失敗しました。エラーが発生したため、リロードが必要な場合があります。",
+  //       );
+  //     },
+  //   );
+
+  //   // ▲▲▲ ここまでが修正箇所 ▲▲▲
+  // });
 
   // advancedSettingsToggle.addEventListener("change", (e) => {
   //   simpleProjectSettings.classList.toggle("hidden", e.target.checked);

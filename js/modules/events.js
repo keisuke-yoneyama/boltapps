@@ -28,6 +28,7 @@ import {
   showToast,
   generateCustomInputFields,
   updateProjectListUI,
+  populateTempBoltMappingModal,
 } from "./ui.js"; // ui.jsで作った関数を使う
 
 import { resetTempJointData, state } from "./state.js";
@@ -107,6 +108,8 @@ export function setupEventListeners() {
   setupListActionEvents();
 
   setupDeleteExecutionEvents();
+
+  setupTempBoltMappingEvents(); //仮ボルトマッピング(置き換え設定)
 }
 
 //登録用フローティングボタンイベント
@@ -1719,6 +1722,100 @@ function setupDeleteExecutionEvents() {
           console.error("削除に失敗:", err);
         });
       }
+    });
+  }
+}
+/**
+ * 仮ボルトマッピング（置換設定）モーダルのイベント設定
+ */
+function setupTempBoltMappingEvents() {
+  // DOM要素の取得
+  const openTempBoltMappingBtn = document.getElementById(
+    "open-temp-bolt-mapping-btn",
+  );
+  const tempBoltMappingModal = document.getElementById(
+    "temp-bolt-mapping-modal",
+  );
+  const closeTempBoltMappingModalBtn = document.getElementById(
+    "close-temp-bolt-mapping-modal-btn",
+  );
+  const cancelTempBoltMappingBtn = document.getElementById(
+    "cancel-temp-bolt-mapping-btn",
+  );
+  const saveTempBoltMappingBtn = document.getElementById(
+    "save-temp-bolt-mapping-btn",
+  );
+  const tempBoltMappingContainer = document.getElementById(
+    "temp-bolt-mapping-container",
+  );
+
+  // 1. モーダルを開く
+  if (openTempBoltMappingBtn) {
+    openTempBoltMappingBtn.addEventListener("click", () => {
+      const project = state.projects.find(
+        (p) => p.id === state.currentProjectId,
+      );
+      if (project && tempBoltMappingModal) {
+        // ui.js の関数を呼び出して中身を生成
+        if (typeof populateTempBoltMappingModal === "function") {
+          populateTempBoltMappingModal(project);
+        }
+        openModal(tempBoltMappingModal);
+      }
+    });
+  }
+
+  // 2. モーダルを閉じる（×ボタン・キャンセル）
+  [closeTempBoltMappingModalBtn, cancelTempBoltMappingBtn].forEach((btn) => {
+    if (btn) {
+      btn.addEventListener("click", () => {
+        if (tempBoltMappingModal) closeModal(tempBoltMappingModal);
+      });
+    }
+  });
+
+  // 3. 設定を保存する
+  if (saveTempBoltMappingBtn) {
+    saveTempBoltMappingBtn.addEventListener("click", () => {
+      if (!tempBoltMappingContainer) return;
+
+      const newMap = {};
+      const selects = tempBoltMappingContainer.querySelectorAll(
+        ".temp-bolt-map-select",
+      );
+
+      selects.forEach((select) => {
+        const finalBolt = select.dataset.finalBolt;
+        const tempBolt = select.value;
+        if (finalBolt && tempBolt) {
+          newMap[finalBolt] = tempBolt;
+        }
+      });
+
+      // 1. ローカルのstateを更新
+      const project = state.projects.find(
+        (p) => p.id === state.currentProjectId,
+      );
+      if (project) {
+        project.tempBoltMap = newMap;
+      }
+
+      // 2. UI再描画
+      renderDetailView();
+
+      // 3. モーダルを閉じて通知
+      if (tempBoltMappingModal) closeModal(tempBoltMappingModal);
+      showToast("仮ボルト設定を保存しました。");
+
+      // 4. DB保存処理
+      updateProjectData(state.currentProjectId, { tempBoltMap: newMap }).catch(
+        (err) => {
+          console.error("仮ボルト設定の保存に失敗しました: ", err);
+          showCustomAlert(
+            "設定の保存に失敗しました。エラーが発生したため、リロードが必要な場合があります。",
+          );
+        },
+      );
     });
   }
 }
