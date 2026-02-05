@@ -30,6 +30,9 @@ import {
   updateProjectListUI,
   populateTempBoltMappingModal,
   resetJointForm,
+  renderResults,
+  renderOrderDetails,
+  renderTempOrderDetails,
 } from "./ui.js"; // ui.jsで作った関数を使う
 
 import { resetTempJointData, state } from "./state.js";
@@ -43,6 +46,8 @@ import { saveGlobalBoltSizes } from "./firebase.js";
 import {
   sortGlobalBoltSizes,
   cleanupAndSaveBoltSettings,
+  getTallyList,
+  calculateResults,
 } from "./calculator.js";
 /**
  * アプリ全体のイベントリスナーを設定する関数
@@ -115,6 +120,10 @@ export function setupEventListeners() {
   setupJointActionEvents();
 
   setupAddActionEvents(); //常設フォームからの追加
+
+  setupResultsCardEvents(); //集計結果関連のイベント
+
+  setupOtherModalEvents(); //その他のモーダル関連のイベント
 }
 
 //登録用フローティングボタンイベント
@@ -816,13 +825,15 @@ function setupNavigationEvents() {
 function setupColorControlEvents() {
   // --- 1. 編集モーダル用の要素 ---
   const editJointColorInput = document.getElementById("edit-joint-color");
-  const clearJointColorBtn = document.getElementById("clear-joint-color-btn"); // ID要確認
+  const clearJointColorBtn = document.getElementById("clear-joint-color-btn");
 
   // イベントリスナー：標準ピッカーで色が選ばれた時 (編集)
   if (editJointColorInput) {
     editJointColorInput.addEventListener("input", (e) => {
+      // ★ここに統合: 色を選んだら有効化フラグを立てる
       editJointColorInput.dataset.isNull = "false";
-      // 全てのパレットの選択解除（編集モーダル内のものを対象にするのが理想ですが、現状は全体でも動作します）
+
+      // パレットの選択解除も同時に行う
       document
         .querySelectorAll(".color-swatch")
         .forEach((el) => el.classList.remove("selected"));
@@ -833,9 +844,11 @@ function setupColorControlEvents() {
   if (clearJointColorBtn) {
     clearJointColorBtn.addEventListener("click", () => {
       if (editJointColorInput) {
+        // ★ここに統合: 値を白に戻し、未設定フラグを立てる
         editJointColorInput.value = "#ffffff";
         editJointColorInput.dataset.isNull = "true";
       }
+      // パレットの選択解除
       document
         .querySelectorAll(".color-swatch")
         .forEach((el) => el.classList.remove("selected"));
@@ -848,7 +861,7 @@ function setupColorControlEvents() {
   const jointColorInput = document.getElementById("joint-color");
   const staticClearJointColorBtn = document.getElementById(
     "static-clear-joint-color-btn",
-  ); // ID要確認
+  );
   const staticColorPaletteContainer = document.getElementById(
     "static-color-palette-container",
   );
@@ -2485,6 +2498,310 @@ function setupAddActionEvents() {
           "部材の追加に失敗しました。ページをリロードして確認してください。",
         );
       });
+    });
+  }
+}
+
+/**
+ * 集計結果カード内のイベント設定（再計算、Excel出力、表示切替、詳細モーダル）
+ */
+function setupResultsCardEvents() {
+  const resultsCard = document.getElementById("results-card");
+
+  // 要素がない場合はスキップ
+  if (!resultsCard) return;
+
+  resultsCard.addEventListener("click", (e) => {
+    const project = state.projects.find((p) => p.id === state.currentProjectId);
+    if (!project) return;
+
+    // --- 1. 再計算ボタン (#recalculate-btn) ---
+    if (e.target.closest("#recalculate-btn")) {
+      const newTally = {};
+      const inputs = document.querySelectorAll(".tally-input");
+      inputs.forEach((input) => {
+        const quantity = parseInt(input.value) || 0;
+        if (quantity > 0) {
+          const { location, id } = input.dataset;
+          if (!newTally[location]) newTally[location] = {};
+          newTally[location][id] = quantity;
+        }
+      });
+
+      project.tally = newTally;
+      renderResults(project); // UI更新
+
+      updateProjectData(state.currentProjectId, { tally: newTally }).catch(
+        (err) => {
+          console.error("Error saving full tally:", err);
+          showCustomAlert("保存に失敗しました。リロードしてください。");
+        },
+      );
+
+      showCustomAlert("結果を更新しました。", {
+        title: "成功",
+        type: "success",
+      });
+      return; // 処理終了
+    }
+
+    // --- 2. Excel出力ボタン (#export-excel-btn) ---
+    if (e.target.closest("#export-excel-btn")) {
+      const { resultsByLocation, allBoltSizes } = calculateResults(project);
+      if (allBoltSizes.size === 0) {
+        return showCustomAlert(
+          "集計表にデータがないため、Excelファイルを出力できません。",
+        );
+      }
+
+      // XLSXライブラリがグローバルにある前提
+      if (typeof XLSX === "undefined") {
+        return showCustomAlert("Excel出力ライブラリが読み込まれていません。");
+      }
+
+      const wb = XLSX.utils.book_new();
+      const tallyList = getTallyList(project);
+      const typeNameMap = {
+        girder: "大梁",
+        beam: "小梁",
+        column: "本柱",
+        stud: "間柱",
+        wall_girt: "胴縁",
+        roof_purlin: "母屋",
+        other: "その他",
+      };
+
+      const tallyHeaders = [
+        "階層 / エリア",
+        ...tallyList.map((item) => {
+          let typeName = typeNameMap[item.joint.type] || "不明";
+          if (item.joint.isPinJoint) typeName += "(ピン取り)";
+          return `${item.name}(${typeName})`;
+        }),
+      ];
+
+      const tallyData = [tallyHeaders];
+      let locations = [];
+
+      if (project.mode === "advanced") {
+        project.customLevels.forEach((level) =>
+          project.customAreas.forEach((area) =>
+            locations.push({
+              id: `${level}-${area}`,
+              label: `${level} - ${area}`,
+            }),
+          ),
+        );
+      } else {
+        for (let f = 2; f <= project.floors; f++) {
+          for (let s = 1; s <= project.sections; s++)
+            locations.push({ id: `${f}-${s}`, label: `${f}階 ${s}工区` });
+        }
+        for (let s = 1; s <= project.sections; s++)
+          locations.push({ id: `R-${s}`, label: `R階 ${s}工区` });
+        if (project.hasPH) {
+          for (let s = 1; s <= project.sections; s++)
+            locations.push({ id: `${s}-${s}`, label: `PH階 ${s}工区` });
+        }
+      }
+
+      locations.forEach((loc) => {
+        const row = [loc.label];
+        tallyList.forEach((item) => {
+          const count = project.tally?.[loc.id]?.[item.id] || null;
+          row.push(count);
+        });
+        tallyData.push(row);
+      });
+
+      const tallySheet = XLSX.utils.aoa_to_sheet(tallyData);
+      XLSX.utils.book_append_sheet(wb, tallySheet, "箇所数シート");
+
+      const sortedSizes = Array.from(allBoltSizes).sort();
+      const summaryHeaders = ["ボルトサイズ"];
+      const summaryColumns = [];
+      locations.forEach((loc) =>
+        summaryColumns.push({ id: loc.id, label: loc.label }),
+      );
+      summaryHeaders.push(...summaryColumns.map((c) => c.label), "総合計");
+      const summaryData = [summaryHeaders];
+
+      sortedSizes.forEach((size) => {
+        let grandTotal = 0;
+        const row = [size];
+        summaryColumns.forEach((col) => {
+          const cellData = resultsByLocation[col.id]?.[size];
+          const count = cellData ? cellData.total : 0;
+          grandTotal += count;
+          row.push(count > 0 ? count : null);
+        });
+        row.push(grandTotal);
+        summaryData.push(row);
+      });
+
+      const summarySheet = XLSX.utils.aoa_to_sheet(summaryData);
+      XLSX.utils.book_append_sheet(wb, summarySheet, "ボルト集計シート");
+      XLSX.writeFile(
+        wb,
+        `${project.name}_ボルト集計_${new Date()
+          .toISOString()
+          .slice(0, 10)}.xlsx`,
+      );
+      return; // 処理終了
+    }
+
+    // --- 3. 注文明細の表示切替 (#toggle-order-view-btn) ---
+    if (e.target.closest("#toggle-order-view-btn")) {
+      state.orderDetailsView =
+        state.orderDetailsView === "location" ? "section" : "location";
+
+      const { resultsByLocation } = calculateResults(project);
+      const container = document.getElementById("order-details-container");
+      if (container) {
+        container.innerHTML = renderOrderDetails(project, resultsByLocation);
+      } else {
+        console.error("【エラー】 order-details-container が見つかりません！");
+      }
+
+      // 仮ボルト注文明細の再描画
+      const tempContainer = document.getElementById(
+        "temp-order-details-container",
+      );
+      if (tempContainer) {
+        renderTempOrderDetails(tempContainer, project);
+      }
+      return;
+    }
+
+    // --- 4. 仮ボルト注文明細の表示切替 (#toggle-temp-order-view-btn) ---
+    if (e.target.closest("#toggle-temp-order-view-btn")) {
+      state.tempOrderDetailsView =
+        state.tempOrderDetailsView === "location" ? "section" : "location";
+
+      const tempContainer = document.getElementById(
+        "temp-order-details-container",
+      );
+      if (tempContainer) {
+        renderTempOrderDetails(tempContainer, project);
+      }
+      return;
+    }
+
+    // --- 5. 工区まとめ設定 (checkbox) ---
+    if (e.target.matches("#temp-order-group-all-checkbox")) {
+      state.tempOrderDetailsGroupAll = e.target.checked;
+      const tempContainer = document.getElementById(
+        "temp-order-details-container",
+      );
+      if (tempContainer) {
+        renderTempOrderDetails(tempContainer, project);
+      }
+      return;
+    }
+
+    // --- 6. グループ化キー (radio) ---
+    if (e.target.matches('input[name="temp-order-group-key"]')) {
+      state.tempOrderDetailsGroupKey = e.target.value;
+      const tempContainer = document.getElementById(
+        "temp-order-details-container",
+      );
+      if (tempContainer) {
+        renderTempOrderDetails(tempContainer, project);
+      }
+      return;
+    }
+
+    // --- 7. 詳細表示モーダル (td.has-details) ---
+    // ここが2つ目のリスナーだった部分を合体させます
+    const targetCell = e.target.closest("td.has-details");
+    if (targetCell) {
+      try {
+        const detailsData = JSON.parse(targetCell.dataset.details);
+        const row = targetCell.closest("tr");
+        const boltSize = row.querySelector("td:first-child").textContent;
+        // 最終列かどうかで合計かを判定
+        const isTotal =
+          targetCell.textContent ===
+          row.querySelector("td:last-child").textContent;
+
+        const modalTitle = document.getElementById("details-modal-title");
+        const modalContent = document.getElementById("details-modal-content");
+        const detailsModal = document.getElementById("details-modal");
+
+        if (modalTitle && modalContent && detailsModal) {
+          modalTitle.textContent = isTotal
+            ? `${boltSize} の総合計内訳`
+            : `${boltSize} の内訳`;
+
+          let contentHtml = '<ul class="space-y-2 text-base">';
+          const sortedJoints = Object.entries(detailsData).sort((a, b) =>
+            a[0].localeCompare(b[0]),
+          );
+
+          for (const [name, count] of sortedJoints) {
+            contentHtml += `
+                    <li class="flex justify-between items-center border-b border-slate-200 dark:border-slate-700 pb-2">
+                        <span class="text-slate-700 dark:text-slate-300">${name}:</span>
+                        <span class="font-bold text-lg text-slate-900 dark:text-slate-100">${count.toLocaleString()}本</span>
+                    </li>`;
+          }
+          contentHtml += "</ul>";
+
+          modalContent.innerHTML = contentHtml;
+          openModal(detailsModal);
+        }
+      } catch (err) {
+        console.error("Failed to parse details data:", err);
+      }
+    }
+  });
+}
+
+/**
+ * その他のモーダル（詳細表示、グループ編集、集計結果）のイベント設定
+ */
+function setupOtherModalEvents() {
+  // 1. 詳細表示モーダルを閉じるボタン
+  const closeDetailsModalBtn = document.getElementById(
+    "close-details-modal-btn",
+  );
+  const detailsModal = document.getElementById("details-modal");
+
+  if (closeDetailsModalBtn) {
+    closeDetailsModalBtn.addEventListener("click", () => {
+      if (detailsModal) closeModal(detailsModal);
+    });
+  }
+
+  // 2. グループ編集モーダルを閉じるボタン
+  const closeEditGroupModalBtn = document.getElementById(
+    "close-edit-group-modal-btn",
+  );
+  const cancelEditGroupBtn = document.getElementById("cancel-edit-group-btn");
+  const editGroupModal = document.getElementById("edit-group-modal");
+
+  if (closeEditGroupModalBtn) {
+    closeEditGroupModalBtn.addEventListener("click", () => {
+      if (editGroupModal) closeModal(editGroupModal);
+    });
+  }
+  if (cancelEditGroupBtn) {
+    cancelEditGroupBtn.addEventListener("click", () => {
+      if (editGroupModal) closeModal(editGroupModal);
+    });
+  }
+
+  // 3. 集計結果モーダルを閉じるボタン
+  const closeAggregatedResultsBtn = document.getElementById(
+    "close-aggregated-results-modal-btn",
+  );
+  const aggregatedResultsModal = document.getElementById(
+    "aggregated-results-modal",
+  );
+
+  if (closeAggregatedResultsBtn) {
+    closeAggregatedResultsBtn.addEventListener("click", () => {
+      if (aggregatedResultsModal) closeModal(aggregatedResultsModal);
     });
   }
 }

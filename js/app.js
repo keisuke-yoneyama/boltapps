@@ -165,31 +165,31 @@ document.addEventListener("DOMContentLoaded", () => {
   // const hamburgerBtn = document.getElementById("hamburger-btn");
   // const mobileMenu = document.getElementById("mobile-menu");
 
-  const projectNameInput = document.getElementById("project-name");
-  const projectFloorsInput = document.getElementById("project-floors");
-  const projectSectionsInput = document.getElementById("project-sections");
-  const projectHasPhInput = document.getElementById("project-has-ph");
-  const addProjectBtn = document.getElementById("add-project-btn");
-  const advancedSettingsToggle = document.getElementById(
-    "advanced-settings-toggle",
-  );
-  const simpleProjectSettings = document.getElementById(
-    "simple-project-settings",
-  );
-  const advancedProjectSettings = document.getElementById(
-    "advanced-project-settings",
-  );
-  const customLevelsCountInput = document.getElementById("custom-levels-count");
+  // const projectNameInput = document.getElementById("project-name");
+  // const projectFloorsInput = document.getElementById("project-floors");
+  // const projectSectionsInput = document.getElementById("project-sections");
+  // const projectHasPhInput = document.getElementById("project-has-ph");
+  // const addProjectBtn = document.getElementById("add-project-btn");
+  // const advancedSettingsToggle = document.getElementById(
+  //   "advanced-settings-toggle",
+  // );
+  // const simpleProjectSettings = document.getElementById(
+  //   "simple-project-settings",
+  // );
+  // const advancedProjectSettings = document.getElementById(
+  //   "advanced-project-settings",
+  // );
+  // const customLevelsCountInput = document.getElementById("custom-levels-count");
   const customLevelsContainer = document.getElementById(
     "custom-levels-container",
   );
-  const customAreasCountInput = document.getElementById("custom-areas-count");
+  // const customAreasCountInput = document.getElementById("custom-areas-count");
   const customAreasContainer = document.getElementById(
     "custom-areas-container",
   );
-  const addCustomLevelsCountInput = document.getElementById(
-    "add-custom-levels-count",
-  );
+  // const addCustomLevelsCountInput = document.getElementById(
+  //   "add-custom-levels-count",
+  // );
   // const addDecrementLevelsBtn = document.getElementById(
   //   "add-decrement-levels-btn",
   // );
@@ -207,56 +207,56 @@ document.addEventListener("DOMContentLoaded", () => {
   // );
   const jointTypeInput = document.getElementById("joint-type");
   const jointNameInput = document.getElementById("joint-name");
-  const flangeSizeInput = document.getElementById("flange-size");
-  const flangeCountInput = document.getElementById("flange-count");
-  const webSizeInput = document.getElementById("web-size");
-  const webCountInput = document.getElementById("web-count");
-  const addJointBtn = document.getElementById("add-joint-btn");
-  const jointListsContainer = document.getElementById("joint-lists-container");
+  // const flangeSizeInput = document.getElementById("flange-size");
+  // const flangeCountInput = document.getElementById("flange-count");
+  // const webSizeInput = document.getElementById("web-size");
+  // const webCountInput = document.getElementById("web-count");
+  // const addJointBtn = document.getElementById("add-joint-btn");
+  // const jointListsContainer = document.getElementById("joint-lists-container");
 
   const tallySheetContainer = document.getElementById("tally-sheet-container");
-  const resultsCard = document.getElementById("results-card");
+  // const resultsCard = document.getElementById("results-card");
 
-  const isPinJointInput = document.getElementById("is-pin-joint");
-  const countAsMemberInput = document.getElementById("count-as-member");
-  const memberNameInput = document.getElementById("member-name");
-  const addMemberBtn = document.getElementById("add-member-btn");
-  const memberListsContainer = document.getElementById(
-    "member-lists-container",
-  );
-  const editModal = document.getElementById("edit-joint-modal");
+  // const isPinJointInput = document.getElementById("is-pin-joint");
+  // const countAsMemberInput = document.getElementById("count-as-member");
+  // const memberNameInput = document.getElementById("member-name");
+  // const addMemberBtn = document.getElementById("add-member-btn");
+  // const memberListsContainer = document.getElementById(
+  //   "member-lists-container",
+  // );
+  // const editModal = document.getElementById("edit-joint-modal");
 
-  const saveJointBtn = document.getElementById("save-joint-btn");
-  const editJointIdInput = document.getElementById("edit-joint-id");
-  const editJointTypeInput = document.getElementById("edit-joint-type");
-  const editJointNameInput = document.getElementById("edit-joint-name");
-  const editFlangeSizeInput = document.getElementById("edit-flange-size");
-  const editFlangeCountInput = document.getElementById("edit-flange-count");
-  const editWebSizeInput = document.getElementById("edit-web-size");
-  const editWebCountInput = document.getElementById("edit-web-count");
+  // const saveJointBtn = document.getElementById("save-joint-btn");
+  // const editJointIdInput = document.getElementById("edit-joint-id");
+  // const editJointTypeInput = document.getElementById("edit-joint-type");
+  // const editJointNameInput = document.getElementById("edit-joint-name");
+  // const editFlangeSizeInput = document.getElementById("edit-flange-size");
+  // const editFlangeCountInput = document.getElementById("edit-flange-count");
+  // const editWebSizeInput = document.getElementById("edit-web-size");
+  // const editWebCountInput = document.getElementById("edit-web-count");
 
-  const editIsPinJointInput = document.getElementById("edit-is-pin-joint");
-  const editCountAsMemberInput = document.getElementById(
-    "edit-count-as-member",
-  );
-  const editMemberModal = document.getElementById("edit-member-modal");
+  // const editIsPinJointInput = document.getElementById("edit-is-pin-joint");
+  // const editCountAsMemberInput = document.getElementById(
+  //   "edit-count-as-member",
+  // );
+  // const editMemberModal = document.getElementById("edit-member-modal");
 
-  const saveMemberBtn = document.getElementById("save-member-btn");
-  const editMemberIdInput = document.getElementById("edit-member-id");
-  const editMemberNameInput = document.getElementById("edit-member-name");
-  const editMemberJointSelect = document.getElementById(
-    "edit-member-joint-select",
-  );
-  const editProjectModal = document.getElementById("edit-project-modal");
+  // const saveMemberBtn = document.getElementById("save-member-btn");
+  // const editMemberIdInput = document.getElementById("edit-member-id");
+  // const editMemberNameInput = document.getElementById("edit-member-name");
+  // const editMemberJointSelect = document.getElementById(
+  //   "edit-member-joint-select",
+  // );
+  // const editProjectModal = document.getElementById("edit-project-modal");
 
-  const saveProjectBtn = document.getElementById("save-project-btn");
-  const editProjectIdInput = document.getElementById("edit-project-id");
-  const editProjectNameInput = document.getElementById("edit-project-name");
-  const editProjectFloorsInput = document.getElementById("edit-project-floors");
-  const editProjectSectionsInput = document.getElementById(
-    "edit-project-sections",
-  );
-  const editProjectHasPhInput = document.getElementById("edit-project-has-ph");
+  // const saveProjectBtn = document.getElementById("save-project-btn");
+  // const editProjectIdInput = document.getElementById("edit-project-id");
+  // const editProjectNameInput = document.getElementById("edit-project-name");
+  // const editProjectFloorsInput = document.getElementById("edit-project-floors");
+  // const editProjectSectionsInput = document.getElementById(
+  //   "edit-project-sections",
+  // );
+  // const editProjectHasPhInput = document.getElementById("edit-project-has-ph");
 
   // const editCustomLevelsCountInput = document.getElementById(
   //   "edit-custom-levels-count",
@@ -271,13 +271,13 @@ document.addEventListener("DOMContentLoaded", () => {
   //   "edit-custom-areas-container",
   // );
   // const confirmDeleteModal = document.getElementById("confirm-delete-modal");
-  const confirmDeleteBtn = document.getElementById("confirm-delete-btn");
+  // const confirmDeleteBtn = document.getElementById("confirm-delete-btn");
   // const cancelDeleteBtn = document.getElementById("cancel-delete-btn");
-  const deleteIdInput = document.getElementById("delete-id");
-  const deleteTypeInput = document.getElementById("delete-type");
+  // const deleteIdInput = document.getElementById("delete-id");
+  // const deleteTypeInput = document.getElementById("delete-type");
 
   const confirmAddModal = document.getElementById("confirm-add-modal");
-  const confirmAddMessage = document.getElementById("confirm-add-message");
+  // const confirmAddMessage = document.getElementById("confirm-add-message");
   const confirmAddBtn = document.getElementById("confirm-add-btn");
 
   const boltSelectorModal = document.getElementById("bolt-selector-modal");
@@ -285,11 +285,11 @@ document.addEventListener("DOMContentLoaded", () => {
     "bolt-options-container",
   );
 
-  const tempBoltSettingInput = document.getElementById("temp-bolt-setting");
+  // const tempBoltSettingInput = document.getElementById("temp-bolt-setting");
 
-  const editTempBoltSettingInput = document.getElementById(
-    "edit-temp-bolt-setting",
-  );
+  // const editTempBoltSettingInput = document.getElementById(
+  //   "edit-temp-bolt-setting",
+  // );
   const jointSelectorModal = document.getElementById("joint-selector-modal");
   const closeJointModalBtn = document.getElementById("close-joint-modal-btn");
   const openJointSelectorBtn = document.getElementById(
@@ -302,40 +302,40 @@ document.addEventListener("DOMContentLoaded", () => {
     "member-joint-select-input",
   );
   const memberJointSelectId = document.getElementById("member-joint-select-id");
-  const tempBoltMappingModal = document.getElementById(
-    "temp-bolt-mapping-modal",
-  );
-  const openTempBoltMappingBtn = document.getElementById(
-    "open-temp-bolt-mapping-btn",
-  );
-  const closeTempBoltMappingModalBtn = document.getElementById(
-    "close-temp-bolt-mapping-modal-btn",
-  );
-  const cancelTempBoltMappingBtn = document.getElementById(
-    "cancel-temp-bolt-mapping-btn",
-  );
-  const tempBoltMappingContainer = document.getElementById(
-    "temp-bolt-mapping-container",
-  );
+  // const tempBoltMappingModal = document.getElementById(
+  //   "temp-bolt-mapping-modal",
+  // );
+  // // const openTempBoltMappingBtn = document.getElementById(
+  //   "open-temp-bolt-mapping-btn",
+  // );
+  // // const closeTempBoltMappingModalBtn = document.getElementById(
+  //   "close-temp-bolt-mapping-modal-btn",
+  // );
+  // const cancelTempBoltMappingBtn = document.getElementById(
+  //   "cancel-temp-bolt-mapping-btn",
+  // );
+  // const tempBoltMappingContainer = document.getElementById(
+  //   "temp-bolt-mapping-container",
+  // );
 
-  const isDoubleShearInput = document.getElementById("is-double-shear");
-  const editIsDoubleShearInput = document.getElementById(
-    "edit-is-double-shear",
-  );
+  // const isDoubleShearInput = document.getElementById("is-double-shear");
+  // const editIsDoubleShearInput = document.getElementById(
+  //   "edit-is-double-shear",
+  // );
 
   const hasBoltCorrectionInput = document.getElementById("has-bolt-correction");
-  const editHasBoltCorrectionInput = document.getElementById(
-    "edit-has-bolt-correction",
-  );
+  // const editHasBoltCorrectionInput = document.getElementById(
+  //   "edit-has-bolt-correction",
+  // );
   const shopSplGroup = document.getElementById("shop-spl-group");
   const hasShopSplInput = document.getElementById("has-shop-spl");
-  const editHasShopSplInput = document.getElementById("edit-has-shop-spl");
-  const confirmMemberDeletionModal = document.getElementById(
-    "confirm-member-deletion-modal",
-  );
-  const confirmMemberDeletionMessage = document.getElementById(
-    "confirm-member-deletion-message",
-  );
+  // const editHasShopSplInput = document.getElementById("edit-has-shop-spl");
+  // const confirmMemberDeletionModal = document.getElementById(
+  //   "confirm-member-deletion-modal",
+  // );
+  // const confirmMemberDeletionMessage = document.getElementById(
+  //   "confirm-member-deletion-message",
+  // );
   // const confirmMemberDeletionBtn = document.getElementById(
   //   "confirm-member-deletion-btn",
   // );
@@ -347,18 +347,18 @@ document.addEventListener("DOMContentLoaded", () => {
   // const decrementAreasBtn = document.getElementById("decrement-areas-btn");
   // const incrementAreasBtn = document.getElementById("increment-areas-btn");
   const confirmActionModal = document.getElementById("confirm-action-modal");
-  const confirmActionMessage = document.getElementById(
-    "confirm-action-message",
-  );
+  // const confirmActionMessage = document.getElementById(
+  //   "confirm-action-message",
+  // );
   const confirmActionBtn = document.getElementById("confirm-action-btn");
   const cancelActionBtn = document.getElementById("cancel-action-btn");
   const shopTempBoltSizeInput = document.getElementById("shop-temp-bolt-size");
   const editShopTempBoltSizeInput = document.getElementById(
     "edit-shop-temp-bolt-size",
   );
-  const editComplexSplCountInput = document.getElementById(
-    "edit-complex-spl-count",
-  );
+  // const editComplexSplCountInput = document.getElementById(
+  //   "edit-complex-spl-count",
+  // );
   // const editDecrementComplexSplBtn = document.getElementById(
   //   "edit-decrement-complex-spl-btn"
   // );
@@ -1745,217 +1745,217 @@ document.addEventListener("DOMContentLoaded", () => {
   // });
   // ▲▲▲【新しいコードはここまで】▲▲▲
 
-  resultsCard.addEventListener("click", (e) => {
-    const project = state.projects.find((p) => p.id === state.currentProjectId);
-    if (!project) return;
+  // resultsCard.addEventListener("click", (e) => {
+  //   const project = state.projects.find((p) => p.id === state.currentProjectId);
+  //   if (!project) return;
 
-    if (e.target.closest("#recalculate-btn")) {
-      const newTally = {};
-      const inputs = document.querySelectorAll(".tally-input");
-      inputs.forEach((input) => {
-        const quantity = parseInt(input.value) || 0;
-        if (quantity > 0) {
-          const { location, id } = input.dataset;
-          if (!newTally[location]) newTally[location] = {};
-          newTally[location][id] = quantity;
-        }
-      });
+  //   if (e.target.closest("#recalculate-btn")) {
+  //     const newTally = {};
+  //     const inputs = document.querySelectorAll(".tally-input");
+  //     inputs.forEach((input) => {
+  //       const quantity = parseInt(input.value) || 0;
+  //       if (quantity > 0) {
+  //         const { location, id } = input.dataset;
+  //         if (!newTally[location]) newTally[location] = {};
+  //         newTally[location][id] = quantity;
+  //       }
+  //     });
 
-      project.tally = newTally;
-      renderResults(project);
+  //     project.tally = newTally;
+  //     renderResults(project);
 
-      updateProjectData(state.currentProjectId, { tally: newTally }).catch(
-        (err) => {
-          // 万が一失敗した時だけアラートを出す
-          console.error("Error saving full tally:", err);
-          showCustomAlert("保存に失敗しました。リロードしてください。");
-        },
-      );
+  //     updateProjectData(state.currentProjectId, { tally: newTally }).catch(
+  //       (err) => {
+  //         // 万が一失敗した時だけアラートを出す
+  //         console.error("Error saving full tally:", err);
+  //         showCustomAlert("保存に失敗しました。リロードしてください。");
+  //       },
+  //     );
 
-      showCustomAlert("結果を更新しました。", {
-        title: "成功",
-        type: "success",
-      });
-    }
+  //     showCustomAlert("結果を更新しました。", {
+  //       title: "成功",
+  //       type: "success",
+  //     });
+  //   }
 
-    if (e.target.closest("#export-excel-btn")) {
-      const { resultsByLocation, allBoltSizes } = calculateResults(project);
-      if (allBoltSizes.size === 0) {
-        return showCustomAlert(
-          "集計表にデータがないため、Excelファイルを出力できません。",
-        );
-      }
-      const wb = XLSX.utils.book_new();
-      const tallyList = getTallyList(project);
-      const typeNameMap = {
-        girder: "大梁",
-        beam: "小梁",
-        column: "本柱",
-        stud: "間柱",
-        wall_girt: "胴縁",
-        roof_purlin: "母屋",
-        other: "その他",
-      };
-      const tallyHeaders = [
-        "階層 / エリア",
-        ...tallyList.map((item) => {
-          let typeName = typeNameMap[item.joint.type] || "不明";
-          if (item.joint.isPinJoint) typeName += "(ピン取り)";
-          return `${item.name}(${typeName})`;
-        }),
-      ];
-      const tallyData = [tallyHeaders];
-      let locations = [];
-      if (project.mode === "advanced") {
-        project.customLevels.forEach((level) =>
-          project.customAreas.forEach((area) =>
-            locations.push({
-              id: `${level}-${area}`,
-              label: `${level} - ${area}`,
-            }),
-          ),
-        );
-      } else {
-        for (let f = 2; f <= project.floors; f++) {
-          for (let s = 1; s <= project.sections; s++)
-            locations.push({ id: `${f}-${s}`, label: `${f}階 ${s}工区` });
-        }
-        for (let s = 1; s <= project.sections; s++)
-          locations.push({ id: `R-${s}`, label: `R階 ${s}工区` });
-        if (project.hasPH) {
-          for (let s = 1; s <= project.sections; s++)
-            locations.push({ id: `${s}-${s}`, label: `PH階 ${s}工区` });
-        }
-      }
-      locations.forEach((loc) => {
-        const row = [loc.label];
-        tallyList.forEach((item) => {
-          const count = project.tally?.[loc.id]?.[item.id] || null;
-          row.push(count);
-        });
-        tallyData.push(row);
-      });
-      const tallySheet = XLSX.utils.aoa_to_sheet(tallyData);
-      XLSX.utils.book_append_sheet(wb, tallySheet, "箇所数シート");
+  //   if (e.target.closest("#export-excel-btn")) {
+  //     const { resultsByLocation, allBoltSizes } = calculateResults(project);
+  //     if (allBoltSizes.size === 0) {
+  //       return showCustomAlert(
+  //         "集計表にデータがないため、Excelファイルを出力できません。",
+  //       );
+  //     }
+  //     const wb = XLSX.utils.book_new();
+  //     const tallyList = getTallyList(project);
+  //     const typeNameMap = {
+  //       girder: "大梁",
+  //       beam: "小梁",
+  //       column: "本柱",
+  //       stud: "間柱",
+  //       wall_girt: "胴縁",
+  //       roof_purlin: "母屋",
+  //       other: "その他",
+  //     };
+  //     const tallyHeaders = [
+  //       "階層 / エリア",
+  //       ...tallyList.map((item) => {
+  //         let typeName = typeNameMap[item.joint.type] || "不明";
+  //         if (item.joint.isPinJoint) typeName += "(ピン取り)";
+  //         return `${item.name}(${typeName})`;
+  //       }),
+  //     ];
+  //     const tallyData = [tallyHeaders];
+  //     let locations = [];
+  //     if (project.mode === "advanced") {
+  //       project.customLevels.forEach((level) =>
+  //         project.customAreas.forEach((area) =>
+  //           locations.push({
+  //             id: `${level}-${area}`,
+  //             label: `${level} - ${area}`,
+  //           }),
+  //         ),
+  //       );
+  //     } else {
+  //       for (let f = 2; f <= project.floors; f++) {
+  //         for (let s = 1; s <= project.sections; s++)
+  //           locations.push({ id: `${f}-${s}`, label: `${f}階 ${s}工区` });
+  //       }
+  //       for (let s = 1; s <= project.sections; s++)
+  //         locations.push({ id: `R-${s}`, label: `R階 ${s}工区` });
+  //       if (project.hasPH) {
+  //         for (let s = 1; s <= project.sections; s++)
+  //           locations.push({ id: `${s}-${s}`, label: `PH階 ${s}工区` });
+  //       }
+  //     }
+  //     locations.forEach((loc) => {
+  //       const row = [loc.label];
+  //       tallyList.forEach((item) => {
+  //         const count = project.tally?.[loc.id]?.[item.id] || null;
+  //         row.push(count);
+  //       });
+  //       tallyData.push(row);
+  //     });
+  //     const tallySheet = XLSX.utils.aoa_to_sheet(tallyData);
+  //     XLSX.utils.book_append_sheet(wb, tallySheet, "箇所数シート");
 
-      const sortedSizes = Array.from(allBoltSizes).sort();
-      const summaryHeaders = ["ボルトサイズ"];
-      const summaryColumns = [];
-      locations.forEach((loc) =>
-        summaryColumns.push({ id: loc.id, label: loc.label }),
-      );
-      summaryHeaders.push(...summaryColumns.map((c) => c.label), "総合計");
-      const summaryData = [summaryHeaders];
+  //     const sortedSizes = Array.from(allBoltSizes).sort();
+  //     const summaryHeaders = ["ボルトサイズ"];
+  //     const summaryColumns = [];
+  //     locations.forEach((loc) =>
+  //       summaryColumns.push({ id: loc.id, label: loc.label }),
+  //     );
+  //     summaryHeaders.push(...summaryColumns.map((c) => c.label), "総合計");
+  //     const summaryData = [summaryHeaders];
 
-      sortedSizes.forEach((size) => {
-        let grandTotal = 0;
-        const row = [size];
-        summaryColumns.forEach((col) => {
-          // ▼▼▼ 修正：オブジェクトから数値(.total)を取り出す ▼▼▼
-          const cellData = resultsByLocation[col.id]?.[size];
-          const count = cellData ? cellData.total : 0;
+  //     sortedSizes.forEach((size) => {
+  //       let grandTotal = 0;
+  //       const row = [size];
+  //       summaryColumns.forEach((col) => {
+  //         // ▼▼▼ 修正：オブジェクトから数値(.total)を取り出す ▼▼▼
+  //         const cellData = resultsByLocation[col.id]?.[size];
+  //         const count = cellData ? cellData.total : 0;
 
-          grandTotal += count;
-          // 0の場合は空欄(null)にして見やすくする
-          row.push(count > 0 ? count : null);
-          // ▲▲▲ 修正ここまで ▲▲▲
-        });
-        row.push(grandTotal);
-        summaryData.push(row);
-      });
+  //         grandTotal += count;
+  //         // 0の場合は空欄(null)にして見やすくする
+  //         row.push(count > 0 ? count : null);
+  //         // ▲▲▲ 修正ここまで ▲▲▲
+  //       });
+  //       row.push(grandTotal);
+  //       summaryData.push(row);
+  //     });
 
-      const summarySheet = XLSX.utils.aoa_to_sheet(summaryData);
-      XLSX.utils.book_append_sheet(wb, summarySheet, "ボルト集計シート");
-      XLSX.writeFile(
-        wb,
-        `${project.name}_ボルト集計_${new Date()
-          .toISOString()
-          .slice(0, 10)}.xlsx`,
-      );
-    }
-    // ▼▼▼【ここから追加】▼▼▼
-    // 注文明細の表示切替ボタンがクリックされた時の処理
-    if (e.target.closest("#toggle-order-view-btn")) {
-      // --- デバッグ用のメッセージをコンソールに出力します ---
-      console.log("「表示切替」ボタンがクリックされました！ (メッセージ1)");
+  //     const summarySheet = XLSX.utils.aoa_to_sheet(summaryData);
+  //     XLSX.utils.book_append_sheet(wb, summarySheet, "ボルト集計シート");
+  //     XLSX.writeFile(
+  //       wb,
+  //       `${project.name}_ボルト集計_${new Date()
+  //         .toISOString()
+  //         .slice(0, 10)}.xlsx`,
+  //     );
+  //   }
+  //   // ▼▼▼【ここから追加】▼▼▼
+  //   // 注文明細の表示切替ボタンがクリックされた時の処理
+  //   if (e.target.closest("#toggle-order-view-btn")) {
+  //     // --- デバッグ用のメッセージをコンソールに出力します ---
+  //     console.log("「表示切替」ボタンがクリックされました！ (メッセージ1)");
 
-      // 1. 表示モードの状態を切り替える
-      state.orderDetailsView =
-        state.orderDetailsView === "location" ? "section" : "location";
-      console.log(
-        "新しい表示モード: ",
-        state.orderDetailsView,
-        "(メッセージ2)",
-      );
+  //     // 1. 表示モードの状態を切り替える
+  //     state.orderDetailsView =
+  //       state.orderDetailsView === "location" ? "section" : "location";
+  //     console.log(
+  //       "新しい表示モード: ",
+  //       state.orderDetailsView,
+  //       "(メッセージ2)",
+  //     );
 
-      // 2. 注文明細エリアだけを新しい表示モードで再描画する
-      const { resultsByLocation } = calculateResults(project);
-      const container = document.getElementById("order-details-container");
-      if (container) {
-        console.log("コンテナを見つけました。HTMLを更新します。(メッセージ3)");
-        container.innerHTML = renderOrderDetails(project, resultsByLocation);
-      } else {
-        // もしコンテナが見つからない場合は、エラーメッセージを出します
-        console.error("【エラー】 order-details-container が見つかりません！");
-      }
+  //     // 2. 注文明細エリアだけを新しい表示モードで再描画する
+  //     const { resultsByLocation } = calculateResults(project);
+  //     const container = document.getElementById("order-details-container");
+  //     if (container) {
+  //       console.log("コンテナを見つけました。HTMLを更新します。(メッセージ3)");
+  //       container.innerHTML = renderOrderDetails(project, resultsByLocation);
+  //     } else {
+  //       // もしコンテナが見つからない場合は、エラーメッセージを出します
+  //       console.error("【エラー】 order-details-container が見つかりません！");
+  //     }
 
-      // ▼▼▼ 追加: 仮ボルト注文明細の再描画 ▼▼▼
-      const tempContainer = document.getElementById(
-        "temp-order-details-container",
-      );
-      if (tempContainer) {
-        renderTempOrderDetails(tempContainer, project);
-      }
-      // ▲▲▲ 追加ここまで ▲▲▲
-    }
+  //     // ▼▼▼ 追加: 仮ボルト注文明細の再描画 ▼▼▼
+  //     const tempContainer = document.getElementById(
+  //       "temp-order-details-container",
+  //     );
+  //     if (tempContainer) {
+  //       renderTempOrderDetails(tempContainer, project);
+  //     }
+  //     // ▲▲▲ 追加ここまで ▲▲▲
+  //   }
 
-    // ▼▼▼ 追加：仮ボルト注文明細の表示切替ボタン ▼▼▼
-    if (e.target.closest("#toggle-temp-order-view-btn")) {
-      // 1. 表示モードの状態を切り替える (state.tempOrderDetailsView を使用)
-      state.tempOrderDetailsView =
-        state.tempOrderDetailsView === "location" ? "section" : "location";
+  //   // ▼▼▼ 追加：仮ボルト注文明細の表示切替ボタン ▼▼▼
+  //   if (e.target.closest("#toggle-temp-order-view-btn")) {
+  //     // 1. 表示モードの状態を切り替える (state.tempOrderDetailsView を使用)
+  //     state.tempOrderDetailsView =
+  //       state.tempOrderDetailsView === "location" ? "section" : "location";
 
-      // 2. 仮ボルト注文明細エリアだけを再描画する
-      const tempContainer = document.getElementById(
-        "temp-order-details-container",
-      );
-      if (tempContainer) {
-        renderTempOrderDetails(tempContainer, project);
-      }
-    }
+  //     // 2. 仮ボルト注文明細エリアだけを再描画する
+  //     const tempContainer = document.getElementById(
+  //       "temp-order-details-container",
+  //     );
+  //     if (tempContainer) {
+  //       renderTempOrderDetails(tempContainer, project);
+  //     }
+  //   }
 
-    // ▼▼▼ 追加：工区まとめ設定（チェックボックス）のイベントリスナー ▼▼▼
-    if (e.target.matches("#temp-order-group-all-checkbox")) {
-      // ステートを更新
-      state.tempOrderDetailsGroupAll = e.target.checked;
+  //   // ▼▼▼ 追加：工区まとめ設定（チェックボックス）のイベントリスナー ▼▼▼
+  //   if (e.target.matches("#temp-order-group-all-checkbox")) {
+  //     // ステートを更新
+  //     state.tempOrderDetailsGroupAll = e.target.checked;
 
-      // 再描画
-      const tempContainer = document.getElementById(
-        "temp-order-details-container",
-      );
-      if (tempContainer) {
-        renderTempOrderDetails(tempContainer, project);
-      }
-    }
-    // ▲▲▲ 追加ここまで ▲▲▲
+  //     // 再描画
+  //     const tempContainer = document.getElementById(
+  //       "temp-order-details-container",
+  //     );
+  //     if (tempContainer) {
+  //       renderTempOrderDetails(tempContainer, project);
+  //     }
+  //   }
+  //   // ▲▲▲ 追加ここまで ▲▲▲
 
-    // ▼▼▼ 追加：グループ化キー（ラジオボタン）のイベントリスナー ▼▼▼
-    if (e.target.matches('input[name="temp-order-group-key"]')) {
-      // ステートを更新
-      state.tempOrderDetailsGroupKey = e.target.value;
+  //   // ▼▼▼ 追加：グループ化キー（ラジオボタン）のイベントリスナー ▼▼▼
+  //   if (e.target.matches('input[name="temp-order-group-key"]')) {
+  //     // ステートを更新
+  //     state.tempOrderDetailsGroupKey = e.target.value;
 
-      // 再描画
-      const tempContainer = document.getElementById(
-        "temp-order-details-container",
-      );
-      if (tempContainer) {
-        renderTempOrderDetails(tempContainer, project);
-      }
-    }
-    // ▲▲▲ 追加ここまで ▲▲▲
-    // ▲▲▲ 追加ここまで ▲▲▲
-    // ▲▲▲【ここまで追加】▲▲▲
-  });
+  //     // 再描画
+  //     const tempContainer = document.getElementById(
+  //       "temp-order-details-container",
+  //     );
+  //     if (tempContainer) {
+  //       renderTempOrderDetails(tempContainer, project);
+  //     }
+  //   }
+  //   // ▲▲▲ 追加ここまで ▲▲▲
+  //   // ▲▲▲ 追加ここまで ▲▲▲
+  //   // ▲▲▲【ここまで追加】▲▲▲
+  // });
 
   // // ★ 修正版：工事情報の保存処理（ハイフン付き階層名対応・即時反映）
   // saveProjectBtn.addEventListener("click", () => {
@@ -2126,14 +2126,14 @@ document.addEventListener("DOMContentLoaded", () => {
   // --- ここから追加 ---
 
   // ▼▼▼ 追加：カラーピッカーの制御 ▼▼▼
-  editJointColorInput.addEventListener("input", () => {
-    editJointColorInput.dataset.isNull = "false"; // 色を選んだら有効化
-  });
+  // editJointColorInput.addEventListener("input", () => {
+  //   editJointColorInput.dataset.isNull = "false"; // 色を選んだら有効化
+  // });
 
-  clearJointColorBtn.addEventListener("click", () => {
-    editJointColorInput.value = "#ffffff";
-    editJointColorInput.dataset.isNull = "true"; // 未設定状態にする
-  });
+  // clearJointColorBtn.addEventListener("click", () => {
+  //   editJointColorInput.value = "#ffffff";
+  //   editJointColorInput.dataset.isNull = "true"; // 未設定状態にする
+  // });
 
   // 確認モーダルの登録ボタンの処理も修正
   // ▼▼▼以下のコードに置き換え▼▼▼
@@ -2627,22 +2627,22 @@ document.addEventListener("DOMContentLoaded", () => {
       // ▲▲▲ ここまでが修正箇所 ▲▲▲
     });
 
-  // 新しいモーダルを閉じるためのイベントリスナー
-  document
-    .getElementById("close-edit-group-modal-btn")
-    .addEventListener("click", () =>
-      closeModal(document.getElementById("edit-group-modal")),
-    );
-  document
-    .getElementById("cancel-edit-group-btn")
-    .addEventListener("click", () =>
-      closeModal(document.getElementById("edit-group-modal")),
-    );
-  document
-    .getElementById("close-aggregated-results-modal-btn")
-    .addEventListener("click", () =>
-      closeModal(document.getElementById("aggregated-results-modal")),
-    );
+  // // 新しいモーダルを閉じるためのイベントリスナー
+  // document
+  //   .getElementById("close-edit-group-modal-btn")
+  //   .addEventListener("click", () =>
+  //     closeModal(document.getElementById("edit-group-modal")),
+  //   );
+  // document
+  //   .getElementById("cancel-edit-group-btn")
+  //   .addEventListener("click", () =>
+  //     closeModal(document.getElementById("edit-group-modal")),
+  //   );
+  // document
+  //   .getElementById("close-aggregated-results-modal-btn")
+  //   .addEventListener("click", () =>
+  //     closeModal(document.getElementById("aggregated-results-modal")),
+  //   );
   // --- App Initialization --- の直前にこのコードブロックを追加 ---
 
   // --- ここから追加 ---
@@ -2721,54 +2721,54 @@ document.addEventListener("DOMContentLoaded", () => {
   // --- App Initialization ---
   // --- ここから追加 ---
 
-  // 詳細表示モーダルを制御するイベントリスナー
+  // // 詳細表示モーダルを制御するイベントリスナー
 
-  resultsCard.addEventListener("click", (e) => {
-    const targetCell = e.target.closest("td.has-details");
-    if (!targetCell) return;
+  // resultsCard.addEventListener("click", (e) => {
+  //   const targetCell = e.target.closest("td.has-details");
+  //   if (!targetCell) return;
 
-    try {
-      const detailsData = JSON.parse(targetCell.dataset.details);
-      const row = targetCell.closest("tr");
-      const boltSize = row.querySelector("td:first-child").textContent;
-      const isTotal =
-        targetCell.textContent ===
-        row.querySelector("td:last-child").textContent;
+  //   try {
+  //     const detailsData = JSON.parse(targetCell.dataset.details);
+  //     const row = targetCell.closest("tr");
+  //     const boltSize = row.querySelector("td:first-child").textContent;
+  //     const isTotal =
+  //       targetCell.textContent ===
+  //       row.querySelector("td:last-child").textContent;
 
-      const modalTitle = document.getElementById("details-modal-title");
-      const modalContent = document.getElementById("details-modal-content");
+  //     const modalTitle = document.getElementById("details-modal-title");
+  //     const modalContent = document.getElementById("details-modal-content");
 
-      modalTitle.textContent = isTotal
-        ? `${boltSize} の総合計内訳`
-        : `${boltSize} の内訳`;
+  //     modalTitle.textContent = isTotal
+  //       ? `${boltSize} の総合計内訳`
+  //       : `${boltSize} の内訳`;
 
-      let contentHtml = '<ul class="space-y-2 text-base">';
-      const sortedJoints = Object.entries(detailsData).sort((a, b) =>
-        a[0].localeCompare(b[0]),
-      );
+  //     let contentHtml = '<ul class="space-y-2 text-base">';
+  //     const sortedJoints = Object.entries(detailsData).sort((a, b) =>
+  //       a[0].localeCompare(b[0]),
+  //     );
 
-      for (const [name, count] of sortedJoints) {
-        contentHtml += `
-                <li class="flex justify-between items-center border-b border-slate-200 dark:border-slate-700 pb-2">
-                    <span class="text-slate-700 dark:text-slate-300">${name}:</span>
-                    <span class="font-bold text-lg text-slate-900 dark:text-slate-100">${count.toLocaleString()}本</span>
-                </li>`;
-      }
-      contentHtml += "</ul>";
+  //     for (const [name, count] of sortedJoints) {
+  //       contentHtml += `
+  //               <li class="flex justify-between items-center border-b border-slate-200 dark:border-slate-700 pb-2">
+  //                   <span class="text-slate-700 dark:text-slate-300">${name}:</span>
+  //                   <span class="font-bold text-lg text-slate-900 dark:text-slate-100">${count.toLocaleString()}本</span>
+  //               </li>`;
+  //     }
+  //     contentHtml += "</ul>";
 
-      modalContent.innerHTML = contentHtml;
-      openModal(document.getElementById("details-modal"));
-    } catch (err) {
-      console.error("Failed to parse details data:", err);
-    }
-  });
+  //     modalContent.innerHTML = contentHtml;
+  //     openModal(document.getElementById("details-modal"));
+  //   } catch (err) {
+  //     console.error("Failed to parse details data:", err);
+  //   }
+  // });
 
-  // 詳細表示モーダルを閉じるボタンのリスナー
-  document
-    .getElementById("close-details-modal-btn")
-    .addEventListener("click", () => {
-      closeModal(document.getElementById("details-modal"));
-    });
+  // // 詳細表示モーダルを閉じるボタンのリスナー
+  // document
+  //   .getElementById("close-details-modal-btn")
+  //   .addEventListener("click", () => {
+  //     closeModal(document.getElementById("details-modal"));
+  //   });
 
   // --- ここから追加 ---
 
