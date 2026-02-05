@@ -1342,251 +1342,251 @@ document.addEventListener("DOMContentLoaded", () => {
   // ★ 修正版：継手の保存処理（新規・編集 両対応）
   // ★ 修正版：継手の保存処理（連続登録対応）
   // ★ 修正版：継手の保存処理（データ整合性確保・連続登録対応）
-  saveJointBtn.addEventListener("click", () => {
-    const project = state.projects.find((p) => p.id === state.currentProjectId);
-    const jointId = editJointIdInput.value; // 空なら新規
-    if (!project) return;
+  // saveJointBtn.addEventListener("click", () => {
+  //   const project = state.projects.find((p) => p.id === state.currentProjectId);
+  //   const jointId = editJointIdInput.value; // 空なら新規
+  //   if (!project) return;
 
-    const oldJoint = jointId
-      ? project.joints.find((j) => j.id === jointId)
-      : {};
+  //   const oldJoint = jointId
+  //     ? project.joints.find((j) => j.id === jointId)
+  //     : {};
 
-    // --- 入力値のチェック ---
-    const type = editJointTypeInput.value;
-    const name = editJointNameInput.value.trim();
-    if (!name)
-      return showCustomAlert("継手名を入力してください。", {
-        invalidElements: [editJointNameInput],
-      });
+  //   // --- 入力値のチェック ---
+  //   const type = editJointTypeInput.value;
+  //   const name = editJointNameInput.value.trim();
+  //   if (!name)
+  //     return showCustomAlert("継手名を入力してください。", {
+  //       invalidElements: [editJointNameInput],
+  //     });
 
-    // 新規登録時の名前重複チェック
-    if (!jointId && project.joints.some((j) => j.name === name)) {
-      return showCustomAlert(`継手名「${name}」は既に登録されています。`);
-    }
+  //   // 新規登録時の名前重複チェック
+  //   if (!jointId && project.joints.some((j) => j.name === name)) {
+  //     return showCustomAlert(`継手名「${name}」は既に登録されています。`);
+  //   }
 
-    // ▼▼▼ 修正：継手の種類に応じてフラグを強制補正する ▼▼▼
-    let isPin = editIsPinJointInput.checked;
-    let isDoubleShear = editIsDoubleShearInput.checked;
-    const tempSetting = editTempBoltSettingInput.value;
-    let hasShopSpl = editHasShopSplInput.checked;
-    let isComplexSpl = editIsComplexSplInput.checked;
+  //   // ▼▼▼ 修正：継手の種類に応じてフラグを強制補正する ▼▼▼
+  //   let isPin = editIsPinJointInput.checked;
+  //   let isDoubleShear = editIsDoubleShearInput.checked;
+  //   const tempSetting = editTempBoltSettingInput.value;
+  //   let hasShopSpl = editHasShopSplInput.checked;
+  //   let isComplexSpl = editIsComplexSplInput.checked;
 
-    // ピン接合を持てるタイプ（これ以外は強制OFF）
-    const pinCapableTypes = ["girder", "beam", "stud", "other"];
-    if (!pinCapableTypes.includes(type)) {
-      isPin = false;
-      isDoubleShear = false;
-      isComplexSpl = false; // 複合SPLも無効化
-    }
+  //   // ピン接合を持てるタイプ（これ以外は強制OFF）
+  //   const pinCapableTypes = ["girder", "beam", "stud", "other"];
+  //   if (!pinCapableTypes.includes(type)) {
+  //     isPin = false;
+  //     isDoubleShear = false;
+  //     isComplexSpl = false; // 複合SPLも無効化
+  //   }
 
-    // 2面せん断がOFFなら、それに依存するオプションも整理
-    if (!isPin) {
-      isDoubleShear = false;
-    }
+  //   // 2面せん断がOFFなら、それに依存するオプションも整理
+  //   if (!isPin) {
+  //     isDoubleShear = false;
+  //   }
 
-    // 工場SPLを持てるタイプ
-    const splCapableTypes = ["girder", "beam", "stud", "other"];
-    if (!splCapableTypes.includes(type)) {
-      hasShopSpl = false;
-    }
-    // ▲▲▲ 修正ここまで ▲▲▲
+  //   // 工場SPLを持てるタイプ
+  //   const splCapableTypes = ["girder", "beam", "stud", "other"];
+  //   if (!splCapableTypes.includes(type)) {
+  //     hasShopSpl = false;
+  //   }
+  //   // ▲▲▲ 修正ここまで ▲▲▲
 
-    if (isComplexSpl) {
-      const splCount = parseInt(editComplexSplCountInput.value);
-      const invalidElements = [];
-      for (let i = 1; i <= splCount; i++) {
-        const suffix = i > 1 ? `-${i}` : "";
-        const sizeInput = document.getElementById(`edit-web-size${suffix}`);
-        const countInput = document.getElementById(`edit-web-count${suffix}`);
-        if (!sizeInput.value) invalidElements.push(sizeInput.parentElement);
-        if (!countInput.value) invalidElements.push(countInput);
-      }
-      if (invalidElements.length > 0)
-        return showCustomAlert(
-          "複合型SPLのウェブサイズと本数をすべて入力してください。",
-          { invalidElements },
-        );
-    }
-    const webCountForValidation = isComplexSpl
-      ? 0
-      : parseInt(editWebCountInput.value) || 0;
-    if (isPin && isDoubleShear && !isComplexSpl && webCountForValidation < 2) {
-      return showCustomAlert(
-        "2面せん断,シングルSPLの場合、ボルト本数は2本以上で入力してください。",
-        { invalidElements: [editWebCountInput] },
-      );
-    }
+  //   if (isComplexSpl) {
+  //     const splCount = parseInt(editComplexSplCountInput.value);
+  //     const invalidElements = [];
+  //     for (let i = 1; i <= splCount; i++) {
+  //       const suffix = i > 1 ? `-${i}` : "";
+  //       const sizeInput = document.getElementById(`edit-web-size${suffix}`);
+  //       const countInput = document.getElementById(`edit-web-count${suffix}`);
+  //       if (!sizeInput.value) invalidElements.push(sizeInput.parentElement);
+  //       if (!countInput.value) invalidElements.push(countInput);
+  //     }
+  //     if (invalidElements.length > 0)
+  //       return showCustomAlert(
+  //         "複合型SPLのウェブサイズと本数をすべて入力してください。",
+  //         { invalidElements },
+  //       );
+  //   }
+  //   const webCountForValidation = isComplexSpl
+  //     ? 0
+  //     : parseInt(editWebCountInput.value) || 0;
+  //   if (isPin && isDoubleShear && !isComplexSpl && webCountForValidation < 2) {
+  //     return showCustomAlert(
+  //       "2面せん断,シングルSPLの場合、ボルト本数は2本以上で入力してください。",
+  //       { invalidElements: [editWebCountInput] },
+  //     );
+  //   }
 
-    // --- データ作成 ---
-    let updatedDataPayload = {
-      ...oldJoint,
-      id: jointId || `joint_${Date.now()}`,
-      type,
-      isPinJoint: isPin,
-      isDoubleShear,
-      hasShopSpl,
-      hasBoltCorrection: hasShopSpl && editHasBoltCorrectionInput.checked,
-      countAsMember: editCountAsMemberInput.checked,
-      name: name,
-      // ▼▼▼ 追加：色の保存（未設定フラグがあれば null） ▼▼▼
-      color:
-        editJointColorInput.dataset.isNull === "true"
-          ? null
-          : editJointColorInput.value,
-      // ▲▲▲ 追加ここまで ▲▲▲
-      // ★追加
-      isBundledWithColumn:
-        type !== "column" &&
-        editIsBundledWithColumnInput &&
-        editIsBundledWithColumnInput.checked,
-      flangeSize: editFlangeSizeInput.value,
-      flangeCount: parseInt(editFlangeCountInput.value) || 0,
-      webSize: editWebSizeInput.value,
-      webCount: parseInt(editWebCountInput.value) || 0,
-      isComplexSpl,
-      complexSplCount: isComplexSpl
-        ? parseInt(editComplexSplCountInput.value)
-        : null,
-      webInputs: null,
-      tempBoltSetting: type === "column" ? "none" : tempSetting,
-      shopTempBoltCount:
-        parseInt(document.getElementById("edit-shop-temp-bolt-count").value) ||
-        null,
-      shopTempBoltSize:
-        document.getElementById("edit-shop-temp-bolt-size").value || null,
-      shopTempBoltCount_F:
-        parseInt(
-          document.getElementById("edit-shop-temp-bolt-count-f").value,
-        ) || null,
-      shopTempBoltSize_F:
-        document.getElementById("edit-shop-temp-bolt-size-f").value || null,
-      shopTempBoltCount_W:
-        parseInt(
-          document.getElementById("edit-shop-temp-bolt-count-w").value,
-        ) || null,
-      shopTempBoltSize_W:
-        document.getElementById("edit-shop-temp-bolt-size-w").value || null,
-    };
+  //   // --- データ作成 ---
+  //   let updatedDataPayload = {
+  //     ...oldJoint,
+  //     id: jointId || `joint_${Date.now()}`,
+  //     type,
+  //     isPinJoint: isPin,
+  //     isDoubleShear,
+  //     hasShopSpl,
+  //     hasBoltCorrection: hasShopSpl && editHasBoltCorrectionInput.checked,
+  //     countAsMember: editCountAsMemberInput.checked,
+  //     name: name,
+  //     // ▼▼▼ 追加：色の保存（未設定フラグがあれば null） ▼▼▼
+  //     color:
+  //       editJointColorInput.dataset.isNull === "true"
+  //         ? null
+  //         : editJointColorInput.value,
+  //     // ▲▲▲ 追加ここまで ▲▲▲
+  //     // ★追加
+  //     isBundledWithColumn:
+  //       type !== "column" &&
+  //       editIsBundledWithColumnInput &&
+  //       editIsBundledWithColumnInput.checked,
+  //     flangeSize: editFlangeSizeInput.value,
+  //     flangeCount: parseInt(editFlangeCountInput.value) || 0,
+  //     webSize: editWebSizeInput.value,
+  //     webCount: parseInt(editWebCountInput.value) || 0,
+  //     isComplexSpl,
+  //     complexSplCount: isComplexSpl
+  //       ? parseInt(editComplexSplCountInput.value)
+  //       : null,
+  //     webInputs: null,
+  //     tempBoltSetting: type === "column" ? "none" : tempSetting,
+  //     shopTempBoltCount:
+  //       parseInt(document.getElementById("edit-shop-temp-bolt-count").value) ||
+  //       null,
+  //     shopTempBoltSize:
+  //       document.getElementById("edit-shop-temp-bolt-size").value || null,
+  //     shopTempBoltCount_F:
+  //       parseInt(
+  //         document.getElementById("edit-shop-temp-bolt-count-f").value,
+  //       ) || null,
+  //     shopTempBoltSize_F:
+  //       document.getElementById("edit-shop-temp-bolt-size-f").value || null,
+  //     shopTempBoltCount_W:
+  //       parseInt(
+  //         document.getElementById("edit-shop-temp-bolt-count-w").value,
+  //       ) || null,
+  //     shopTempBoltSize_W:
+  //       document.getElementById("edit-shop-temp-bolt-size-w").value || null,
+  //   };
 
-    // サイズ情報のクリーンアップ
-    if (isPin) {
-      updatedDataPayload.flangeSize = "";
-      updatedDataPayload.flangeCount = 0;
-    } else if (["column", "wall_girt", "roof_purlin"].includes(type)) {
-      updatedDataPayload.webSize = "";
-      updatedDataPayload.webCount = 0;
-    }
+  //   // サイズ情報のクリーンアップ
+  //   if (isPin) {
+  //     updatedDataPayload.flangeSize = "";
+  //     updatedDataPayload.flangeCount = 0;
+  //   } else if (["column", "wall_girt", "roof_purlin"].includes(type)) {
+  //     updatedDataPayload.webSize = "";
+  //     updatedDataPayload.webCount = 0;
+  //   }
 
-    if (isComplexSpl) {
-      updatedDataPayload.webSize = "";
-      updatedDataPayload.webCount = 0;
-      updatedDataPayload.webInputs = Array.from(
-        { length: parseInt(editComplexSplCountInput.value) },
-        (_, i) => {
-          const suffix = i === 0 ? "" : `-${i + 1}`;
-          return {
-            size:
-              document.getElementById(`edit-web-size${suffix}`)?.value || "",
-            count:
-              parseInt(
-                document.getElementById(`edit-web-count${suffix}`)?.value,
-              ) || 0,
-          };
-        },
-      );
-    }
+  //   if (isComplexSpl) {
+  //     updatedDataPayload.webSize = "";
+  //     updatedDataPayload.webCount = 0;
+  //     updatedDataPayload.webInputs = Array.from(
+  //       { length: parseInt(editComplexSplCountInput.value) },
+  //       (_, i) => {
+  //         const suffix = i === 0 ? "" : `-${i + 1}`;
+  //         return {
+  //           size:
+  //             document.getElementById(`edit-web-size${suffix}`)?.value || "",
+  //           count:
+  //             parseInt(
+  //               document.getElementById(`edit-web-count${suffix}`)?.value,
+  //             ) || 0,
+  //         };
+  //       },
+  //     );
+  //   }
 
-    // --- 保存実行 ---
-    const performUpdate = (finalJointData, finalMembers) => {
-      const projectIndex = state.projects.findIndex(
-        (p) => p.id === state.currentProjectId,
-      );
-      if (projectIndex === -1) return;
+  //   // --- 保存実行 ---
+  //   const performUpdate = (finalJointData, finalMembers) => {
+  //     const projectIndex = state.projects.findIndex(
+  //       (p) => p.id === state.currentProjectId,
+  //     );
+  //     if (projectIndex === -1) return;
 
-      let newJointsList;
-      if (jointId) {
-        newJointsList = state.projects[projectIndex].joints.map((j) =>
-          j.id === jointId ? finalJointData : j,
-        );
-      } else {
-        newJointsList = [
-          ...state.projects[projectIndex].joints,
-          finalJointData,
-        ];
-      }
+  //     let newJointsList;
+  //     if (jointId) {
+  //       newJointsList = state.projects[projectIndex].joints.map((j) =>
+  //         j.id === jointId ? finalJointData : j,
+  //       );
+  //     } else {
+  //       newJointsList = [
+  //         ...state.projects[projectIndex].joints,
+  //         finalJointData,
+  //       ];
+  //     }
 
-      state.projects[projectIndex].joints = newJointsList;
-      if (finalMembers) {
-        state.projects[projectIndex].members = finalMembers;
-      }
+  //     state.projects[projectIndex].joints = newJointsList;
+  //     if (finalMembers) {
+  //       state.projects[projectIndex].members = finalMembers;
+  //     }
 
-      renderDetailView();
+  //     renderDetailView();
 
-      if (jointId) {
-        // 編集モードなら閉じる
-        closeModal(editModal);
-      } else {
-        // 新規登録モードならリセットして継続
-        resetJointForm();
-        editJointIdInput.value = "";
-        document.getElementById("edit-joint-name").focus();
-      }
+  //     if (jointId) {
+  //       // 編集モードなら閉じる
+  //       closeModal(editModal);
+  //     } else {
+  //       // 新規登録モードならリセットして継続
+  //       resetJointForm();
+  //       editJointIdInput.value = "";
+  //       document.getElementById("edit-joint-name").focus();
+  //     }
 
-      let boltInfo = "";
-      if (finalJointData.isComplexSpl && finalJointData.webInputs)
-        boltInfo = finalJointData.webInputs
-          .map((w) => `${w.size}/${w.count}本`)
-          .join(", ");
-      else if (finalJointData.isPinJoint)
-        boltInfo = `${finalJointData.webSize} / ${finalJointData.webCount}本`;
-      else if (
-        ["column", "wall_girt", "roof_purlin"].includes(finalJointData.type)
-      )
-        boltInfo = `${finalJointData.flangeSize} / ${finalJointData.flangeCount}本`;
-      else
-        boltInfo = `F:${finalJointData.flangeSize}/${finalJointData.flangeCount}本, W:${finalJointData.webSize}/${finalJointData.webCount}本`;
+  //     let boltInfo = "";
+  //     if (finalJointData.isComplexSpl && finalJointData.webInputs)
+  //       boltInfo = finalJointData.webInputs
+  //         .map((w) => `${w.size}/${w.count}本`)
+  //         .join(", ");
+  //     else if (finalJointData.isPinJoint)
+  //       boltInfo = `${finalJointData.webSize} / ${finalJointData.webCount}本`;
+  //     else if (
+  //       ["column", "wall_girt", "roof_purlin"].includes(finalJointData.type)
+  //     )
+  //       boltInfo = `${finalJointData.flangeSize} / ${finalJointData.flangeCount}本`;
+  //     else
+  //       boltInfo = `F:${finalJointData.flangeSize}/${finalJointData.flangeCount}本, W:${finalJointData.webSize}/${finalJointData.webCount}本`;
 
-      const actionWord = jointId ? "更新" : "登録";
-      showToast(
-        `継手「${finalJointData.name}」を${actionWord}しました (${boltInfo})`,
-      );
+  //     const actionWord = jointId ? "更新" : "登録";
+  //     showToast(
+  //       `継手「${finalJointData.name}」を${actionWord}しました (${boltInfo})`,
+  //     );
 
-      const updatePayload = { joints: newJointsList };
-      if (finalMembers) updatePayload.members = finalMembers;
+  //     const updatePayload = { joints: newJointsList };
+  //     if (finalMembers) updatePayload.members = finalMembers;
 
-      updateProjectData(state.currentProjectId, updatePayload).catch((err) => {
-        showCustomAlert(`継手の${actionWord}に失敗しました。`);
-        console.error("保存失敗: ", err);
-      });
-    };
+  //     updateProjectData(state.currentProjectId, updatePayload).catch((err) => {
+  //       showCustomAlert(`継手の${actionWord}に失敗しました。`);
+  //       console.error("保存失敗: ", err);
+  //     });
+  //   };
 
-    if (
-      jointId &&
-      updatedDataPayload.countAsMember &&
-      !oldJoint.countAsMember
-    ) {
-      const membersToDelete = (project.members || []).filter(
-        (member) => member.jointId === jointId,
-      );
-      if (membersToDelete.length > 0) {
-        const memberNames = membersToDelete
-          .map((m) => `・${m.name}`)
-          .join("<br>");
-        confirmMemberDeletionMessage.innerHTML = `「部材としてカウント」をONにすると、紐付けられている以下の部材が削除されます。<br><strong class="text-red-600">${memberNames}</strong>`;
-        const updatedMembers = (project.members || []).filter(
-          (member) => member.jointId !== jointId,
-        );
-        state.pendingAction = () => {
-          performUpdate(updatedDataPayload, updatedMembers);
-          closeModal(confirmMemberDeletionModal);
-        };
-        openModal(confirmMemberDeletionModal);
-        return;
-      }
-    }
+  //   if (
+  //     jointId &&
+  //     updatedDataPayload.countAsMember &&
+  //     !oldJoint.countAsMember
+  //   ) {
+  //     const membersToDelete = (project.members || []).filter(
+  //       (member) => member.jointId === jointId,
+  //     );
+  //     if (membersToDelete.length > 0) {
+  //       const memberNames = membersToDelete
+  //         .map((m) => `・${m.name}`)
+  //         .join("<br>");
+  //       confirmMemberDeletionMessage.innerHTML = `「部材としてカウント」をONにすると、紐付けられている以下の部材が削除されます。<br><strong class="text-red-600">${memberNames}</strong>`;
+  //       const updatedMembers = (project.members || []).filter(
+  //         (member) => member.jointId !== jointId,
+  //       );
+  //       state.pendingAction = () => {
+  //         performUpdate(updatedDataPayload, updatedMembers);
+  //         closeModal(confirmMemberDeletionModal);
+  //       };
+  //       openModal(confirmMemberDeletionModal);
+  //       return;
+  //     }
+  //   }
 
-    performUpdate(updatedDataPayload);
-  });
+  //   performUpdate(updatedDataPayload);
+  // });
   // // ★ 修正版：部材の保存処理（新規・編集 両対応）
   // // ★ 修正版：部材保存（階層情報保存対応）
   // // ★ 修正版：部材の保存処理（新規登録時の連続入力対応）

@@ -29,6 +29,7 @@ import {
   generateCustomInputFields,
   updateProjectListUI,
   populateTempBoltMappingModal,
+  resetJointForm,
 } from "./ui.js"; // ui.jsで作った関数を使う
 
 import { resetTempJointData, state } from "./state.js";
@@ -110,6 +111,8 @@ export function setupEventListeners() {
   setupDeleteExecutionEvents();
 
   setupTempBoltMappingEvents(); //仮ボルトマッピング(置き換え設定)
+
+  setupJointActionEvents();
 }
 
 //登録用フローティングボタンイベント
@@ -1816,6 +1819,332 @@ function setupTempBoltMappingEvents() {
           );
         },
       );
+    });
+  }
+}
+/**
+ * 継手の保存（新規登録・更新）に関するイベント
+ */
+function setupJointActionEvents() {
+  const saveJointBtn = document.getElementById("save-joint-btn");
+  const editJointIdInput = document.getElementById("edit-joint-id");
+  const editJointNameInput = document.getElementById("edit-joint-name");
+  const editJointTypeInput = document.getElementById("edit-joint-type");
+  const editModal = document.getElementById("edit-joint-modal");
+
+  // フラグ系チェックボックス
+  const editIsPinJointInput = document.getElementById("edit-is-pin-joint");
+  const editIsDoubleShearInput = document.getElementById(
+    "edit-is-double-shear",
+  );
+  const editTempBoltSettingInput = document.getElementById(
+    "edit-temp-bolt-setting",
+  );
+  const editHasShopSplInput = document.getElementById("edit-has-shop-spl");
+  const editIsComplexSplInput = document.getElementById("edit-is-complex-spl");
+  const editComplexSplCountInput = document.getElementById(
+    "edit-complex-spl-count",
+  );
+  const editHasBoltCorrectionInput = document.getElementById(
+    "edit-has-bolt-correction",
+  );
+  const editCountAsMemberInput = document.getElementById(
+    "edit-count-as-member",
+  );
+  const editIsBundledWithColumnInput = document.getElementById(
+    "edit-is-bundled-with-column",
+  );
+
+  // ボルト情報入力欄
+  const editFlangeSizeInput = document.getElementById("edit-flange-size");
+  const editFlangeCountInput = document.getElementById("edit-flange-count");
+  const editWebSizeInput = document.getElementById("edit-web-size");
+  const editWebCountInput = document.getElementById("edit-web-count");
+  const editJointColorInput = document.getElementById("edit-joint-color");
+
+  // 部材削除確認モーダル関連
+  const confirmMemberDeletionModal = document.getElementById(
+    "confirm-member-deletion-modal",
+  );
+  const confirmMemberDeletionMessage = document.getElementById(
+    "confirm-member-deletion-message",
+  );
+
+  if (saveJointBtn) {
+    saveJointBtn.addEventListener("click", () => {
+      // DOM要素取得チェック (最低限必要なもの)
+      if (!editJointIdInput || !editJointNameInput || !editJointTypeInput)
+        return;
+
+      const project = state.projects.find(
+        (p) => p.id === state.currentProjectId,
+      );
+      const jointId = editJointIdInput.value; // 空なら新規
+      if (!project) return;
+
+      const oldJoint = jointId
+        ? project.joints.find((j) => j.id === jointId)
+        : {};
+
+      // --- 入力値のチェック ---
+      const type = editJointTypeInput.value;
+      const name = editJointNameInput.value.trim();
+
+      if (!name)
+        return showCustomAlert("継手名を入力してください。", {
+          invalidElements: [editJointNameInput],
+        });
+
+      // 新規登録時の名前重複チェック
+      if (!jointId && project.joints.some((j) => j.name === name)) {
+        return showCustomAlert(`継手名「${name}」は既に登録されています。`);
+      }
+
+      // ▼▼▼ 継手の種類に応じてフラグを強制補正 ▼▼▼
+      let isPin = editIsPinJointInput.checked;
+      let isDoubleShear = editIsDoubleShearInput.checked;
+      const tempSetting = editTempBoltSettingInput.value;
+      let hasShopSpl = editHasShopSplInput.checked;
+      let isComplexSpl = editIsComplexSplInput.checked;
+
+      // ピン接合を持てるタイプ（これ以外は強制OFF）
+      const pinCapableTypes = ["girder", "beam", "stud", "other"];
+      if (!pinCapableTypes.includes(type)) {
+        isPin = false;
+        isDoubleShear = false;
+        isComplexSpl = false; // 複合SPLも無効化
+      }
+
+      // 2面せん断がOFFなら、それに依存するオプションも整理
+      if (!isPin) {
+        isDoubleShear = false;
+      }
+
+      // 工場SPLを持てるタイプ
+      const splCapableTypes = ["girder", "beam", "stud", "other"];
+      if (!splCapableTypes.includes(type)) {
+        hasShopSpl = false;
+      }
+      // ▲▲▲ 補正ここまで ▲▲▲
+
+      // 複合SPLのバリデーション
+      if (isComplexSpl) {
+        const splCount = parseInt(editComplexSplCountInput.value);
+        const invalidElements = [];
+        for (let i = 1; i <= splCount; i++) {
+          const suffix = i > 1 ? `-${i}` : "";
+          const sizeInput = document.getElementById(`edit-web-size${suffix}`);
+          const countInput = document.getElementById(`edit-web-count${suffix}`);
+          if (!sizeInput || !sizeInput.value) {
+            if (sizeInput) invalidElements.push(sizeInput.parentElement);
+          }
+          if (!countInput || !countInput.value) {
+            if (countInput) invalidElements.push(countInput);
+          }
+        }
+        if (invalidElements.length > 0)
+          return showCustomAlert(
+            "複合型SPLのウェブサイズと本数をすべて入力してください。",
+            { invalidElements },
+          );
+      }
+
+      const webCountForValidation = isComplexSpl
+        ? 0
+        : parseInt(editWebCountInput.value) || 0;
+      if (
+        isPin &&
+        isDoubleShear &&
+        !isComplexSpl &&
+        webCountForValidation < 2
+      ) {
+        return showCustomAlert(
+          "2面せん断,シングルSPLの場合、ボルト本数は2本以上で入力してください。",
+          { invalidElements: [editWebCountInput] },
+        );
+      }
+
+      // --- データ作成 ---
+      let updatedDataPayload = {
+        ...oldJoint,
+        id: jointId || `joint_${Date.now()}`,
+        type,
+        isPinJoint: isPin,
+        isDoubleShear,
+        hasShopSpl,
+        hasBoltCorrection: hasShopSpl && editHasBoltCorrectionInput.checked,
+        countAsMember: editCountAsMemberInput.checked,
+        name: name,
+        color:
+          editJointColorInput.dataset.isNull === "true"
+            ? null
+            : editJointColorInput.value,
+        isBundledWithColumn:
+          type !== "column" &&
+          editIsBundledWithColumnInput &&
+          editIsBundledWithColumnInput.checked,
+        flangeSize: editFlangeSizeInput.value,
+        flangeCount: parseInt(editFlangeCountInput.value) || 0,
+        webSize: editWebSizeInput.value,
+        webCount: parseInt(editWebCountInput.value) || 0,
+        isComplexSpl,
+        complexSplCount: isComplexSpl
+          ? parseInt(editComplexSplCountInput.value)
+          : null,
+        webInputs: null,
+        tempBoltSetting: type === "column" ? "none" : tempSetting,
+
+        // 仮ボルト詳細設定（DOM要素があれば値を取得）
+        shopTempBoltCount:
+          parseInt(
+            document.getElementById("edit-shop-temp-bolt-count")?.value,
+          ) || null,
+        shopTempBoltSize:
+          document.getElementById("edit-shop-temp-bolt-size")?.value || null,
+        shopTempBoltCount_F:
+          parseInt(
+            document.getElementById("edit-shop-temp-bolt-count-f")?.value,
+          ) || null,
+        shopTempBoltSize_F:
+          document.getElementById("edit-shop-temp-bolt-size-f")?.value || null,
+        shopTempBoltCount_W:
+          parseInt(
+            document.getElementById("edit-shop-temp-bolt-count-w")?.value,
+          ) || null,
+        shopTempBoltSize_W:
+          document.getElementById("edit-shop-temp-bolt-size-w")?.value || null,
+      };
+
+      // サイズ情報のクリーンアップ
+      if (isPin) {
+        updatedDataPayload.flangeSize = "";
+        updatedDataPayload.flangeCount = 0;
+      } else if (["column", "wall_girt", "roof_purlin"].includes(type)) {
+        updatedDataPayload.webSize = "";
+        updatedDataPayload.webCount = 0;
+      }
+
+      if (isComplexSpl) {
+        updatedDataPayload.webSize = "";
+        updatedDataPayload.webCount = 0;
+        updatedDataPayload.webInputs = Array.from(
+          { length: parseInt(editComplexSplCountInput.value) },
+          (_, i) => {
+            const suffix = i === 0 ? "" : `-${i + 1}`;
+            return {
+              size:
+                document.getElementById(`edit-web-size${suffix}`)?.value || "",
+              count:
+                parseInt(
+                  document.getElementById(`edit-web-count${suffix}`)?.value,
+                ) || 0,
+            };
+          },
+        );
+      }
+
+      // --- 保存実行関数 ---
+      const performUpdate = (finalJointData, finalMembers) => {
+        const projectIndex = state.projects.findIndex(
+          (p) => p.id === state.currentProjectId,
+        );
+        if (projectIndex === -1) return;
+
+        let newJointsList;
+        if (jointId) {
+          // 更新
+          newJointsList = state.projects[projectIndex].joints.map((j) =>
+            j.id === jointId ? finalJointData : j,
+          );
+        } else {
+          // 新規追加
+          newJointsList = [
+            ...state.projects[projectIndex].joints,
+            finalJointData,
+          ];
+        }
+
+        state.projects[projectIndex].joints = newJointsList;
+        if (finalMembers) {
+          state.projects[projectIndex].members = finalMembers;
+        }
+
+        renderDetailView();
+
+        if (jointId) {
+          // 編集モードなら閉じる
+          if (editModal) closeModal(editModal);
+        } else {
+          // 新規登録モードならリセットして継続
+          resetJointForm();
+          editJointIdInput.value = "";
+
+          // 名前入力欄にフォーカス
+          if (editJointNameInput) editJointNameInput.focus();
+        }
+
+        let boltInfo = "";
+        if (finalJointData.isComplexSpl && finalJointData.webInputs)
+          boltInfo = finalJointData.webInputs
+            .map((w) => `${w.size}/${w.count}本`)
+            .join(", ");
+        else if (finalJointData.isPinJoint)
+          boltInfo = `${finalJointData.webSize} / ${finalJointData.webCount}本`;
+        else if (
+          ["column", "wall_girt", "roof_purlin"].includes(finalJointData.type)
+        )
+          boltInfo = `${finalJointData.flangeSize} / ${finalJointData.flangeCount}本`;
+        else
+          boltInfo = `F:${finalJointData.flangeSize}/${finalJointData.flangeCount}本, W:${finalJointData.webSize}/${finalJointData.webCount}本`;
+
+        const actionWord = jointId ? "更新" : "登録";
+        showToast(
+          `継手「${finalJointData.name}」を${actionWord}しました (${boltInfo})`,
+        );
+
+        const updatePayload = { joints: newJointsList };
+        if (finalMembers) updatePayload.members = finalMembers;
+
+        updateProjectData(state.currentProjectId, updatePayload).catch(
+          (err) => {
+            showCustomAlert(`継手の${actionWord}に失敗しました。`);
+            console.error("保存失敗: ", err);
+          },
+        );
+      };
+
+      // 部材削除の警告が必要かどうか
+      if (
+        jointId &&
+        updatedDataPayload.countAsMember &&
+        !oldJoint.countAsMember
+      ) {
+        const membersToDelete = (project.members || []).filter(
+          (member) => member.jointId === jointId,
+        );
+        if (membersToDelete.length > 0) {
+          const memberNames = membersToDelete
+            .map((m) => `・${m.name}`)
+            .join("<br>");
+
+          if (confirmMemberDeletionMessage) {
+            confirmMemberDeletionMessage.innerHTML = `「部材としてカウント」をONにすると、紐付けられている以下の部材が削除されます。<br><strong class="text-red-600">${memberNames}</strong>`;
+          }
+
+          const updatedMembers = (project.members || []).filter(
+            (member) => member.jointId !== jointId,
+          );
+          state.pendingAction = () => {
+            performUpdate(updatedDataPayload, updatedMembers);
+            if (confirmMemberDeletionModal)
+              closeModal(confirmMemberDeletionModal);
+          };
+          if (confirmMemberDeletionModal) openModal(confirmMemberDeletionModal);
+          return;
+        }
+      }
+
+      performUpdate(updatedDataPayload);
     });
   }
 }
