@@ -1241,4 +1241,197 @@ function setupProjectActionEvents() {
       btn.addEventListener("click", () => closeModal(copyProjectModal));
     }
   });
+
+  // ▼▼▼ 追加: 工事編集保存用のDOM要素 ▼▼▼
+  const saveProjectBtn = document.getElementById("save-project-btn");
+  const editProjectModal = document.getElementById("edit-project-modal");
+
+  const editProjectIdInput = document.getElementById("edit-project-id");
+  const editProjectNameInput = document.getElementById("edit-project-name");
+  // const editPropertyNameInput = document.getElementById("edit-property-name"); // 内部で取得しているので必須ではないが、出しても良い
+
+  const editProjectFloorsInput = document.getElementById("edit-project-floors");
+  const editProjectSectionsInput = document.getElementById(
+    "edit-project-sections",
+  );
+  const editProjectHasPhInput = document.getElementById("edit-project-has-ph");
+
+  const confirmActionModal = document.getElementById("confirm-action-modal");
+  const confirmActionMessage = document.getElementById(
+    "confirm-action-message",
+  );
+
+  // --- 4. 工事情報の保存 (編集) ---
+  if (saveProjectBtn) {
+    saveProjectBtn.addEventListener("click", () => {
+      const projectId = editProjectIdInput.value;
+      const project = state.projects.find((p) => p.id === projectId);
+      if (!project) return;
+
+      const newName = editProjectNameInput.value.trim();
+      const newPropertyName = document
+        .getElementById("edit-property-name")
+        .value.trim();
+
+      if (!newName)
+        return showCustomAlert("工事名を入力してください。", {
+          invalidElements: [editProjectNameInput],
+        });
+
+      // 更新実行関数
+      const performUpdate = (projectData) => {
+        const projectIndex = state.projects.findIndex(
+          (p) => p.id === projectId,
+        );
+        if (projectIndex !== -1) {
+          state.projects[projectIndex] = {
+            ...state.projects[projectIndex],
+            ...projectData,
+          };
+        }
+
+        updateProjectListUI(); // 画面更新
+
+        updateProjectData(state.currentProjectId, projectData).catch((err) => {
+          console.error("工事情報の保存に失敗:", err);
+          showCustomAlert("工事情報の保存に失敗しました。");
+        });
+
+        if (editProjectModal) closeModal(editProjectModal);
+
+        // ★修正: stateのキャッシュをリセット
+        state.levelNameCache = [];
+        state.areaNameCache = [];
+
+        showToast(`工事情報を更新しました。`);
+      };
+
+      let updatedProjectData = { name: newName, propertyName: newPropertyName };
+
+      // 詳細モードの場合
+      if (project.mode === "advanced") {
+        const newLevels = Array.from(
+          document.querySelectorAll("#edit-custom-levels-container input"),
+        ).map((i) => i.value.trim());
+        const newAreas = Array.from(
+          document.querySelectorAll("#edit-custom-areas-container input"),
+        ).map((i) => i.value.trim());
+
+        if (newLevels.includes("") || newAreas.includes("")) {
+          const invalidInputs = [
+            ...document.querySelectorAll(
+              "#edit-custom-levels-container input, #edit-custom-areas-container input",
+            ),
+          ].filter((i) => i.value.trim() === "");
+          showCustomAlert(
+            "階層またはエリア名が空白です。すべての項目を入力してください。",
+            { invalidElements: invalidInputs },
+          );
+          return;
+        }
+
+        const oldLevels = project.customLevels || [];
+        const oldAreas = project.customAreas || [];
+
+        updatedProjectData.customLevels = newLevels;
+        updatedProjectData.customAreas = newAreas;
+
+        // 箇所数データ(tally)のキー変換ロジック
+        const newTally = {};
+        const oldTally = project.tally || {};
+
+        const oldLevelIndexMap = new Map(
+          oldLevels.map((level, i) => [level, i]),
+        );
+        const oldAreaIndexMap = new Map(oldAreas.map((area, i) => [area, i]));
+
+        // 長い名前順にソート（前方一致の誤判定防止）
+        const sortedOldLevels = [...oldLevels].sort(
+          (a, b) => b.length - a.length,
+        );
+
+        for (const oldKey in oldTally) {
+          let oldLevelName = null;
+          let oldAreaName = null;
+
+          for (const level of sortedOldLevels) {
+            if (oldKey.startsWith(level + "-")) {
+              oldLevelName = level;
+              oldAreaName = oldKey.substring(level.length + 1);
+              break;
+            }
+          }
+
+          if (!oldLevelName || !oldAreaName) continue;
+
+          const levelIndex = oldLevelIndexMap.get(oldLevelName);
+          const areaIndex = oldAreaIndexMap.get(oldAreaName);
+
+          if (
+            levelIndex !== undefined &&
+            areaIndex !== undefined &&
+            levelIndex < newLevels.length &&
+            areaIndex < newAreas.length
+          ) {
+            const newLevelName = newLevels[levelIndex];
+            const newAreaName = newAreas[areaIndex];
+            const newKey = `${newLevelName}-${newAreaName}`;
+            newTally[newKey] = oldTally[oldKey];
+          }
+        }
+
+        updatedProjectData.tally = newTally;
+
+        // 削除項目の検知
+        const tallyDataToDeleteKeys = [];
+        const oldTallyForDeletionCheck = project.tally || {};
+
+        if (
+          oldLevels.length > newLevels.length ||
+          oldAreas.length > newAreas.length
+        ) {
+          for (const key in oldTallyForDeletionCheck) {
+            let level = null;
+            let area = null;
+            for (const lvl of sortedOldLevels) {
+              if (key.startsWith(lvl + "-")) {
+                level = lvl;
+                area = key.substring(lvl.length + 1);
+                break;
+              }
+            }
+
+            if (level && area) {
+              if (!newLevels.includes(level) || !newAreas.includes(area)) {
+                tallyDataToDeleteKeys.push(key);
+              }
+            }
+          }
+        }
+
+        if (tallyDataToDeleteKeys.length > 0) {
+          const removedItems = [
+            ...oldLevels.filter((l) => !newLevels.includes(l)),
+            ...oldAreas.filter((a) => !newAreas.includes(a)),
+          ];
+          document.getElementById("confirm-action-title").textContent =
+            "箇所数データの削除確認";
+          confirmActionMessage.innerHTML = `階層またはエリアの数を減らしたため、以下の項目に関連する箇所数データが削除されます。よろしいですか？<br><br><strong class="text-red-600">${removedItems.join(
+            "、",
+          )}</strong>`;
+
+          state.pendingAction = () => performUpdate(updatedProjectData);
+          if (confirmActionModal) openModal(confirmActionModal);
+          return;
+        }
+      } else {
+        // 簡易モードの場合
+        updatedProjectData.floors = parseInt(editProjectFloorsInput.value);
+        updatedProjectData.sections = parseInt(editProjectSectionsInput.value);
+        updatedProjectData.hasPH = editProjectHasPhInput.checked;
+      }
+
+      performUpdate(updatedProjectData);
+    });
+  }
 }
