@@ -35,6 +35,7 @@ import {
   renderTempOrderDetails,
   populateJointDropdownForEdit,
   renderBulkMemberInputs,
+  toggleQuickNav,
   closeQuickNavIfOutside,
 } from "./ui.js"; // ui.jsで作った関数を使う
 
