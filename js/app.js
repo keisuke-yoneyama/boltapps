@@ -70,6 +70,7 @@ import {
   generateCustomInputFields,
   populateJointSelectorModal,
   updateProjectListUI,
+  initTheme,
 } from "./modules/ui.js";
 
 import {
