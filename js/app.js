@@ -94,7 +94,7 @@ let isUndoRedoOperation = false;
 // let newLevelNameCache = [];
 // let newAreaNameCache = [];
 
-let dragSourceElement = null;
+// let dragSourceElement = null;
 
 /**
  * グローバル設定の読み込みと移行ロジック
@@ -128,36 +128,36 @@ document.addEventListener("DOMContentLoaded", () => {
     list: document.getElementById("project-list-view"),
     detail: document.getElementById("project-detail-view"),
   };
-  // ▼▼▼ 追加：一括登録用モーダル関連の変数 ▼▼▼
-  const fabBulkAddMember = document.getElementById("fab-bulk-add-member");
-  const bulkAddMemberModal = document.getElementById("bulk-add-member-modal");
-  const closeBulkAddMemberModalBtn = document.getElementById(
-    "close-bulk-add-member-modal-btn",
-  );
-  const cancelBulkAddMemberBtn = document.getElementById(
-    "cancel-bulk-add-member-btn",
-  );
-  const saveBulkMemberBtn = document.getElementById("save-bulk-member-btn");
-  const bulkMemberJointSelect = document.getElementById(
-    "bulk-member-joint-select",
-  );
-  //const bulkMemberLevelsContainer = document.getElementById('bulk-member-levels-container');
-  const bulkMemberInputsContainer = document.getElementById(
-    "bulk-member-inputs-container",
-  );
-  const addBulkInputBtn = document.getElementById("add-bulk-input-btn");
-  // ▲▲▲ 追加ここまで ▲▲▲
-  // ▼▼▼ 新規追加: 部材一括登録用の階層選択モーダル関連 ▼▼▼
-  const bulkLevelSelectorModal = document.getElementById(
-    "bulk-level-selector-modal",
-  );
-  const closeBulkLevelModalBtn = document.getElementById(
-    "close-bulk-level-modal-btn",
-  );
-  const saveBulkLevelBtn = document.getElementById("save-bulk-level-btn");
-  const bulkLevelOptionsContainer = document.getElementById(
-    "bulk-level-options-container",
-  );
+  // // ▼▼▼ 追加：一括登録用モーダル関連の変数 ▼▼▼
+  // const fabBulkAddMember = document.getElementById("fab-bulk-add-member");
+  // const bulkAddMemberModal = document.getElementById("bulk-add-member-modal");
+  // const closeBulkAddMemberModalBtn = document.getElementById(
+  //   "close-bulk-add-member-modal-btn",
+  // );
+  // const cancelBulkAddMemberBtn = document.getElementById(
+  //   "cancel-bulk-add-member-btn",
+  // );
+  // const saveBulkMemberBtn = document.getElementById("save-bulk-member-btn");
+  // const bulkMemberJointSelect = document.getElementById(
+  //   "bulk-member-joint-select",
+  // );
+  // //const bulkMemberLevelsContainer = document.getElementById('bulk-member-levels-container');
+  // const bulkMemberInputsContainer = document.getElementById(
+  //   "bulk-member-inputs-container",
+  // );
+  // const addBulkInputBtn = document.getElementById("add-bulk-input-btn");
+  // // ▲▲▲ 追加ここまで ▲▲▲
+  // // ▼▼▼ 新規追加: 部材一括登録用の階層選択モーダル関連 ▼▼▼
+  // const bulkLevelSelectorModal = document.getElementById(
+  //   "bulk-level-selector-modal",
+  // );
+  // const closeBulkLevelModalBtn = document.getElementById(
+  //   "close-bulk-level-modal-btn",
+  // );
+  // const saveBulkLevelBtn = document.getElementById("save-bulk-level-btn");
+  // const bulkLevelOptionsContainer = document.getElementById(
+  //   "bulk-level-options-container",
+  // );
 
   // const navTabJoints = document.getElementById("nav-tab-joints");
   // const navTabTally = document.getElementById("nav-tab-tally");
@@ -2954,271 +2954,271 @@ document.addEventListener("DOMContentLoaded", () => {
   }
   // --- Start Application ---
   // ▼▼▼ 追加：クイックナビゲーションの制御ロジック ▼▼▼
-  const quickNavContainer = document.getElementById("quick-nav-container");
-  const quickNavToggle = document.getElementById("quick-nav-toggle");
-  let isQuickNavOpen = false;
+  // const quickNavContainer = document.getElementById("quick-nav-container");
+  // const quickNavToggle = document.getElementById("quick-nav-toggle");
+  // let isQuickNavOpen = false;
 
-  // FABボタンクリック：モーダルを開く
-  fabBulkAddMember.addEventListener("click", () => {
-    toggleFab(false);
-    const project = state.projects.find((p) => p.id === state.currentProjectId);
+  // // FABボタンクリック：モーダルを開く
+  // fabBulkAddMember.addEventListener("click", () => {
+  //   toggleFab(false);
+  //   const project = state.projects.find((p) => p.id === state.currentProjectId);
 
-    // 継手が一つも登録されていない場合は警告を出して中断
-    if (!project || project.joints.length === 0) {
-      // showCustomAlert はこのファイルで定義されている前提
-      return showCustomAlert("先に継手情報を登録してください。");
-    }
+  //   // 継手が一つも登録されていない場合は警告を出して中断
+  //   if (!project || project.joints.length === 0) {
+  //     // showCustomAlert はこのファイルで定義されている前提
+  //     return showCustomAlert("先に継手情報を登録してください。");
+  //   }
 
-    // 継手セレクトボックスの準備（既存の関数を再利用）
-    populateJointDropdownForEdit(bulkMemberJointSelect, "");
+  //   // 継手セレクトボックスの準備（既存の関数を再利用）
+  //   populateJointDropdownForEdit(bulkMemberJointSelect, "");
 
-    // ▼▼▼ 修正追加: 継手選択をリセットする（最初の継手を選択） ▼▼▼
-    if (project.joints.length > 0) {
-      bulkMemberJointSelect.value = project.joints[0].id;
-    } else {
-      bulkMemberJointSelect.value = "";
-    }
-    // ▲▲▲ 修正追加ここまで ▲▲▲
+  //   // ▼▼▼ 修正追加: 継手選択をリセットする（最初の継手を選択） ▼▼▼
+  //   if (project.joints.length > 0) {
+  //     bulkMemberJointSelect.value = project.joints[0].id;
+  //   } else {
+  //     bulkMemberJointSelect.value = "";
+  //   }
+  //   // ▲▲▲ 修正追加ここまで ▲▲▲
 
-    // ▼▼▼ 必須の修正追加: 部材ごとの個別階層設定をリセットする ▼▼▼
-    state.bulkMemberLevels = [];
-    // ▲▲▲ 必須の修正追加ここまで ▲▲▲
+  //   // ▼▼▼ 必須の修正追加: 部材ごとの個別階層設定をリセットする ▼▼▼
+  //   state.bulkMemberLevels = [];
+  //   // ▲▲▲ 必須の修正追加ここまで ▲▲▲
 
-    // 入力欄を初期化（最初の5つを再描画。この関数内で state.bulkMemberLevels の長さも調整されます）
-    renderBulkMemberInputs(5);
+  //   // 入力欄を初期化（最初の5つを再描画。この関数内で state.bulkMemberLevels の長さも調整されます）
+  //   renderBulkMemberInputs(5);
 
-    openModal(bulkAddMemberModal);
-  });
-  // 入力欄追加ボタン
-  addBulkInputBtn.addEventListener("click", () => {
-    const currentCount = bulkMemberInputsContainer.children.length;
-    if (currentCount >= 15) {
-      showToast("一度に登録できるのは最大15件までです。");
-      return;
-    }
+  //   openModal(bulkAddMemberModal);
+  // });
+  // // 入力欄追加ボタン
+  // addBulkInputBtn.addEventListener("click", () => {
+  //   const currentCount = bulkMemberInputsContainer.children.length;
+  //   if (currentCount >= 15) {
+  //     showToast("一度に登録できるのは最大15件までです。");
+  //     return;
+  //   }
 
-    // 現在の入力値を保持
-    const currentValues = Array.from(
-      document.querySelectorAll(".bulk-member-name-input"),
-    ).map((input) => input.value);
+  //   // 現在の入力値を保持
+  //   const currentValues = Array.from(
+  //     document.querySelectorAll(".bulk-member-name-input"),
+  //   ).map((input) => input.value);
 
-    // 入力欄を再描画（+1個）
-    renderBulkMemberInputs(currentCount + 1);
+  //   // 入力欄を再描画（+1個）
+  //   renderBulkMemberInputs(currentCount + 1);
 
-    // 値を復元
-    const newInputs = document.querySelectorAll(".bulk-member-name-input");
-    currentValues.forEach((val, index) => {
-      if (newInputs[index]) newInputs[index].value = val;
-    });
-  });
+  //   // 値を復元
+  //   const newInputs = document.querySelectorAll(".bulk-member-name-input");
+  //   currentValues.forEach((val, index) => {
+  //     if (newInputs[index]) newInputs[index].value = val;
+  //   });
+  // });
 
-  // index.html内の <script>
-  // ... (省略) ...
-  // 入力欄追加ボタン
-  addBulkInputBtn.addEventListener("click", () => {
-    const currentCount = bulkMemberInputsContainer.children.length;
-    if (currentCount >= 15) {
-      showToast("一度に登録できるのは最大15件までです。");
-      return;
-    }
+  // // index.html内の <script>
+  // // ... (省略) ...
+  // // 入力欄追加ボタン
+  // addBulkInputBtn.addEventListener("click", () => {
+  //   const currentCount = bulkMemberInputsContainer.children.length;
+  //   if (currentCount >= 15) {
+  //     showToast("一度に登録できるのは最大15件までです。");
+  //     return;
+  //   }
 
-    // 現在の入力値と階層を保持
-    const currentValues = Array.from(
-      document.querySelectorAll(".bulk-member-name-input"),
-    ).map((input) => input.value);
+  //   // 現在の入力値と階層を保持
+  //   const currentValues = Array.from(
+  //     document.querySelectorAll(".bulk-member-name-input"),
+  //   ).map((input) => input.value);
 
-    // 入力欄を再描画（+1個）
-    renderBulkMemberInputs(currentCount + 1);
+  //   // 入力欄を再描画（+1個）
+  //   renderBulkMemberInputs(currentCount + 1);
 
-    // 値を復元
-    const newInputs = document.querySelectorAll(".bulk-member-name-input");
-    currentValues.forEach((val, index) => {
-      if (newInputs[index]) newInputs[index].value = val;
-    });
-  });
+  //   // 値を復元
+  //   const newInputs = document.querySelectorAll(".bulk-member-name-input");
+  //   currentValues.forEach((val, index) => {
+  //     if (newInputs[index]) newInputs[index].value = val;
+  //   });
+  // });
 
-  // ▼▼▼ 新規追加: 部材ごとの階層選択モーダル制御ロジック ▼▼▼
-  bulkMemberInputsContainer.addEventListener("click", (e) => {
-    const button = e.target.closest(".open-bulk-level-selector");
-    if (button) {
-      const project = state.projects.find(
-        (p) => p.id === state.currentProjectId,
-      );
-      if (!project) return;
+  // // ▼▼▼ 新規追加: 部材ごとの階層選択モーダル制御ロジック ▼▼▼
+  // bulkMemberInputsContainer.addEventListener("click", (e) => {
+  //   const button = e.target.closest(".open-bulk-level-selector");
+  //   if (button) {
+  //     const project = state.projects.find(
+  //       (p) => p.id === state.currentProjectId,
+  //     );
+  //     if (!project) return;
 
-      state.activeBulkMemberIndex = parseInt(button.dataset.index, 10);
-      const currentSelection =
-        state.bulkMemberLevels[state.activeBulkMemberIndex] || [];
-      const levels = getProjectLevels(project);
+  //     state.activeBulkMemberIndex = parseInt(button.dataset.index, 10);
+  //     const currentSelection =
+  //       state.bulkMemberLevels[state.activeBulkMemberIndex] || [];
+  //     const levels = getProjectLevels(project);
 
-      bulkLevelOptionsContainer.innerHTML = "";
+  //     bulkLevelOptionsContainer.innerHTML = "";
 
-      // 全階層チェックボックス
-      const allLevelLabel = document.createElement("label");
-      allLevelLabel.className =
-        "flex items-center gap-2 text-sm font-bold text-slate-800 dark:text-slate-200 cursor-pointer border-b pb-2";
-      const isAllChecked = currentSelection.length === 0;
-      allLevelLabel.innerHTML = `<input type="checkbox" id="bulk-level-select-all" class="h-4 w-4 rounded border-gray-300 text-blue-800 focus:ring-yellow-500" ${
-        isAllChecked ? "checked" : ""
-      }> 全階層を対象にする`;
-      bulkLevelOptionsContainer.appendChild(allLevelLabel);
+  //     // 全階層チェックボックス
+  //     const allLevelLabel = document.createElement("label");
+  //     allLevelLabel.className =
+  //       "flex items-center gap-2 text-sm font-bold text-slate-800 dark:text-slate-200 cursor-pointer border-b pb-2";
+  //     const isAllChecked = currentSelection.length === 0;
+  //     allLevelLabel.innerHTML = `<input type="checkbox" id="bulk-level-select-all" class="h-4 w-4 rounded border-gray-300 text-blue-800 focus:ring-yellow-500" ${
+  //       isAllChecked ? "checked" : ""
+  //     }> 全階層を対象にする`;
+  //     bulkLevelOptionsContainer.appendChild(allLevelLabel);
 
-      // 個別階層チェックボックス
-      levels.forEach((lvl) => {
-        const isChecked = currentSelection.includes(lvl.id) || isAllChecked;
-        const label = document.createElement("label");
-        label.className = "flex items-center gap-2 text-sm cursor-pointer ml-3";
-        label.innerHTML = `<input type="checkbox" value="${
-          lvl.id
-        }" class="bulk-level-checkbox-option h-4 w-4 rounded border-gray-300 text-blue-800 focus:ring-yellow-500" ${
-          isChecked ? "checked" : ""
-        } ${isAllChecked ? "disabled" : ""}> ${lvl.label}`;
-        bulkLevelOptionsContainer.appendChild(label);
-      });
+  //     // 個別階層チェックボックス
+  //     levels.forEach((lvl) => {
+  //       const isChecked = currentSelection.includes(lvl.id) || isAllChecked;
+  //       const label = document.createElement("label");
+  //       label.className = "flex items-center gap-2 text-sm cursor-pointer ml-3";
+  //       label.innerHTML = `<input type="checkbox" value="${
+  //         lvl.id
+  //       }" class="bulk-level-checkbox-option h-4 w-4 rounded border-gray-300 text-blue-800 focus:ring-yellow-500" ${
+  //         isChecked ? "checked" : ""
+  //       } ${isAllChecked ? "disabled" : ""}> ${lvl.label}`;
+  //       bulkLevelOptionsContainer.appendChild(label);
+  //     });
 
-      // 全階層チェックボックスの連動
-      document
-        .getElementById("bulk-level-select-all")
-        .addEventListener("change", (e) => {
-          const isChecked = e.target.checked;
-          bulkLevelOptionsContainer
-            .querySelectorAll(".bulk-level-checkbox-option")
-            .forEach((cb) => {
-              cb.checked = isChecked;
-              cb.disabled = isChecked;
-            });
-        });
+  //     // 全階層チェックボックスの連動
+  //     document
+  //       .getElementById("bulk-level-select-all")
+  //       .addEventListener("change", (e) => {
+  //         const isChecked = e.target.checked;
+  //         bulkLevelOptionsContainer
+  //           .querySelectorAll(".bulk-level-checkbox-option")
+  //           .forEach((cb) => {
+  //             cb.checked = isChecked;
+  //             cb.disabled = isChecked;
+  //           });
+  //       });
 
-      openModal(bulkLevelSelectorModal);
-    }
-  });
+  //     openModal(bulkLevelSelectorModal);
+  //   }
+  // });
 
-  // 階層選択モーダル：決定ボタン
-  saveBulkLevelBtn.addEventListener("click", () => {
-    // ▼▼▼ 修正追加: 現在の部材名入力値を取得する ▼▼▼
-    const currentMemberNames = Array.from(
-      document.querySelectorAll(".bulk-member-name-input"),
-    ).map((input) => input.value);
-    // ▲▲▲ 修正追加ここまで ▲▲▲
+  // // 階層選択モーダル：決定ボタン
+  // saveBulkLevelBtn.addEventListener("click", () => {
+  //   // ▼▼▼ 修正追加: 現在の部材名入力値を取得する ▼▼▼
+  //   const currentMemberNames = Array.from(
+  //     document.querySelectorAll(".bulk-member-name-input"),
+  //   ).map((input) => input.value);
+  //   // ▲▲▲ 修正追加ここまで ▲▲▲
 
-    const selectAll = document.getElementById("bulk-level-select-all").checked;
-    let newSelection = [];
+  //   const selectAll = document.getElementById("bulk-level-select-all").checked;
+  //   let newSelection = [];
 
-    if (!selectAll) {
-      newSelection = Array.from(
-        bulkLevelOptionsContainer.querySelectorAll(
-          ".bulk-level-checkbox-option:checked",
-        ),
-      ).map((cb) => cb.value);
-    }
+  //   if (!selectAll) {
+  //     newSelection = Array.from(
+  //       bulkLevelOptionsContainer.querySelectorAll(
+  //         ".bulk-level-checkbox-option:checked",
+  //       ),
+  //     ).map((cb) => cb.value);
+  //   }
 
-    // グローバル状態を更新
-    if (state.activeBulkMemberIndex !== -1) {
-      state.bulkMemberLevels[state.activeBulkMemberIndex] = newSelection;
-    }
+  //   // グローバル状態を更新
+  //   if (state.activeBulkMemberIndex !== -1) {
+  //     state.bulkMemberLevels[state.activeBulkMemberIndex] = newSelection;
+  //   }
 
-    // UIを再描画して変更を反映
-    // ▼▼▼ 修正: 取得した部材名リストを引数として渡す ▼▼▼
-    renderBulkMemberInputs(
-      bulkMemberInputsContainer.children.length,
-      currentMemberNames,
-    );
-    // ▲▲▲ 修正ここまで ▲▲▲
+  //   // UIを再描画して変更を反映
+  //   // ▼▼▼ 修正: 取得した部材名リストを引数として渡す ▼▼▼
+  //   renderBulkMemberInputs(
+  //     bulkMemberInputsContainer.children.length,
+  //     currentMemberNames,
+  //   );
+  //   // ▲▲▲ 修正ここまで ▲▲▲
 
-    // モーダルを閉じる
-    closeModal(bulkLevelSelectorModal);
-    state.activeBulkMemberIndex = -1;
-  });
+  //   // モーダルを閉じる
+  //   closeModal(bulkLevelSelectorModal);
+  //   state.activeBulkMemberIndex = -1;
+  // });
 
-  // 階層選択モーダル：閉じる
-  closeBulkLevelModalBtn.addEventListener("click", () => {
-    closeModal(bulkLevelSelectorModal);
-    state.activeBulkMemberIndex = -1;
-  });
-  // ▲▲▲ 新規追加: 部材ごとの階層選択モーダル制御ロジック ▲▲▲
+  // // 階層選択モーダル：閉じる
+  // closeBulkLevelModalBtn.addEventListener("click", () => {
+  //   closeModal(bulkLevelSelectorModal);
+  //   state.activeBulkMemberIndex = -1;
+  // });
+  // // ▲▲▲ 新規追加: 部材ごとの階層選択モーダル制御ロジック ▲▲▲
 
-  // 保存ボタン
-  saveBulkMemberBtn.addEventListener("click", () => {
-    const project = state.projects.find((p) => p.id === state.currentProjectId);
-    if (!project) return;
+  // // 保存ボタン
+  // saveBulkMemberBtn.addEventListener("click", () => {
+  //   const project = state.projects.find((p) => p.id === state.currentProjectId);
+  //   if (!project) return;
 
-    const jointId = bulkMemberJointSelect.value;
-    if (!jointId)
-      return showCustomAlert("使用する継手を選択してください。", {
-        invalidElements: [bulkMemberJointSelect],
-      });
+  //   const jointId = bulkMemberJointSelect.value;
+  //   if (!jointId)
+  //     return showCustomAlert("使用する継手を選択してください。", {
+  //       invalidElements: [bulkMemberJointSelect],
+  //     });
 
-    const nameInputs = document.querySelectorAll(".bulk-member-name-input");
+  //   const nameInputs = document.querySelectorAll(".bulk-member-name-input");
 
-    const newMembers = [];
-    const timestamp = Date.now();
+  //   const newMembers = [];
+  //   const timestamp = Date.now();
 
-    // 入力された名前と、対応する階層設定を収集
-    nameInputs.forEach((input, index) => {
-      const name = input.value.trim();
-      const targetLevels = state.bulkMemberLevels[index] || []; // グローバル配列から階層を取得
+  //   // 入力された名前と、対応する階層設定を収集
+  //   nameInputs.forEach((input, index) => {
+  //     const name = input.value.trim();
+  //     const targetLevels = state.bulkMemberLevels[index] || []; // グローバル配列から階層を取得
 
-      if (name) {
-        newMembers.push({
-          id: `member_${timestamp}_${index}`,
-          name: name,
-          jointId: jointId,
-          targetLevels: targetLevels,
-        });
-      }
-    });
+  //     if (name) {
+  //       newMembers.push({
+  //         id: `member_${timestamp}_${index}`,
+  //         name: name,
+  //         jointId: jointId,
+  //         targetLevels: targetLevels,
+  //       });
+  //     }
+  //   });
 
-    if (newMembers.length === 0) {
-      return showCustomAlert("少なくとも1つの部材名を入力してください。", {
-        invalidElements: [nameInputs[0]],
-      });
-    }
+  //   if (newMembers.length === 0) {
+  //     return showCustomAlert("少なくとも1つの部材名を入力してください。", {
+  //       invalidElements: [nameInputs[0]],
+  //     });
+  //   }
 
-    // 楽観的UI更新
-    const updatedMembersList = [...(project.members || []), ...newMembers];
-    const projectIndex = state.projects.findIndex(
-      (p) => p.id === state.currentProjectId,
-    );
-    if (projectIndex !== -1)
-      state.projects[projectIndex].members = updatedMembersList;
+  //   // 楽観的UI更新
+  //   const updatedMembersList = [...(project.members || []), ...newMembers];
+  //   const projectIndex = state.projects.findIndex(
+  //     (p) => p.id === state.currentProjectId,
+  //   );
+  //   if (projectIndex !== -1)
+  //     state.projects[projectIndex].members = updatedMembersList;
 
-    renderDetailView();
+  //   renderDetailView();
 
-    // モーダルを閉じて通知
-    closeModal(bulkAddMemberModal);
-    const jointName =
-      bulkMemberJointSelect.options[bulkMemberJointSelect.selectedIndex].text;
-    showToast(
-      `${newMembers.length}件の部材を一括登録しました (継手: ${jointName})`,
-    );
+  //   // モーダルを閉じて通知
+  //   closeModal(bulkAddMemberModal);
+  //   const jointName =
+  //     bulkMemberJointSelect.options[bulkMemberJointSelect.selectedIndex].text;
+  //   showToast(
+  //     `${newMembers.length}件の部材を一括登録しました (継手: ${jointName})`,
+  //   );
 
-    // データベース保存
-    updateProjectData(state.currentProjectId, { members: newMembers }).catch(
-      (err) => {
-        // 万が一失敗した時だけアラートを出す
-        console.error(err);
-        showCustomAlert("保存に失敗しました。リロードしてください。");
-      },
-    );
-  });
+  //   // データベース保存
+  //   updateProjectData(state.currentProjectId, { members: newMembers }).catch(
+  //     (err) => {
+  //       // 万が一失敗した時だけアラートを出す
+  //       console.error(err);
+  //       showCustomAlert("保存に失敗しました。リロードしてください。");
+  //     },
+  //   );
+  // });
 
-  // 閉じるボタン等
-  [closeBulkAddMemberModalBtn, cancelBulkAddMemberBtn].forEach((btn) => {
-    btn.addEventListener("click", () => closeModal(bulkAddMemberModal));
-  });
-  // ▲▲▲ 追加ここまで ▲▲▲
+  // // 閉じるボタン等
+  // [closeBulkAddMemberModalBtn, cancelBulkAddMemberBtn].forEach((btn) => {
+  //   btn.addEventListener("click", () => closeModal(bulkAddMemberModal));
+  // });
+  // // ▲▲▲ 追加ここまで ▲▲▲
 
-  quickNavToggle.addEventListener("click", (e) => {
-    e.stopPropagation(); // 親への伝播を止める（documentのclickで閉じないように）
-    toggleQuickNav();
-  });
+  // quickNavToggle.addEventListener("click", (e) => {
+  //   e.stopPropagation(); // 親への伝播を止める（documentのclickで閉じないように）
+  //   toggleQuickNav();
+  // });
 
-  // メニューの外側をクリックしたら閉じる
-  document.addEventListener("click", (e) => {
-    if (isQuickNavOpen && !quickNavContainer.contains(e.target)) {
-      toggleQuickNav();
-    }
-  });
+  // // メニューの外側をクリックしたら閉じる
+  // document.addEventListener("click", (e) => {
+  //   if (isQuickNavOpen && !quickNavContainer.contains(e.target)) {
+  //     toggleQuickNav();
+  //   }
+  // });
 
   // populateBoltSelectorModal(); // ← 廃止
   populateHugBoltSelector(shopTempBoltSizeInput);
@@ -3280,338 +3280,338 @@ document.addEventListener("DOMContentLoaded", () => {
   // --- Excel風の入力補助機能 最終確定版 v5 ---
   //const tallySheetContainer = document.getElementById('tally-sheet-container');
 
-  if (tallySheetContainer) {
-    let isEditing = false;
+  // if (tallySheetContainer) {
+  //   let isEditing = false;
 
-    const clearHighlights = () => {
-      tallySheetContainer
-        .querySelectorAll(".cell-highlight, .cell-selected")
-        .forEach((el) => {
-          el.classList.remove("cell-highlight", "cell-selected");
-        });
-    };
+  //   const clearHighlights = () => {
+  //     tallySheetContainer
+  //       .querySelectorAll(".cell-highlight, .cell-selected")
+  //       .forEach((el) => {
+  //         el.classList.remove("cell-highlight", "cell-selected");
+  //       });
+  //   };
 
-    const applyHighlightAndSelect = (targetInputElement) => {
-      clearHighlights();
-      if (!targetInputElement) return;
-      const cell = targetInputElement.closest("td");
-      if (!cell) return;
-      const colIndex = cell.cellIndex;
-      const row = cell.parentElement;
-      const table = targetInputElement.closest("table");
+  //   const applyHighlightAndSelect = (targetInputElement) => {
+  //     clearHighlights();
+  //     if (!targetInputElement) return;
+  //     const cell = targetInputElement.closest("td");
+  //     if (!cell) return;
+  //     const colIndex = cell.cellIndex;
+  //     const row = cell.parentElement;
+  //     const table = targetInputElement.closest("table");
 
-      // ▼▼▼ ここから修正 ▼▼▼
-      // 1. 行全体と、特に1列目のセルをハイライトする
-      if (row) {
-        row.classList.add("cell-highlight");
-        // 1列目のセルにも明示的にクラスを適用して黄色表示を優先させる
-        if (row.cells[0]) {
-          row.cells[0].classList.add("cell-highlight");
-        }
-        // ▼▼▼ 追加：一番右側のセル（行合計）もハイライトする ▼▼▼
-        const lastCellIndex = row.cells.length - 1;
-        if (row.cells[lastCellIndex]) {
-          row.cells[lastCellIndex].classList.add("cell-highlight");
-        }
-        // ▲▲▲ 追加ここまで ▲▲▲
-      }
+  //     // ▼▼▼ ここから修正 ▼▼▼
+  //     // 1. 行全体と、特に1列目のセルをハイライトする
+  //     if (row) {
+  //       row.classList.add("cell-highlight");
+  //       // 1列目のセルにも明示的にクラスを適用して黄色表示を優先させる
+  //       if (row.cells[0]) {
+  //         row.cells[0].classList.add("cell-highlight");
+  //       }
+  //       // ▼▼▼ 追加：一番右側のセル（行合計）もハイライトする ▼▼▼
+  //       const lastCellIndex = row.cells.length - 1;
+  //       if (row.cells[lastCellIndex]) {
+  //         row.cells[lastCellIndex].classList.add("cell-highlight");
+  //       }
+  //       // ▲▲▲ 追加ここまで ▲▲▲
+  //     }
 
-      // 2. 列全体（ヘッダー3行を含む）をハイライトする
-      if (table && colIndex > 0) {
-        const thead = table.querySelector("thead");
-        if (thead) {
-          // ヘッダー1行目：ロック用チェックボックスのセル
-          if (thead.rows[0] && thead.rows[0].cells[colIndex]) {
-            thead.rows[0].cells[colIndex].classList.add("cell-highlight");
-          }
-          // ヘッダー2行目：部材名のセル
-          if (thead.rows[1] && thead.rows[1].cells[colIndex - 1]) {
-            thead.rows[1].cells[colIndex - 1].classList.add("cell-highlight");
-          }
-          // ヘッダー3行目：ボルトサイズのセル
-          if (thead.rows[2] && thead.rows[2].cells[colIndex - 1]) {
-            thead.rows[2].cells[colIndex - 1].classList.add("cell-highlight");
-          }
-        }
+  //     // 2. 列全体（ヘッダー3行を含む）をハイライトする
+  //     if (table && colIndex > 0) {
+  //       const thead = table.querySelector("thead");
+  //       if (thead) {
+  //         // ヘッダー1行目：ロック用チェックボックスのセル
+  //         if (thead.rows[0] && thead.rows[0].cells[colIndex]) {
+  //           thead.rows[0].cells[colIndex].classList.add("cell-highlight");
+  //         }
+  //         // ヘッダー2行目：部材名のセル
+  //         if (thead.rows[1] && thead.rows[1].cells[colIndex - 1]) {
+  //           thead.rows[1].cells[colIndex - 1].classList.add("cell-highlight");
+  //         }
+  //         // ヘッダー3行目：ボルトサイズのセル
+  //         if (thead.rows[2] && thead.rows[2].cells[colIndex - 1]) {
+  //           thead.rows[2].cells[colIndex - 1].classList.add("cell-highlight");
+  //         }
+  //       }
 
-        // 本体とフッターのセル
-        table.querySelectorAll("tbody tr, tfoot tr").forEach((tableRow) => {
-          if (tableRow.cells[colIndex]) {
-            tableRow.cells[colIndex].classList.add("cell-highlight");
-          }
-        });
-      }
-      // ▲▲▲ ここまで修正 ▲▲▲
+  //       // 本体とフッターのセル
+  //       table.querySelectorAll("tbody tr, tfoot tr").forEach((tableRow) => {
+  //         if (tableRow.cells[colIndex]) {
+  //           tableRow.cells[colIndex].classList.add("cell-highlight");
+  //         }
+  //       });
+  //     }
+  //     // ▲▲▲ ここまで修正 ▲▲▲
 
-      cell.classList.add("cell-selected");
-    };
+  //     cell.classList.add("cell-selected");
+  //   };
 
-    // --- イベントリスナー ---
+  //   // --- イベントリスナー ---
 
-    tallySheetContainer.addEventListener("dblclick", (e) => {
-      if (e.target.classList.contains("tally-input")) {
-        isEditing = true;
-        e.target.setSelectionRange(
-          e.target.value.length,
-          e.target.value.length,
-        );
-      }
-    });
+  //   tallySheetContainer.addEventListener("dblclick", (e) => {
+  //     if (e.target.classList.contains("tally-input")) {
+  //       isEditing = true;
+  //       e.target.setSelectionRange(
+  //         e.target.value.length,
+  //         e.target.value.length,
+  //       );
+  //     }
+  //   });
 
-    tallySheetContainer.addEventListener("focusin", (e) => {
-      if (e.target.classList.contains("tally-input")) {
-        applyHighlightAndSelect(e.target);
-        e.target.select();
-        isEditing = false;
-      }
-    });
+  //   tallySheetContainer.addEventListener("focusin", (e) => {
+  //     if (e.target.classList.contains("tally-input")) {
+  //       applyHighlightAndSelect(e.target);
+  //       e.target.select();
+  //       isEditing = false;
+  //     }
+  //   });
 
-    tallySheetContainer.addEventListener("focusout", (e) => {
-      setTimeout(() => {
-        if (!tallySheetContainer.contains(document.activeElement)) {
-          clearHighlights();
-        }
-      }, 0);
-    });
+  //   tallySheetContainer.addEventListener("focusout", (e) => {
+  //     setTimeout(() => {
+  //       if (!tallySheetContainer.contains(document.activeElement)) {
+  //         clearHighlights();
+  //       }
+  //     }, 0);
+  //   });
 
-    // ★ 修正版：全角数字を半角に、それ以外の文字（全角・記号含む）を削除
-    tallySheetContainer.addEventListener("input", (e) => {
-      if (e.target.classList.contains("tally-input")) {
-        const target = e.target;
-        let val = target.value;
+  //   // ★ 修正版：全角数字を半角に、それ以外の文字（全角・記号含む）を削除
+  //   tallySheetContainer.addEventListener("input", (e) => {
+  //     if (e.target.classList.contains("tally-input")) {
+  //       const target = e.target;
+  //       let val = target.value;
 
-        // 1. 全角数字を半角に変換
-        val = val.replace(/[０-９]/g, (s) =>
-          String.fromCharCode(s.charCodeAt(0) - 0xfee0),
-        );
+  //       // 1. 全角数字を半角に変換
+  //       val = val.replace(/[０-９]/g, (s) =>
+  //         String.fromCharCode(s.charCodeAt(0) - 0xfee0),
+  //       );
 
-        // 2. 数字以外（スペース、全角文字、記号など）をすべて削除
-        // ※ マイナス記号(-)も不要であれば削除対象に含めています
-        const newVal = val.replace(/[^0-9]/g, "");
+  //       // 2. 数字以外（スペース、全角文字、記号など）をすべて削除
+  //       // ※ マイナス記号(-)も不要であれば削除対象に含めています
+  //       const newVal = val.replace(/[^0-9]/g, "");
 
-        // 値が変わっている場合のみ更新（カーソル位置飛び防止のため）
-        if (val !== newVal) {
-          target.value = newVal;
-        }
-      }
-    });
+  //       // 値が変わっている場合のみ更新（カーソル位置飛び防止のため）
+  //       if (val !== newVal) {
+  //         target.value = newVal;
+  //       }
+  //     }
+  //   });
 
-    // ... 既存の keydown イベントリスナーの後 ...
+  //   // ... 既存の keydown イベントリスナーの後 ...
 
-    // --- ここから追加 ---
-    // ドラッグ＆ドロップによる数値移動の確認機能
-    tallySheetContainer.addEventListener("dragstart", (e) => {
-      if (e.target.classList.contains("tally-input") && !e.target.disabled) {
-        dragSourceElement = e.target;
-        e.dataTransfer.effectAllowed = "move";
-      }
-    });
+  //   // --- ここから追加 ---
+  //   // ドラッグ＆ドロップによる数値移動の確認機能
+  //   tallySheetContainer.addEventListener("dragstart", (e) => {
+  //     if (e.target.classList.contains("tally-input") && !e.target.disabled) {
+  //       dragSourceElement = e.target;
+  //       e.dataTransfer.effectAllowed = "move";
+  //     }
+  //   });
 
-    tallySheetContainer.addEventListener("dragover", (e) => {
-      // ドロップを許可するために、デフォルトの動作をキャンセル
-      if (e.target.classList.contains("tally-input") && !e.target.disabled) {
-        e.preventDefault();
-      }
-    });
+  //   tallySheetContainer.addEventListener("dragover", (e) => {
+  //     // ドロップを許可するために、デフォルトの動作をキャンセル
+  //     if (e.target.classList.contains("tally-input") && !e.target.disabled) {
+  //       e.preventDefault();
+  //     }
+  //   });
 
-    tallySheetContainer.addEventListener("dragend", (e) => {
-      // ドラッグ操作が終了した際（ドロップされなかった場合など）にリセット
-      dragSourceElement = null;
-    });
+  //   tallySheetContainer.addEventListener("dragend", (e) => {
+  //     // ドラッグ操作が終了した際（ドロップされなかった場合など）にリセット
+  //     dragSourceElement = null;
+  //   });
 
-    tallySheetContainer.addEventListener("drop", (e) => {
-      e.preventDefault();
-      const dropTargetElement = e.target;
+  //   tallySheetContainer.addEventListener("drop", (e) => {
+  //     e.preventDefault();
+  //     const dropTargetElement = e.target;
 
-      // ドラッグ元が存在し、有効なドロップ先（別の入力可能なセル）であるかを確認
-      if (
-        !dragSourceElement ||
-        !dropTargetElement ||
-        !dropTargetElement.classList.contains("tally-input") ||
-        dropTargetElement === dragSourceElement ||
-        dropTargetElement.disabled
-      ) {
-        dragSourceElement = null;
-        return;
-      }
+  //     // ドラッグ元が存在し、有効なドロップ先（別の入力可能なセル）であるかを確認
+  //     if (
+  //       !dragSourceElement ||
+  //       !dropTargetElement ||
+  //       !dropTargetElement.classList.contains("tally-input") ||
+  //       dropTargetElement === dragSourceElement ||
+  //       dropTargetElement.disabled
+  //     ) {
+  //       dragSourceElement = null;
+  //       return;
+  //     }
 
-      const sourceValue = dragSourceElement.value || "(空)";
-      const targetValue = dropTargetElement.value || "(空)";
+  //     const sourceValue = dragSourceElement.value || "(空)";
+  //     const targetValue = dropTargetElement.value || "(空)";
 
-      document.getElementById("confirm-action-title").textContent =
-        "数値の移動確認";
-      document.getElementById("confirm-action-message").innerHTML =
-        `セルからセルへ数値を移動しますか？<br><br>
-                移動元セルの値: <strong class="text-blue-600 dark:text-blue-400">${sourceValue}</strong><br>
-                移動先セルの値: <strong class="text-red-600 dark:text-red-400">${targetValue}</strong> (この値は上書きされます)`;
+  //     document.getElementById("confirm-action-title").textContent =
+  //       "数値の移動確認";
+  //     document.getElementById("confirm-action-message").innerHTML =
+  //       `セルからセルへ数値を移動しますか？<br><br>
+  //               移動元セルの値: <strong class="text-blue-600 dark:text-blue-400">${sourceValue}</strong><br>
+  //               移動先セルの値: <strong class="text-red-600 dark:text-red-400">${targetValue}</strong> (この値は上書きされます)`;
 
-      // 確認モーダルの「実行する」が押された時の動作を定義
-      state.pendingAction = () => {
-        // 移動を実行
-        dropTargetElement.value = dragSourceElement.value;
-        dragSourceElement.value = "";
+  //     // 確認モーダルの「実行する」が押された時の動作を定義
+  //     state.pendingAction = () => {
+  //       // 移動を実行
+  //       dropTargetElement.value = dragSourceElement.value;
+  //       dragSourceElement.value = "";
 
-        // 変更をアプリケーションに通知し、合計値の再計算や保存をトリガーする
-        dragSourceElement.dispatchEvent(new Event("change", { bubbles: true }));
-        dropTargetElement.dispatchEvent(new Event("change", { bubbles: true }));
+  //       // 変更をアプリケーションに通知し、合計値の再計算や保存をトリガーする
+  //       dragSourceElement.dispatchEvent(new Event("change", { bubbles: true }));
+  //       dropTargetElement.dispatchEvent(new Event("change", { bubbles: true }));
 
-        dragSourceElement = null; // 完了後にリセット
-      };
+  //       dragSourceElement = null; // 完了後にリセット
+  //     };
 
-      openModal(document.getElementById("confirm-action-modal"));
-    });
-    // --- ここまで追加 ---
+  //     openModal(document.getElementById("confirm-action-modal"));
+  //   });
+  //   // --- ここまで追加 ---
 
-    // ★ 最終決定版：キーボード操作（IME強制クリア・行き止まり維持・Excel挙動）
-    tallySheetContainer.addEventListener("keydown", (e) => {
-      if (!e.target.classList.contains("tally-input")) return;
+  //   // ★ 最終決定版：キーボード操作（IME強制クリア・行き止まり維持・Excel挙動）
+  //   tallySheetContainer.addEventListener("keydown", (e) => {
+  //     if (!e.target.classList.contains("tally-input")) return;
 
-      const key = e.key;
-      const code = e.code;
-      const target = e.target;
-      const isComposing = e.isComposing; // IME入力中かどうか
+  //     const key = e.key;
+  //     const code = e.code;
+  //     const target = e.target;
+  //     const isComposing = e.isComposing; // IME入力中かどうか
 
-      // --- 1. スペースキーで値をクリア (IME強制中断ロジック) ---
-      if (code === "Space" || key === " " || key === "Spacebar") {
-        e.preventDefault(); // ブラウザ標準動作を停止
-        e.stopPropagation();
+  //     // --- 1. スペースキーで値をクリア (IME強制中断ロジック) ---
+  //     if (code === "Space" || key === " " || key === "Spacebar") {
+  //       e.preventDefault(); // ブラウザ標準動作を停止
+  //       e.stopPropagation();
 
-        // ★重要：IME変換窓が出ないように、一度フォーカスを外してIMEを殺す
-        target.blur();
+  //       // ★重要：IME変換窓が出ないように、一度フォーカスを外してIMEを殺す
+  //       target.blur();
 
-        // 値をクリア
-        target.value = "";
-        isEditing = true;
+  //       // 値をクリア
+  //       target.value = "";
+  //       isEditing = true;
 
-        // 変更を保存
-        target.dispatchEvent(new Event("input", { bubbles: true }));
-        target.dispatchEvent(new Event("change", { bubbles: true }));
+  //       // 変更を保存
+  //       target.dispatchEvent(new Event("input", { bubbles: true }));
+  //       target.dispatchEvent(new Event("change", { bubbles: true }));
 
-        // フォーカスを戻して入力可能な状態にする
-        // (blurで外れたので、微小な遅延を入れて戻すのが確実)
-        setTimeout(() => {
-          target.focus();
-        }, 0);
+  //       // フォーカスを戻して入力可能な状態にする
+  //       // (blurで外れたので、微小な遅延を入れて戻すのが確実)
+  //       setTimeout(() => {
+  //         target.focus();
+  //       }, 0);
 
-        return;
-      }
+  //       return;
+  //     }
 
-      // --- 2. 十字キーとEnterキーの移動ロジック ---
-      const moveKeys = [
-        "ArrowUp",
-        "ArrowDown",
-        "ArrowLeft",
-        "ArrowRight",
-        "Enter",
-      ];
-      if (moveKeys.includes(key)) {
-        // 【左右キー】全角入力中(IME有効)は、文字変換の文節移動などに使うため移動しない
-        if (isComposing && (key === "ArrowLeft" || key === "ArrowRight")) {
-          return;
-        }
+  //     // --- 2. 十字キーとEnterキーの移動ロジック ---
+  //     const moveKeys = [
+  //       "ArrowUp",
+  //       "ArrowDown",
+  //       "ArrowLeft",
+  //       "ArrowRight",
+  //       "Enter",
+  //     ];
+  //     if (moveKeys.includes(key)) {
+  //       // 【左右キー】全角入力中(IME有効)は、文字変換の文節移動などに使うため移動しない
+  //       if (isComposing && (key === "ArrowLeft" || key === "ArrowRight")) {
+  //         return;
+  //       }
 
-        // 【Enterキー】全角入力中(IME有効)は、文字確定に使うため移動しない
-        if (isComposing && key === "Enter") {
-          return;
-        }
+  //       // 【Enterキー】全角入力中(IME有効)は、文字確定に使うため移動しない
+  //       if (isComposing && key === "Enter") {
+  //         return;
+  //       }
 
-        // 上下キーは、全角入力中でも「確定して移動」とみなす（Excelライク）
-        e.preventDefault();
+  //       // 上下キーは、全角入力中でも「確定して移動」とみなす（Excelライク）
+  //       e.preventDefault();
 
-        // 現在のセルを Blur させることで値を確定
-        target.blur();
+  //       // 現在のセルを Blur させることで値を確定
+  //       target.blur();
 
-        // --- 移動先を探す ---
-        const table = target.closest("table");
-        const tbody = table.querySelector("tbody");
-        if (!tbody) return;
+  //       // --- 移動先を探す ---
+  //       const table = target.closest("table");
+  //       const tbody = table.querySelector("tbody");
+  //       if (!tbody) return;
 
-        const rows = Array.from(tbody.querySelectorAll("tr"));
-        const currentRow = target.closest("tr");
-        const currentIndex = rows.indexOf(currentRow);
-        const currentCell = target.closest("td");
-        const currentCellIndex = currentCell.cellIndex;
+  //       const rows = Array.from(tbody.querySelectorAll("tr"));
+  //       const currentRow = target.closest("tr");
+  //       const currentIndex = rows.indexOf(currentRow);
+  //       const currentCell = target.closest("td");
+  //       const currentCellIndex = currentCell.cellIndex;
 
-        let nextInput = null;
+  //       let nextInput = null;
 
-        if (key === "ArrowUp") {
-          for (let i = currentIndex - 1; i >= 0; i--) {
-            const input = rows[i].cells[currentCellIndex]?.querySelector(
-              ".tally-input:not([disabled])",
-            );
-            if (input) {
-              nextInput = input;
-              break;
-            }
-          }
-        } else if (key === "ArrowDown" || key === "Enter") {
-          for (let i = currentIndex + 1; i < rows.length; i++) {
-            const input = rows[i].cells[currentCellIndex]?.querySelector(
-              ".tally-input:not([disabled])",
-            );
-            if (input) {
-              nextInput = input;
-              break;
-            }
-          }
-        } else if (key === "ArrowLeft") {
-          for (let i = currentCellIndex - 1; i >= 0; i--) {
-            const input = currentRow.cells[i]?.querySelector(
-              ".tally-input:not([disabled])",
-            );
-            if (input) {
-              nextInput = input;
-              break;
-            }
-          }
-        } else if (key === "ArrowRight") {
-          for (let i = currentCellIndex + 1; i < currentRow.cells.length; i++) {
-            const input = currentRow.cells[i]?.querySelector(
-              ".tally-input:not([disabled])",
-            );
-            if (input) {
-              nextInput = input;
-              break;
-            }
-          }
-        }
+  //       if (key === "ArrowUp") {
+  //         for (let i = currentIndex - 1; i >= 0; i--) {
+  //           const input = rows[i].cells[currentCellIndex]?.querySelector(
+  //             ".tally-input:not([disabled])",
+  //           );
+  //           if (input) {
+  //             nextInput = input;
+  //             break;
+  //           }
+  //         }
+  //       } else if (key === "ArrowDown" || key === "Enter") {
+  //         for (let i = currentIndex + 1; i < rows.length; i++) {
+  //           const input = rows[i].cells[currentCellIndex]?.querySelector(
+  //             ".tally-input:not([disabled])",
+  //           );
+  //           if (input) {
+  //             nextInput = input;
+  //             break;
+  //           }
+  //         }
+  //       } else if (key === "ArrowLeft") {
+  //         for (let i = currentCellIndex - 1; i >= 0; i--) {
+  //           const input = currentRow.cells[i]?.querySelector(
+  //             ".tally-input:not([disabled])",
+  //           );
+  //           if (input) {
+  //             nextInput = input;
+  //             break;
+  //           }
+  //         }
+  //       } else if (key === "ArrowRight") {
+  //         for (let i = currentCellIndex + 1; i < currentRow.cells.length; i++) {
+  //           const input = currentRow.cells[i]?.querySelector(
+  //             ".tally-input:not([disabled])",
+  //           );
+  //           if (input) {
+  //             nextInput = input;
+  //             break;
+  //           }
+  //         }
+  //       }
 
-        // --- 移動実行 or 維持 ---
+  //       // --- 移動実行 or 維持 ---
 
-        // IME確定後の値コピーバグを防ぐため、移動は非同期で行う
-        setTimeout(() => {
-          if (nextInput) {
-            // 移動先がある場合
-            nextInput.focus();
-            nextInput.select();
-          } else {
-            // 行き止まりの場合
-            // フォーカスを再設定して維持し、変更イベントを発火
-            target.focus(); // ★ここを追加（迷子防止）
-            target.select();
-            target.dispatchEvent(new Event("change", { bubbles: true }));
-          }
-        }, 0);
+  //       // IME確定後の値コピーバグを防ぐため、移動は非同期で行う
+  //       setTimeout(() => {
+  //         if (nextInput) {
+  //           // 移動先がある場合
+  //           nextInput.focus();
+  //           nextInput.select();
+  //         } else {
+  //           // 行き止まりの場合
+  //           // フォーカスを再設定して維持し、変更イベントを発火
+  //           target.focus(); // ★ここを追加（迷子防止）
+  //           target.select();
+  //           target.dispatchEvent(new Event("change", { bubbles: true }));
+  //         }
+  //       }, 0);
 
-        return;
-      }
+  //       return;
+  //     }
 
-      // --- 3. Escapeキー ---
-      if (key === "Escape") {
-        e.preventDefault();
-        isEditing = false;
-        target.blur();
-        return;
-      }
+  //     // --- 3. Escapeキー ---
+  //     if (key === "Escape") {
+  //       e.preventDefault();
+  //       isEditing = false;
+  //       target.blur();
+  //       return;
+  //     }
 
-      // --- 4. 入力開始 ---
-      const isCharacterKey =
-        !e.ctrlKey && !e.altKey && !e.metaKey && key.length === 1;
-      if (isCharacterKey) {
-        isEditing = true;
-      }
-    });
-  }
+  //     // --- 4. 入力開始 ---
+  //     const isCharacterKey =
+  //       !e.ctrlKey && !e.altKey && !e.metaKey && key.length === 1;
+  //     if (isCharacterKey) {
+  //       isEditing = true;
+  //     }
+  //   });
+  // }
 
   // ▼▼▼ 追加：タブ切り替えイベントリスナーの登録 ▼▼▼
   const tabJoints = document.getElementById("nav-tab-joints");

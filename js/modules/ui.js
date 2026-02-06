@@ -5792,3 +5792,21 @@ export const renderAggregatedResults = (propertyName, aggregatedData) => {
 
   contentEl.innerHTML = html;
 };
+
+/**
+ * クイックナビゲーションの外側がクリックされたら閉じる関数
+ * (events.js から呼び出す)
+ */
+export const closeQuickNavIfOutside = (target) => {
+  const quickNavContainer = document.getElementById("quick-nav-container");
+
+  // メニューが開いていて、かつクリックされた場所がコンテナの外側なら閉じる
+  // (toggleQuickNavの実装が「開いていれば閉じる」ようになっている前提)
+  if (
+    isQuickNavOpen &&
+    quickNavContainer &&
+    !quickNavContainer.contains(target)
+  ) {
+    toggleQuickNav();
+  }
+};
