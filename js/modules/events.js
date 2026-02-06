@@ -158,6 +158,8 @@ export function setupEventListeners() {
   setupBoltSelectorEvents(); //ボルトサイズ選択モーダル（汎用セレクター）のイベント設定
 
   setupJointSelectorEvents(); // 部材登録用：継手選択モーダルのイベント設定
+
+  setupGlobalActionEvents(); //汎用アクション確認モーダル（実行・キャンセル）のイベント設定
 }
 
 //登録用フローティングボタンイベント
@@ -3861,4 +3863,118 @@ function setupJointSelectorEvents() {
       }
     });
   }
+}
+/**
+ * 汎用アクション確認モーダル（実行・キャンセル）のイベント設定
+ */
+function setupGlobalActionEvents() {
+  const confirmActionBtn = document.getElementById("confirm-action-btn");
+  const cancelActionBtn = document.getElementById("cancel-action-btn");
+  const confirmActionModal = document.getElementById("confirm-action-modal");
+
+  // 1. 実行ボタン ("はい")
+  if (confirmActionBtn) {
+    confirmActionBtn.addEventListener("click", () => {
+      // state.pendingAction に保存された関数を実行
+      if (typeof state.pendingAction === "function") {
+        state.pendingAction();
+      }
+
+      // 後始末
+      state.pendingAction = null;
+      if (confirmActionModal) closeModal(confirmActionModal);
+    });
+  }
+
+  // 2. キャンセルボタン ("いいえ")
+  if (cancelActionBtn) {
+    cancelActionBtn.addEventListener("click", () => {
+      // 実行せずにクリア
+      state.pendingAction = null;
+      if (confirmActionModal) closeModal(confirmActionModal);
+    });
+  }
+}
+/**
+ * 箇所数入力表のクリップボードコピー機能
+ */
+function setupTallyClipboardEvents() {
+  // ボタンが動的に生成される可能性を考慮し、documentに対してイベントを設定します
+  document.addEventListener("click", (e) => {
+    // IDで判定
+    if (e.target.id === "copy-tally-btn") {
+      const table = document.querySelector("#tally-sheet-container table");
+      if (!table) {
+        if (typeof showToast === "function")
+          showToast("コピー対象の表がありません。");
+        return;
+      }
+
+      const data = [];
+      const tHead = table.querySelector("thead");
+      const tBody = table.querySelector("tbody");
+      const tFoot = table.querySelector("tfoot");
+
+      // --- ヘッダー処理 ---
+      if (tHead) {
+        const headerRows = tHead.querySelectorAll("tr");
+
+        // 1行目のヘッダー
+        if (headerRows[0]) {
+          const rowData = Array.from(headerRows[0].cells).map(
+            (cell) => `"${cell.textContent.trim()}"`,
+          );
+          data.push(rowData.join("\t"));
+        }
+
+        // 2行目のヘッダー
+        if (headerRows[1]) {
+          const rowData = Array.from(headerRows[1].cells).map(
+            (cell) => `"${cell.textContent.trim()}"`,
+          );
+          // 先頭に空のセルを追加して、横ずれを補正
+          rowData.unshift('""');
+          data.push(rowData.join("\t"));
+        }
+      }
+
+      // --- 本体行を収集 ---
+      if (tBody) {
+        tBody.querySelectorAll("tr").forEach((tr) => {
+          const rowData = Array.from(tr.cells).map((cell) => {
+            const input = cell.querySelector("input");
+            return `"${input ? input.value : cell.textContent.trim()}"`;
+          });
+          data.push(rowData.join("\t"));
+        });
+      }
+
+      // --- フッター行を収集 ---
+      if (tFoot) {
+        tFoot.querySelectorAll("tr").forEach((tr) => {
+          const rowData = Array.from(tr.cells).map(
+            (cell) => `"${cell.textContent.trim()}"`,
+          );
+          data.push(rowData.join("\t"));
+        });
+      }
+
+      // --- クリップボードへ書き込み ---
+      const tsvString = data.join("\n");
+
+      if (navigator.clipboard) {
+        navigator.clipboard
+          .writeText(tsvString)
+          .then(() => {
+            showToast("表のデータをクリップボードにコピーしました。");
+          })
+          .catch((err) => {
+            console.error("コピーに失敗しました: ", err);
+            showCustomAlert("クリップボードへのコピーに失敗しました。");
+          });
+      } else {
+        showCustomAlert("このブラウザはクリップボード操作に対応していません。");
+      }
+    }
+  });
 }
