@@ -5810,3 +5810,53 @@ export const closeQuickNavIfOutside = (target) => {
     toggleQuickNav();
   }
 };
+
+/**
+ * テーマ（ダーク/ライト）を適用する関数
+ */
+export const applyTheme = (theme) => {
+  const darkModeToggle = document.getElementById("dark-mode-toggle");
+  const mobileDarkModeToggle = document.getElementById(
+    "mobile-dark-mode-toggle",
+  );
+
+  if (theme === "dark") {
+    document.documentElement.classList.add("dark");
+    if (darkModeToggle) darkModeToggle.checked = true;
+    if (mobileDarkModeToggle) mobileDarkModeToggle.checked = true;
+  } else {
+    document.documentElement.classList.remove("dark");
+    if (darkModeToggle) darkModeToggle.checked = false;
+    if (mobileDarkModeToggle) mobileDarkModeToggle.checked = false;
+  }
+};
+
+/**
+ * テーマを切り替える関数（トグル用）
+ */
+export const toggleTheme = () => {
+  const currentTheme = localStorage.getItem("theme");
+  if (currentTheme === "dark") {
+    localStorage.setItem("theme", "light");
+    applyTheme("light");
+  } else {
+    localStorage.setItem("theme", "dark");
+    applyTheme("dark");
+  }
+};
+
+/**
+ * アプリ起動時のテーマ初期化
+ */
+export const initTheme = () => {
+  const savedTheme = localStorage.getItem("theme");
+  const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+
+  if (savedTheme) {
+    applyTheme(savedTheme);
+  } else if (prefersDark) {
+    applyTheme("dark");
+  } else {
+    applyTheme("light");
+  }
+};

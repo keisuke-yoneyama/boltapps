@@ -83,3 +83,27 @@ export const saveGlobalBoltSizes = async (globalBoltSizes) => {
     throw error;
   }
 };
+
+/**
+ * 複数の工事の物件名を一括更新する関数
+ * @param {string[]} ids - 更新対象のプロジェクトIDの配列
+ * @param {string} newName - 新しい物件名
+ */
+export async function updateProjectPropertyNameBatch(ids, newName) {
+  // 方法A: Promise.all で並列実行 (シンプル)
+  const updates = ids.map((id) => {
+    const projectRef = doc(db, "projects", id);
+    return updateDoc(projectRef, { propertyName: newName });
+  });
+  await Promise.all(updates);
+
+  // 方法B: WriteBatch を使う (より堅牢な方法。500件以内ならこちら推奨)
+  /*
+  const batch = writeBatch(db);
+  ids.forEach(id => {
+    const projectRef = doc(db, "projects", id);
+    batch.update(projectRef, { propertyName: newName });
+  });
+  await batch.commit();
+  */
+}

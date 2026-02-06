@@ -17,6 +17,7 @@ import {
   openModal,
   openEditModal,
   openEditMemberModal,
+  openBoltSelectorModal,
   updateDynamicInputs,
   showCustomAlert,
   performHistoryAction,
@@ -36,8 +37,12 @@ import {
   populateJointDropdownForEdit,
   renderBulkMemberInputs,
   toggleQuickNav,
+  toggleTheme,
   makeDraggable,
+  updateColumnLockUI,
+  updateTallySheetCalculations,
   closeQuickNavIfOutside,
+  populateJointSelectorModal,
 } from "./ui.js"; // ui.jsで作った関数を使う
 
 import { resetTempJointData, state } from "./state.js";
@@ -46,7 +51,10 @@ import { updateProjectData, addProject, deleteProject } from "./db.js";
 
 import { BOLT_TYPES } from "./config.js";
 
-import { saveGlobalBoltSizes } from "./firebase.js";
+import {
+  saveGlobalBoltSizes,
+  updateProjectPropertyNameBatch,
+} from "./firebase.js";
 
 import {
   sortGlobalBoltSizes,
@@ -140,6 +148,16 @@ export function setupEventListeners() {
   setupDraggableModals(); //ドラッグ可能にするイベント
 
   setupTabNavigationEvents(); // タブ切り替えイベント
+
+  setupThemeEvents(); // テーマイベント
+
+  setupGroupActionEvents(); //工事グループ一括登録
+
+  setupAggregatedResultsEvents(); //物件ごとの集計結果モーダル内のイベント設定
+
+  setupBoltSelectorEvents(); //ボルトサイズ選択モーダル（汎用セレクター）のイベント設定
+
+  setupJointSelectorEvents(); // 部材登録用：継手選択モーダルのイベント設定
 }
 
 //登録用フローティングボタンイベント
@@ -2409,8 +2427,9 @@ function setupAddActionEvents() {
     });
   }
 
-  // 内部関数: 継手追加とトースト表示
+  // 内部関数: 継手追加とトースト表示 (再利用する共通ロジック)
   const addJointAndShowToast = (jointData) => {
+    // 1. State更新
     const projectIndex = state.projects.findIndex(
       (p) => p.id === state.currentProjectId,
     );
@@ -2418,8 +2437,10 @@ function setupAddActionEvents() {
     const updatedJoints = [...state.projects[projectIndex].joints, jointData];
     state.projects[projectIndex].joints = updatedJoints;
 
+    // 2. UI再描画
     renderDetailView();
 
+    // 3. 通知 & リセット
     let boltInfo = "";
     if (jointData.isComplexSpl && jointData.webInputs)
       boltInfo = jointData.webInputs
@@ -2431,10 +2452,14 @@ function setupAddActionEvents() {
       boltInfo = `${jointData.flangeSize} / ${jointData.flangeCount}本`;
     else
       boltInfo = `F:${jointData.flangeSize}/${jointData.flangeCount}本, W:${jointData.webSize}/${jointData.webCount}本`;
+
     showToast(`継手「${jointData.name}」を登録しました (${boltInfo})`);
-    resetJointForm();
+
+    // ui.jsのresetJointFormを呼ぶ
+    if (typeof resetJointForm === "function") resetJointForm();
     if (jointNameInput) jointNameInput.focus();
 
+    // 4. DB保存
     updateProjectData(state.currentProjectId, {
       joints: updatedJoints,
     }).catch((err) => {
@@ -2445,11 +2470,14 @@ function setupAddActionEvents() {
     });
   };
 
-  // 確認モーダルの「はい」ボタン (confirm-add-btn) のイベントも必要
+  // ▼▼▼ 【ここに追加・統合】確認モーダルの登録ボタン ▼▼▼
   if (confirmAddBtn) {
     confirmAddBtn.addEventListener("click", () => {
+      // 一時保存されたデータがあれば、共通処理を呼び出す
       if (state.tempJointData) {
         addJointAndShowToast(state.tempJointData);
+
+        // 後処理
         state.tempJointData = null;
         if (confirmAddModal) closeModal(confirmAddModal);
       }
@@ -3131,6 +3159,102 @@ function setupTallySheetInteractions() {
         isEditing = true;
       }
     });
+
+    // ▼▼▼ 【ここに追加】変更検知 (ロック切り替え & 値入力確定) ▼▼▼
+    tallySheetContainer.addEventListener("change", (e) => {
+      // 1. ロック用チェックボックスが変更された時の処理
+      if (e.target.classList.contains("tally-lock-checkbox")) {
+        const project = state.projects.find(
+          (p) => p.id === state.currentProjectId,
+        );
+        if (!project) return;
+
+        const itemId = e.target.dataset.id;
+        const isLocked = e.target.checked;
+
+        // ブラウザ内のデータを即座に更新
+        if (!project.tallyLocks) project.tallyLocks = {};
+        project.tallyLocks[itemId] = isLocked;
+
+        // UI反映 (ui.jsの関数)
+        if (typeof updateColumnLockUI === "function") {
+          updateColumnLockUI(itemId, isLocked);
+        }
+
+        const fieldPath = `tallyLocks.${itemId}`;
+
+        updateProjectData(state.currentProjectId, {
+          [fieldPath]: isLocked,
+        }).catch((err) => {
+          console.error("ロック状態の保存に失敗しました: ", err);
+          showCustomAlert("ロック状態の保存に失敗しました。");
+          // 失敗時は戻す
+          e.target.checked = !isLocked;
+          project.tallyLocks[itemId] = !isLocked;
+          if (typeof updateColumnLockUI === "function") {
+            updateColumnLockUI(itemId, !isLocked);
+          }
+        });
+      }
+
+      // 2. 箇所数入力のセルが変更された時の処理
+      if (e.target.classList.contains("tally-input")) {
+        const project = state.projects.find(
+          (p) => p.id === state.currentProjectId,
+        );
+        if (!project) return;
+
+        const { location, id } = e.target.dataset;
+        // Firestoreのネストされたフィールド更新用のパス
+        const fieldPath = `tally.${location}.${id}`;
+
+        // 値をより厳密に取得・整形
+        let valueStr = e.target.value.trim();
+        // 全角数字を半角に
+        valueStr = valueStr.replace(/[０-９]/g, (s) =>
+          String.fromCharCode(s.charCodeAt(0) - 0xfee0),
+        );
+
+        const quantity = parseInt(valueStr, 10);
+
+        // A. ブラウザ内のデータ(state)を即座に更新
+        if (!project.tally) project.tally = {};
+        if (!project.tally[location]) project.tally[location] = {};
+
+        if (valueStr === "" || isNaN(quantity)) {
+          delete project.tally[location][id];
+          e.target.value = ""; // 見た目もクリア
+        } else {
+          project.tally[location][id] = quantity;
+          e.target.value = quantity; // 整形した数値を戻す
+        }
+
+        // B. 箇所数入力の表の合計値を更新 (ui.js)
+        if (typeof updateTallySheetCalculations === "function") {
+          updateTallySheetCalculations(project);
+        }
+
+        // C. 全ての集計結果の表を再計算・再描画 (ui.js)
+        if (typeof renderResults === "function") {
+          renderResults(project);
+        }
+
+        // D. 裏側でデータベースに保存
+        // 空白または非数の場合は削除(null)として保存する場合と、DeleteFieldを使う場合がありますが、
+        // ここではnull保存またはmap更新のロジックに従います
+        const valueToSave =
+          valueStr === "" || isNaN(quantity) ? null : quantity;
+
+        // updateProjectData は updateDoc を呼んでいるので、
+        // `tally.locationId.itemId`: value という形式で部分更新が可能
+        updateProjectData(state.currentProjectId, {
+          [fieldPath]: valueToSave,
+        }).catch((err) => {
+          showCustomAlert(`集計結果の保存に失敗`);
+          console.error("Error updating tally: ", err);
+        });
+      }
+    });
   }
 }
 
@@ -3484,5 +3608,257 @@ function setupTabNavigationEvents() {
 
   if (mobileTabTally) {
     mobileTabTally.addEventListener("click", () => switchTab("tally"));
+  }
+}
+
+/**
+ * ダークモード切り替えのイベント設定
+ */
+function setupThemeEvents() {
+  const darkModeToggle = document.getElementById("dark-mode-toggle");
+  const mobileDarkModeToggle = document.getElementById(
+    "mobile-dark-mode-toggle",
+  );
+
+  if (darkModeToggle) {
+    darkModeToggle.addEventListener("change", toggleTheme);
+  }
+
+  if (mobileDarkModeToggle) {
+    mobileDarkModeToggle.addEventListener("change", toggleTheme);
+  }
+}
+
+/**
+ * グループ（物件名）操作関連のイベント設定
+ */
+function setupGroupActionEvents() {
+  const saveGroupBtn = document.getElementById("save-group-btn");
+  const editGroupModal = document.getElementById("edit-group-modal");
+  const oldNameInput = document.getElementById("edit-group-old-name");
+  const newNameInput = document.getElementById("edit-group-new-name");
+
+  if (saveGroupBtn) {
+    saveGroupBtn.addEventListener("click", async () => {
+      // DOM要素の取得チェック
+      if (!oldNameInput || !newNameInput) return;
+
+      const oldName = oldNameInput.value;
+      const newName = newNameInput.value.trim();
+
+      const projectsToUpdate = state.projects.filter(
+        (p) => p.propertyName === oldName,
+      );
+
+      if (projectsToUpdate.length === 0) {
+        if (editGroupModal) closeModal(editGroupModal);
+        return;
+      }
+
+      // --- 1. 楽観的UI更新 (ローカルState) ---
+      projectsToUpdate.forEach((project) => {
+        const localProject = state.projects.find((p) => p.id === project.id);
+        if (localProject) {
+          localProject.propertyName = newName;
+        }
+      });
+
+      // --- 2. UI再描画 ---
+      updateProjectListUI();
+
+      // --- 3. モーダルを閉じて通知 ---
+      if (editGroupModal) closeModal(editGroupModal);
+      showToast(`物件名を「${newName}」に更新しました。`);
+
+      // --- 4. DB更新 (裏側実行) ---
+      const targetIds = projectsToUpdate.map((p) => p.id);
+
+      updateProjectPropertyNameBatch(targetIds, newName).catch((err) => {
+        console.error("物件名の一括更新に失敗しました: ", err);
+        showCustomAlert(
+          "物件名の一括更新に失敗しました。ページをリロードしてデータを確認してください。",
+        );
+      });
+    });
+  }
+}
+
+/**
+ * 物件ごとの集計結果モーダル内のイベント設定（詳細表示クリックなど）
+ */
+function setupAggregatedResultsEvents() {
+  const aggregatedResultsContent = document.getElementById(
+    "aggregated-results-content",
+  );
+
+  if (aggregatedResultsContent) {
+    aggregatedResultsContent.addEventListener("click", (e) => {
+      // 詳細データを持っているセル(td.has-details)がクリックされたか判定
+      const targetCell = e.target.closest("td.has-details");
+      if (!targetCell) return;
+
+      try {
+        // データ属性から詳細情報を取得
+        const detailsData = JSON.parse(targetCell.dataset.details);
+        const row = targetCell.closest("tr");
+        const boltSize = row.querySelector("td:first-child").textContent;
+
+        // 詳細モーダルの要素取得
+        const modalTitle = document.getElementById("details-modal-title");
+        const modalContent = document.getElementById("details-modal-content");
+        const detailsModal = document.getElementById("details-modal");
+
+        if (modalTitle && modalContent && detailsModal) {
+          modalTitle.textContent = `${boltSize} の合計内訳`;
+
+          let contentHtml = '<ul class="space-y-2 text-base">';
+          const sortedJoints = Object.entries(detailsData).sort((a, b) =>
+            a[0].localeCompare(b[0]),
+          );
+
+          for (const [name, count] of sortedJoints) {
+            contentHtml += `
+                    <li class="flex justify-between items-center border-b border-slate-200 dark:border-slate-700 pb-2">
+                        <span class="text-slate-700 dark:text-slate-300">${name}:</span>
+                        <span class="font-bold text-lg text-slate-900 dark:text-slate-100">${count.toLocaleString()}本</span>
+                    </li>`;
+          }
+          contentHtml += "</ul>";
+
+          modalContent.innerHTML = contentHtml;
+          openModal(detailsModal);
+        }
+      } catch (err) {
+        console.error("Failed to parse aggregated details data:", err);
+      }
+    });
+  }
+}
+
+/**
+ * ボルトサイズ選択モーダル（汎用セレクター）のイベント設定
+ */
+function setupBoltSelectorEvents() {
+  const boltOptionsContainer = document.getElementById(
+    "bolt-options-container",
+  );
+  const boltSelectorModal = document.getElementById("bolt-selector-modal");
+
+  // 1. モーダルを開く処理 (Document Delegation)
+  // 動的に生成される要素や、複数の場所にあるトリガーに対応するため document に設定
+  document.addEventListener("click", (e) => {
+    // A. 「▼」ボタンがクリックされた時
+    if (e.target.classList.contains("bolt-select-trigger")) {
+      // ui.js の関数を呼び出す (dataset.targetには対象のinput IDが入っている想定)
+      if (typeof openBoltSelectorModal === "function") {
+        openBoltSelectorModal(e.target.dataset.target);
+      }
+    }
+    // B. 読み取り専用の入力欄がクリックされた時（隣の▼ボタンを押したことにする）
+    else if (e.target.classList.contains("modal-trigger-input")) {
+      const triggerButton = e.target.nextElementSibling;
+      if (triggerButton) {
+        triggerButton.click();
+      }
+    }
+  });
+
+  // 2. モーダル内でボルトを選択した時の処理
+  if (boltOptionsContainer) {
+    boltOptionsContainer.addEventListener("click", (e) => {
+      // ボタンがクリックされ、かつ書き込み対象(activeBoltTarget)が特定されている場合
+      if (
+        e.target.classList.contains("bolt-option-btn") &&
+        state.activeBoltTarget
+      ) {
+        // 対象の入力欄に値をセット
+        state.activeBoltTarget.value = e.target.dataset.size;
+
+        // inputイベントを発火させて、変更検知（保存処理など）をトリガーする
+        state.activeBoltTarget.dispatchEvent(
+          new Event("input", { bubbles: true }),
+        );
+        state.activeBoltTarget.dispatchEvent(
+          new Event("change", { bubbles: true }),
+        );
+
+        // モーダルを閉じる
+        if (boltSelectorModal) closeModal(boltSelectorModal);
+      }
+    });
+  }
+}
+
+/**
+ * 部材登録用：継手選択モーダルのイベント設定
+ */
+function setupJointSelectorEvents() {
+  // DOM要素の取得
+  const openJointSelectorBtn = document.getElementById(
+    "open-joint-selector-btn",
+  );
+  const jointSelectorModal = document.getElementById("joint-selector-modal");
+  const closeJointModalBtn = document.getElementById("close-joint-modal-btn"); // ※HTMLのIDを確認してください
+  const jointOptionsContainer = document.getElementById(
+    "joint-options-container",
+  );
+
+  const memberJointSelectInput = document.getElementById(
+    "member-joint-select-input",
+  ); // 表示用(readonly)
+  const memberJointSelectId = document.getElementById("member-joint-select"); // 送信用(hidden)
+
+  // 1. 「▼」ボタンクリックでモーダルを開く
+  if (openJointSelectorBtn) {
+    openJointSelectorBtn.addEventListener("click", () => {
+      const project = state.projects.find(
+        (p) => p.id === state.currentProjectId,
+      );
+
+      // 現在選択されているIDを取得
+      const currentJointId = memberJointSelectId
+        ? memberJointSelectId.value
+        : "";
+
+      // ui.js の関数を使ってリストを生成
+      if (typeof populateJointSelectorModal === "function") {
+        populateJointSelectorModal(project, currentJointId);
+      }
+
+      openModal(jointSelectorModal);
+    });
+  }
+
+  // 2. テキスト入力欄クリックで「▼」ボタンのクリックを代行
+  if (memberJointSelectInput && openJointSelectorBtn) {
+    memberJointSelectInput.addEventListener("click", () => {
+      openJointSelectorBtn.click();
+    });
+  }
+
+  // 3. 閉じるボタン
+  if (closeJointModalBtn) {
+    closeJointModalBtn.addEventListener("click", () => {
+      if (jointSelectorModal) closeModal(jointSelectorModal);
+    });
+  }
+
+  // 4. 選択肢をクリックした時の処理 (Event Delegation)
+  if (jointOptionsContainer) {
+    jointOptionsContainer.addEventListener("click", (e) => {
+      // アイコンなどがクリックされた場合も考慮して closest を使用
+      const target = e.target.closest(".joint-option-btn");
+
+      if (target) {
+        const { id, name } = target.dataset;
+
+        // 入力欄に値をセット
+        if (memberJointSelectInput) memberJointSelectInput.value = name;
+        if (memberJointSelectId) memberJointSelectId.value = id;
+
+        // モーダルを閉じる
+        if (jointSelectorModal) closeModal(jointSelectorModal);
+      }
+    });
   }
 }

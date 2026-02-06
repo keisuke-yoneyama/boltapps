@@ -96,6 +96,34 @@ let isUndoRedoOperation = false;
 
 // let dragSourceElement = null;
 
+const initApp = async () => {
+  console.log("🚀 App initializing...");
+
+  try {
+    // --- Step 1: テーマの適用 (画面のチラつきを防ぐため最初に行う) ---
+    initTheme();
+
+    // --- Step 2: データの読み込み (完了するまで待機) ---
+    // ※ もし firebase.js に初期データロード関数を作っていない場合は、
+    //    ここで updateProjectListUI() を呼ぶだけで良い場合もあります。
+    //    (例: await loadGlobalSettings(); )
+
+    // --- Step 3: UIの初期描画 ---
+    // プロジェクト一覧を表示し、操作可能な状態にする
+    // updateProjectListUI();
+
+    // --- Step 4: イベントリスナーの一括登録 ---
+    // ボタンや入力欄の動作を有効化する
+    setupEventListeners();
+
+    console.log("✅ App initialized successfully.");
+  } catch (err) {
+    console.error("❌ Initialization failed:", err);
+    // 必要であればユーザーにエラーを表示する処理
+    // alert("アプリの起動に失敗しました。リロードしてください。");
+  }
+};
+
 /**
  * グローバル設定の読み込みと移行ロジック
  */
@@ -120,8 +148,7 @@ const loadGlobalSettings = async () => {
 };
 
 document.addEventListener("DOMContentLoaded", () => {
-  // --- DOM Elements ---
-  setupEventListeners();
+  initApp();
 
   const loader = document.getElementById("loader");
   const views = {
@@ -276,14 +303,14 @@ document.addEventListener("DOMContentLoaded", () => {
   // const deleteIdInput = document.getElementById("delete-id");
   // const deleteTypeInput = document.getElementById("delete-type");
 
-  const confirmAddModal = document.getElementById("confirm-add-modal");
-  // const confirmAddMessage = document.getElementById("confirm-add-message");
-  const confirmAddBtn = document.getElementById("confirm-add-btn");
+  // const confirmAddModal = document.getElementById("confirm-add-modal");
+  // // const confirmAddMessage = document.getElementById("confirm-add-message");
+  // const confirmAddBtn = document.getElementById("confirm-add-btn");
 
-  const boltSelectorModal = document.getElementById("bolt-selector-modal");
-  const boltOptionsContainer = document.getElementById(
-    "bolt-options-container",
-  );
+  // const boltSelectorModal = document.getElementById("bolt-selector-modal");
+  // const boltOptionsContainer = document.getElementById(
+  //   "bolt-options-container",
+  // );
 
   // const tempBoltSettingInput = document.getElementById("temp-bolt-setting");
 
@@ -1264,80 +1291,80 @@ document.addEventListener("DOMContentLoaded", () => {
   //   });
   // };
 
-  tallySheetContainer.addEventListener("change", (e) => {
-    // ロック用チェックボックスが変更された時の処理
-    if (e.target.classList.contains("tally-lock-checkbox")) {
-      const project = state.projects.find(
-        (p) => p.id === state.currentProjectId,
-      );
-      if (!project) return;
-      const itemId = e.target.dataset.id;
-      const isLocked = e.target.checked;
+  // tallySheetContainer.addEventListener("change", (e) => {
+  //   // ロック用チェックボックスが変更された時の処理
+  //   if (e.target.classList.contains("tally-lock-checkbox")) {
+  //     const project = state.projects.find(
+  //       (p) => p.id === state.currentProjectId,
+  //     );
+  //     if (!project) return;
+  //     const itemId = e.target.dataset.id;
+  //     const isLocked = e.target.checked;
 
-      // ブラウザ内のデータを即座に更新
-      if (!project.tallyLocks) project.tallyLocks = {};
-      project.tallyLocks[itemId] = isLocked;
+  //     // ブラウザ内のデータを即座に更新
+  //     if (!project.tallyLocks) project.tallyLocks = {};
+  //     project.tallyLocks[itemId] = isLocked;
 
-      updateColumnLockUI(itemId, isLocked);
+  //     updateColumnLockUI(itemId, isLocked);
 
-      const fieldPath = `tallyLocks.${itemId}`;
+  //     const fieldPath = `tallyLocks.${itemId}`;
 
-      updateProjectData(state.currentProjectId, {
-        [fieldPath]: isLocked,
-      }).catch((err) => {
-        console.error("ロック状態の保存に失敗しました: ", err);
-        showCustomAlert("ロック状態の保存に失敗しました。");
-        e.target.checked = !isLocked;
-        project.tallyLocks[itemId] = !isLocked; // 失敗時は戻す
-        updateColumnLockUI(itemId, !isLocked);
-      });
-    }
+  //     updateProjectData(state.currentProjectId, {
+  //       [fieldPath]: isLocked,
+  //     }).catch((err) => {
+  //       console.error("ロック状態の保存に失敗しました: ", err);
+  //       showCustomAlert("ロック状態の保存に失敗しました。");
+  //       e.target.checked = !isLocked;
+  //       project.tallyLocks[itemId] = !isLocked; // 失敗時は戻す
+  //       updateColumnLockUI(itemId, !isLocked);
+  //     });
+  //   }
 
-    // 箇所数入力のセルが変更された時の処理
-    if (e.target.classList.contains("tally-input")) {
-      const project = state.projects.find(
-        (p) => p.id === state.currentProjectId,
-      );
-      if (!project) return;
-      const { location, id } = e.target.dataset;
-      const fieldPath = `tally.${location}.${id}`;
+  //   // 箇所数入力のセルが変更された時の処理
+  //   if (e.target.classList.contains("tally-input")) {
+  //     const project = state.projects.find(
+  //       (p) => p.id === state.currentProjectId,
+  //     );
+  //     if (!project) return;
+  //     const { location, id } = e.target.dataset;
+  //     const fieldPath = `tally.${location}.${id}`;
 
-      // 値をより厳密に取得・整形
-      let valueStr = e.target.value.trim();
-      valueStr = valueStr.replace(/[０-９]/g, (s) =>
-        String.fromCharCode(s.charCodeAt(0) - 0xfee0),
-      );
+  //     // 値をより厳密に取得・整形
+  //     let valueStr = e.target.value.trim();
+  //     valueStr = valueStr.replace(/[０-９]/g, (s) =>
+  //       String.fromCharCode(s.charCodeAt(0) - 0xfee0),
+  //     );
 
-      const quantity = parseInt(valueStr, 10);
+  //     const quantity = parseInt(valueStr, 10);
 
-      // 1. ブラウザ内のデータ(state)を即座に更新
-      if (!project.tally) project.tally = {};
-      if (!project.tally[location]) project.tally[location] = {};
+  //     // 1. ブラウザ内のデータ(state)を即座に更新
+  //     if (!project.tally) project.tally = {};
+  //     if (!project.tally[location]) project.tally[location] = {};
 
-      if (valueStr === "" || isNaN(quantity)) {
-        delete project.tally[location][id];
-        e.target.value = ""; // 見た目もクリア
-      } else {
-        project.tally[location][id] = quantity;
-        e.target.value = quantity; // 整形した数値を戻す
-      }
+  //     if (valueStr === "" || isNaN(quantity)) {
+  //       delete project.tally[location][id];
+  //       e.target.value = ""; // 見た目もクリア
+  //     } else {
+  //       project.tally[location][id] = quantity;
+  //       e.target.value = quantity; // 整形した数値を戻す
+  //     }
 
-      // 2. 箇所数入力の表の合計値を更新
-      updateTallySheetCalculations(project);
+  //     // 2. 箇所数入力の表の合計値を更新
+  //     updateTallySheetCalculations(project);
 
-      // 3. 全ての集計結果の表を再計算・再描画
-      renderResults(project);
+  //     // 3. 全ての集計結果の表を再計算・再描画
+  //     renderResults(project);
 
-      // 4. 裏側でデータベースに保存
-      const valueToSave = valueStr === "" || isNaN(quantity) ? null : quantity;
-      updateProjectData(state.currentProjectId, {
-        [fieldPath]: valueToSave,
-      }).catch((err) => {
-        showCustomAlert(`集計結果の保存に失敗`);
-        console.error("Error updating tally: ", err);
-      });
-    }
-  });
+  //     // 4. 裏側でデータベースに保存
+  //     const valueToSave = valueStr === "" || isNaN(quantity) ? null : quantity;
+  //     updateProjectData(state.currentProjectId, {
+  //       [fieldPath]: valueToSave,
+  //     }).catch((err) => {
+  //       showCustomAlert(`集計結果の保存に失敗`);
+  //       console.error("Error updating tally: ", err);
+  //     });
+  //   }
+  // });
 
   // ★ 修正版：継手の保存処理（新規・編集 両対応）
   // ★ 修正版：継手の保存処理（連続登録対応）
@@ -2137,80 +2164,80 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // 確認モーダルの登録ボタンの処理も修正
   // ▼▼▼以下のコードに置き換え▼▼▼
-  confirmAddBtn.addEventListener("click", () => {
-    if (state.tempJointData) {
-      const jointData = state.tempJointData;
-      const projectIndex = state.projects.findIndex(
-        (p) => p.id === state.currentProjectId,
-      );
-      if (projectIndex !== -1) {
-        // 手順A: ブラウザ内のデータを先に書き換える
-        const updatedJoints = [
-          ...state.projects[projectIndex].joints,
-          jointData,
-        ];
-        state.projects[projectIndex].joints = updatedJoints;
+  // confirmAddBtn.addEventListener("click", () => {
+  //   if (state.tempJointData) {
+  //     const jointData = state.tempJointData;
+  //     const projectIndex = state.projects.findIndex(
+  //       (p) => p.id === state.currentProjectId,
+  //     );
+  //     if (projectIndex !== -1) {
+  //       // 手順A: ブラウザ内のデータを先に書き換える
+  //       const updatedJoints = [
+  //         ...state.projects[projectIndex].joints,
+  //         jointData,
+  //       ];
+  //       state.projects[projectIndex].joints = updatedJoints;
 
-        // 手順B: 画面を即座に再描画する
-        renderDetailView();
+  //       // 手順B: 画面を即座に再描画する
+  //       renderDetailView();
 
-        // 手順C: ユーザーに完了を通知し、フォームをリセット
-        let boltInfo = "";
-        if (jointData.isComplexSpl && jointData.webInputs)
-          boltInfo = jointData.webInputs
-            .map((w) => `${w.size}/${w.count}本`)
-            .join(", ");
-        else if (jointData.isPinJoint)
-          boltInfo = `${jointData.webSize} / ${jointData.webCount}本`;
-        else if (
-          ["column", "wall_girt", "roof_purlin"].includes(jointData.type)
-        )
-          boltInfo = `${jointData.flangeSize} / ${jointData.flangeCount}本`;
-        else
-          boltInfo = `F:${jointData.flangeSize}/${jointData.flangeCount}本, W:${jointData.webSize}/${jointData.webCount}本`;
-        showToast(`継手「${jointData.name}」を登録しました (${boltInfo})`);
-        resetJointForm();
-        jointNameInput.focus();
+  //       // 手順C: ユーザーに完了を通知し、フォームをリセット
+  //       let boltInfo = "";
+  //       if (jointData.isComplexSpl && jointData.webInputs)
+  //         boltInfo = jointData.webInputs
+  //           .map((w) => `${w.size}/${w.count}本`)
+  //           .join(", ");
+  //       else if (jointData.isPinJoint)
+  //         boltInfo = `${jointData.webSize} / ${jointData.webCount}本`;
+  //       else if (
+  //         ["column", "wall_girt", "roof_purlin"].includes(jointData.type)
+  //       )
+  //         boltInfo = `${jointData.flangeSize} / ${jointData.flangeCount}本`;
+  //       else
+  //         boltInfo = `F:${jointData.flangeSize}/${jointData.flangeCount}本, W:${jointData.webSize}/${jointData.webCount}本`;
+  //       showToast(`継手「${jointData.name}」を登録しました (${boltInfo})`);
+  //       resetJointForm();
+  //       jointNameInput.focus();
 
-        // 手順D: 裏側でデータベースに保存する
-        updateProjectData(state.currentProjectId, {
-          joints: updatedJoints,
-        }).catch((err) => {
-          showCustomAlert(
-            "継手の追加に失敗しました。ページをリロードしてデータを確認してください。",
-          );
-          console.error("継手の追加に失敗: ", err);
-        });
-      }
-    }
-    closeModal(confirmAddModal);
-    state.tempJointData = null;
-  });
+  //       // 手順D: 裏側でデータベースに保存する
+  //       updateProjectData(state.currentProjectId, {
+  //         joints: updatedJoints,
+  //       }).catch((err) => {
+  //         showCustomAlert(
+  //           "継手の追加に失敗しました。ページをリロードしてデータを確認してください。",
+  //         );
+  //         console.error("継手の追加に失敗: ", err);
+  //       });
+  //     }
+  //   }
+  //   closeModal(confirmAddModal);
+  //   state.tempJointData = null;
+  // });
 
-  // ▼▼▼ このイベントリスナーを追記 ▼▼▼
-  document.addEventListener("click", (e) => {
-    // 「▼」ボタンがクリックされた時の処理
-    if (e.target.classList.contains("bolt-select-trigger")) {
-      openBoltSelectorModal(e.target.dataset.target);
-    }
-    // 読み取り専用の入力欄がクリックされた時の処理
-    else if (e.target.classList.contains("modal-trigger-input")) {
-      const triggerButton = e.target.nextElementSibling;
-      if (triggerButton) {
-        // 隣にある「▼」ボタンのクリックをプログラムが実行する
-        triggerButton.click();
-      }
-    }
-  });
-  boltOptionsContainer.addEventListener("click", (e) => {
-    if (
-      e.target.classList.contains("bolt-option-btn") &&
-      state.activeBoltTarget
-    ) {
-      state.activeBoltTarget.value = e.target.dataset.size;
-      closeModal(boltSelectorModal);
-    }
-  });
+  // // ▼▼▼ このイベントリスナーを追記 ▼▼▼
+  // document.addEventListener("click", (e) => {
+  //   // 「▼」ボタンがクリックされた時の処理
+  //   if (e.target.classList.contains("bolt-select-trigger")) {
+  //     openBoltSelectorModal(e.target.dataset.target);
+  //   }
+  //   // 読み取り専用の入力欄がクリックされた時の処理
+  //   else if (e.target.classList.contains("modal-trigger-input")) {
+  //     const triggerButton = e.target.nextElementSibling;
+  //     if (triggerButton) {
+  //       // 隣にある「▼」ボタンのクリックをプログラムが実行する
+  //       triggerButton.click();
+  //     }
+  //   }
+  // });
+  // boltOptionsContainer.addEventListener("click", (e) => {
+  //   if (
+  //     e.target.classList.contains("bolt-option-btn") &&
+  //     state.activeBoltTarget
+  //   ) {
+  //     state.activeBoltTarget.value = e.target.dataset.size;
+  //     closeModal(boltSelectorModal);
+  //   }
+  // });
 
   // [
   //   navTabJoints,
@@ -2270,35 +2297,35 @@ document.addEventListener("DOMContentLoaded", () => {
   // });
 
   // 「▼」ボタンがクリックされた時の処理
-  openJointSelectorBtn.addEventListener("click", () => {
-    const project = state.projects.find((p) => p.id === state.currentProjectId);
-    // 現在選択されている継手のIDをhidden inputから取得します
-    const currentJointId = memberJointSelectId.value;
-    // 取得したIDを引数としてモーダル生成関数に渡します
-    populateJointSelectorModal(project, currentJointId);
-    openModal(jointSelectorModal);
-  });
+  // openJointSelectorBtn.addEventListener("click", () => {
+  //   const project = state.projects.find((p) => p.id === state.currentProjectId);
+  //   // 現在選択されている継手のIDをhidden inputから取得します
+  //   const currentJointId = memberJointSelectId.value;
+  //   // 取得したIDを引数としてモーダル生成関数に渡します
+  //   populateJointSelectorModal(project, currentJointId);
+  //   openModal(jointSelectorModal);
+  // });
 
-  // テキスト入力欄がクリックされた時に、上の「▼」ボタンのクリックを代行する処理
-  document
-    .getElementById("member-joint-select-input")
-    .addEventListener("click", () => {
-      openJointSelectorBtn.click();
-    });
+  // // テキスト入力欄がクリックされた時に、上の「▼」ボタンのクリックを代行する処理
+  // document
+  //   .getElementById("member-joint-select-input")
+  //   .addEventListener("click", () => {
+  //     openJointSelectorBtn.click();
+  //   });
 
-  // ▲▲▲ ここまでを追加 ▲▲▲
-  closeJointModalBtn.addEventListener("click", () =>
-    closeModal(jointSelectorModal),
-  );
+  // // ▲▲▲ ここまでを追加 ▲▲▲
+  // closeJointModalBtn.addEventListener("click", () =>
+  //   closeModal(jointSelectorModal),
+  // );
 
-  jointOptionsContainer.addEventListener("click", (e) => {
-    if (e.target.classList.contains("joint-option-btn")) {
-      const { id, name } = e.target.dataset;
-      memberJointSelectInput.value = name;
-      memberJointSelectId.value = id;
-      closeModal(jointSelectorModal);
-    }
-  });
+  // jointOptionsContainer.addEventListener("click", (e) => {
+  //   if (e.target.classList.contains("joint-option-btn")) {
+  //     const { id, name } = e.target.dataset;
+  //     memberJointSelectInput.value = name;
+  //     memberJointSelectId.value = id;
+  //     closeModal(jointSelectorModal);
+  //   }
+  // });
 
   // openTempBoltMappingBtn.addEventListener("click", () => {
   //   const project = state.projects.find((p) => p.id === state.currentProjectId);
@@ -2578,54 +2605,54 @@ document.addEventListener("DOMContentLoaded", () => {
   // };
   // 物件名一括保存ボタンの処理
   // 物件名一括保存ボタンの処理 (楽観的UIを適用)
-  document
-    .getElementById("save-group-btn")
-    .addEventListener("click", async () => {
-      const oldName = document.getElementById("edit-group-old-name").value;
-      const newName = document
-        .getElementById("edit-group-new-name")
-        .value.trim();
+  // document
+  //   .getElementById("save-group-btn")
+  //   .addEventListener("click", async () => {
+  //     const oldName = document.getElementById("edit-group-old-name").value;
+  //     const newName = document
+  //       .getElementById("edit-group-new-name")
+  //       .value.trim();
 
-      const projectsToUpdate = state.projects.filter(
-        (p) => p.propertyName === oldName,
-      );
+  //     const projectsToUpdate = state.projects.filter(
+  //       (p) => p.propertyName === oldName,
+  //     );
 
-      if (projectsToUpdate.length === 0) {
-        closeModal(document.getElementById("edit-group-modal"));
-        return;
-      }
+  //     if (projectsToUpdate.length === 0) {
+  //       closeModal(document.getElementById("edit-group-modal"));
+  //       return;
+  //     }
 
-      // ▼▼▼ ここからが修正箇所 ▼▼▼
+  //     // ▼▼▼ ここからが修正箇所 ▼▼▼
 
-      // 1. ローカルのstate（アプリが保持しているデータ）を即座に更新する
-      projectsToUpdate.forEach((project) => {
-        const localProject = state.projects.find((p) => p.id === project.id);
-        if (localProject) {
-          localProject.propertyName = newName;
-        }
-      });
+  //     // 1. ローカルのstate（アプリが保持しているデータ）を即座に更新する
+  //     projectsToUpdate.forEach((project) => {
+  //       const localProject = state.projects.find((p) => p.id === project.id);
+  //       if (localProject) {
+  //         localProject.propertyName = newName;
+  //       }
+  //     });
 
-      // 2. 更新されたローカルstateを使って、UI（物件一覧）を即座に再描画する
-      updateProjectListUI();
+  //     // 2. 更新されたローカルstateを使って、UI（物件一覧）を即座に再描画する
+  //     updateProjectListUI();
 
-      // 3. UIの操作（モーダルを閉じる）を完了させる
-      closeModal(document.getElementById("edit-group-modal"));
-      showToast(`物件名を「${newName}」に更新しました。`);
+  //     // 3. UIの操作（モーダルを閉じる）を完了させる
+  //     closeModal(document.getElementById("edit-group-modal"));
+  //     showToast(`物件名を「${newName}」に更新しました。`);
 
-      // ▼▼▼ 4. 裏側でDB更新 (ここを修正) ▼▼▼
+  //     // ▼▼▼ 4. 裏側でDB更新 (ここを修正) ▼▼▼
 
-      // 更新対象のIDリストを作成
-      const targetIds = projectsToUpdate.map((p) => p.id);
+  //     // 更新対象のIDリストを作成
+  //     const targetIds = projectsToUpdate.map((p) => p.id);
 
-      // DB操作関数を呼び出す（awaitなしで、裏側実行）
-      updateProjectPropertyNameBatch(targetIds, newName).catch((err) => {
-        console.error("物件名の一括更新に失敗しました: ", err);
-        showCustomAlert(
-          "物件名の一括更新に失敗しました。ページをリロードしてデータを確認してください。",
-        );
-      });
-      // ▲▲▲ ここまでが修正箇所 ▲▲▲
-    });
+  //     // DB操作関数を呼び出す（awaitなしで、裏側実行）
+  //     updateProjectPropertyNameBatch(targetIds, newName).catch((err) => {
+  //       console.error("物件名の一括更新に失敗しました: ", err);
+  //       showCustomAlert(
+  //         "物件名の一括更新に失敗しました。ページをリロードしてデータを確認してください。",
+  //       );
+  //     });
+  //     // ▲▲▲ ここまでが修正箇所 ▲▲▲
+  //   });
 
   // // 新しいモーダルを閉じるためのイベントリスナー
   // document
@@ -2772,44 +2799,44 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // --- ここから追加 ---
 
-  // 物件ごとの集計結果モーダル用の詳細表示リスナー
-  const aggregatedResultsContent = document.getElementById(
-    "aggregated-results-content",
-  );
-  aggregatedResultsContent.addEventListener("click", (e) => {
-    const targetCell = e.target.closest("td.has-details");
-    if (!targetCell) return;
+  // // 物件ごとの集計結果モーダル用の詳細表示リスナー
+  // const aggregatedResultsContent = document.getElementById(
+  //   "aggregated-results-content",
+  // );
+  // aggregatedResultsContent.addEventListener("click", (e) => {
+  //   const targetCell = e.target.closest("td.has-details");
+  //   if (!targetCell) return;
 
-    try {
-      const detailsData = JSON.parse(targetCell.dataset.details);
-      const row = targetCell.closest("tr");
-      const boltSize = row.querySelector("td:first-child").textContent;
+  //   try {
+  //     const detailsData = JSON.parse(targetCell.dataset.details);
+  //     const row = targetCell.closest("tr");
+  //     const boltSize = row.querySelector("td:first-child").textContent;
 
-      const modalTitle = document.getElementById("details-modal-title");
-      const modalContent = document.getElementById("details-modal-content");
+  //     const modalTitle = document.getElementById("details-modal-title");
+  //     const modalContent = document.getElementById("details-modal-content");
 
-      modalTitle.textContent = `${boltSize} の合計内訳`;
+  //     modalTitle.textContent = `${boltSize} の合計内訳`;
 
-      let contentHtml = '<ul class="space-y-2 text-base">';
-      const sortedJoints = Object.entries(detailsData).sort((a, b) =>
-        a[0].localeCompare(b[0]),
-      );
+  //     let contentHtml = '<ul class="space-y-2 text-base">';
+  //     const sortedJoints = Object.entries(detailsData).sort((a, b) =>
+  //       a[0].localeCompare(b[0]),
+  //     );
 
-      for (const [name, count] of sortedJoints) {
-        contentHtml += `
-                <li class="flex justify-between items-center border-b border-slate-200 dark:border-slate-700 pb-2">
-                    <span class="text-slate-700 dark:text-slate-300">${name}:</span>
-                    <span class="font-bold text-lg text-slate-900 dark:text-slate-100">${count.toLocaleString()}本</span>
-                </li>`;
-      }
-      contentHtml += "</ul>";
+  //     for (const [name, count] of sortedJoints) {
+  //       contentHtml += `
+  //               <li class="flex justify-between items-center border-b border-slate-200 dark:border-slate-700 pb-2">
+  //                   <span class="text-slate-700 dark:text-slate-300">${name}:</span>
+  //                   <span class="font-bold text-lg text-slate-900 dark:text-slate-100">${count.toLocaleString()}本</span>
+  //               </li>`;
+  //     }
+  //     contentHtml += "</ul>";
 
-      modalContent.innerHTML = contentHtml;
-      openModal(document.getElementById("details-modal"));
-    } catch (err) {
-      console.error("Failed to parse aggregated details data:", err);
-    }
-  });
+  //     modalContent.innerHTML = contentHtml;
+  //     openModal(document.getElementById("details-modal"));
+  //   } catch (err) {
+  //     console.error("Failed to parse aggregated details data:", err);
+  //   }
+  // });
 
   // --- ここまで追加 ---
 
@@ -2909,49 +2936,49 @@ document.addEventListener("DOMContentLoaded", () => {
       },
     );
   }
-  // --- Dark Mode Logic ---
-  const darkModeToggle = document.getElementById("dark-mode-toggle");
-  const mobileDarkModeToggle = document.getElementById(
-    "mobile-dark-mode-toggle",
-  );
+  // // --- Dark Mode Logic ---
+  // const darkModeToggle = document.getElementById("dark-mode-toggle");
+  // const mobileDarkModeToggle = document.getElementById(
+  //   "mobile-dark-mode-toggle",
+  // );
 
-  const applyTheme = (theme) => {
-    if (theme === "dark") {
-      document.documentElement.classList.add("dark");
-      darkModeToggle.checked = true;
-      mobileDarkModeToggle.checked = true;
-    } else {
-      document.documentElement.classList.remove("dark");
-      darkModeToggle.checked = false;
-      mobileDarkModeToggle.checked = false;
-    }
-  };
+  // const applyTheme = (theme) => {
+  //   if (theme === "dark") {
+  //     document.documentElement.classList.add("dark");
+  //     darkModeToggle.checked = true;
+  //     mobileDarkModeToggle.checked = true;
+  //   } else {
+  //     document.documentElement.classList.remove("dark");
+  //     darkModeToggle.checked = false;
+  //     mobileDarkModeToggle.checked = false;
+  //   }
+  // };
 
-  const toggleTheme = () => {
-    const currentTheme = localStorage.getItem("theme");
-    if (currentTheme === "dark") {
-      localStorage.setItem("theme", "light");
-      applyTheme("light");
-    } else {
-      localStorage.setItem("theme", "dark");
-      applyTheme("dark");
-    }
-  };
+  // const toggleTheme = () => {
+  //   const currentTheme = localStorage.getItem("theme");
+  //   if (currentTheme === "dark") {
+  //     localStorage.setItem("theme", "light");
+  //     applyTheme("light");
+  //   } else {
+  //     localStorage.setItem("theme", "dark");
+  //     applyTheme("dark");
+  //   }
+  // };
 
-  darkModeToggle.addEventListener("change", toggleTheme);
-  mobileDarkModeToggle.addEventListener("change", toggleTheme);
+  // darkModeToggle.addEventListener("change", toggleTheme);
+  // mobileDarkModeToggle.addEventListener("change", toggleTheme);
 
-  // Apply theme on initial load
-  const savedTheme = localStorage.getItem("theme");
-  const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+  // // Apply theme on initial load
+  // const savedTheme = localStorage.getItem("theme");
+  // const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
 
-  if (savedTheme) {
-    applyTheme(savedTheme);
-  } else if (prefersDark) {
-    applyTheme("dark");
-  } else {
-    applyTheme("light");
-  }
+  // if (savedTheme) {
+  //   applyTheme(savedTheme);
+  // } else if (prefersDark) {
+  //   applyTheme("dark");
+  // } else {
+  //   applyTheme("light");
+  // }
   // --- Start Application ---
   // ▼▼▼ 追加：クイックナビゲーションの制御ロジック ▼▼▼
   // const quickNavContainer = document.getElementById("quick-nav-container");
