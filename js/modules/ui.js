@@ -5860,3 +5860,65 @@ export const initTheme = () => {
     applyTheme("light");
   }
 };
+
+// ▼ 追加: UIコンポーネントの初期化（セレクトボックスやパレットなど）
+export const initializeUIComponents = () => {
+  // カラーパレット
+  renderColorPalette(null);
+  renderStaticColorPalette(null);
+
+  // カスタム入力欄生成
+  const customLevelsContainer = document.getElementById(
+    "custom-levels-container",
+  );
+  const customAreasContainer = document.getElementById(
+    "custom-areas-container",
+  );
+  if (customLevelsContainer)
+    generateCustomInputFields(1, customLevelsContainer, "custom-level");
+  if (customAreasContainer)
+    generateCustomInputFields(1, customAreasContainer, "custom-area");
+
+  // ボルトセレクトボックス (HUGボルトなど)
+  const boltInputs = [
+    "shop-temp-bolt-size",
+    "edit-shop-temp-bolt-size",
+    "shop-temp-bolt-size-f",
+    "shop-temp-bolt-size-w",
+    "edit-shop-temp-bolt-size-f",
+    "edit-shop-temp-bolt-size-w",
+  ];
+  boltInputs.forEach((id) => {
+    const el = document.getElementById(id);
+    if (el) populateHugBoltSelector(el);
+  });
+};
+
+// ▼ 追加: 継手フォームの初期状態設定 (一番下にあったロジック)
+export const initializeJointFormState = () => {
+  const jointTypeInput = document.getElementById("joint-type");
+  const hasBoltCorrectionInput = document.getElementById("has-bolt-correction");
+  const shopSplGroup = document.getElementById("shop-spl-group");
+  const hasShopSplInput = document.getElementById("has-shop-spl");
+
+  updateJointFormUI(false); // 既存関数
+
+  if (jointTypeInput && shopSplGroup && hasShopSplInput) {
+    const initialJointTypeForSpl = jointTypeInput.value;
+    const applicableSplTypes = ["girder", "beam", "stud", "other"];
+
+    if (applicableSplTypes.includes(initialJointTypeForSpl)) {
+      shopSplGroup.classList.remove("hidden");
+      hasShopSplInput.checked = true;
+    }
+
+    if (hasShopSplInput.checked) {
+      if (hasBoltCorrectionInput) hasBoltCorrectionInput.disabled = false;
+    } else {
+      if (hasBoltCorrectionInput) {
+        hasBoltCorrectionInput.disabled = true;
+        hasBoltCorrectionInput.checked = false;
+      }
+    }
+  }
+};
