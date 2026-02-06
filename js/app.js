@@ -3238,27 +3238,27 @@ document.addEventListener("DOMContentLoaded", () => {
     populateGlobalBoltSelectorModal();
   });
 
-  // モーダル要素を取得してドラッグ可能にする
-  const modals = [
-    document.getElementById("edit-joint-modal"),
-    document.getElementById("edit-member-modal"),
-    document.getElementById("bulk-add-member-modal"),
-    document.getElementById("temp-bolt-mapping-modal"),
-  ];
+  // // モーダル要素を取得してドラッグ可能にする
+  // const modals = [
+  //   document.getElementById("edit-joint-modal"),
+  //   document.getElementById("edit-member-modal"),
+  //   document.getElementById("bulk-add-member-modal"),
+  //   document.getElementById("temp-bolt-mapping-modal"),
+  // ];
 
-  modals.forEach((modal) => {
-    if (modal) {
-      makeDraggable(modal);
-    }
-  });
-  if ("serviceWorker" in navigator) {
-    window.addEventListener("load", () => {
-      navigator.serviceWorker
-        .register("sw.js")
-        .then((reg) => console.log("SW registered!", reg))
-        .catch((err) => console.log("SW registration failed:", err));
-    });
-  }
+  // modals.forEach((modal) => {
+  //   if (modal) {
+  //     makeDraggable(modal);
+  //   }
+  // });
+  // if ("serviceWorker" in navigator) {
+  //   window.addEventListener("load", () => {
+  //     navigator.serviceWorker
+  //       .register("sw.js")
+  //       .then((reg) => console.log("SW registered!", reg))
+  //       .catch((err) => console.log("SW registration failed:", err));
+  //   });
+  // }
 
   updateJointFormUI(false); // 初期UI状態を設定
 
@@ -3614,16 +3614,16 @@ document.addEventListener("DOMContentLoaded", () => {
   // }
 
   // ▼▼▼ 追加：タブ切り替えイベントリスナーの登録 ▼▼▼
-  const tabJoints = document.getElementById("nav-tab-joints");
-  const tabTally = document.getElementById("nav-tab-tally");
-  const mobileTabJoints = document.getElementById("mobile-nav-tab-joints");
-  const mobileTabTally = document.getElementById("mobile-nav-tab-tally");
+  // const tabJoints = document.getElementById("nav-tab-joints");
+  // const tabTally = document.getElementById("nav-tab-tally");
+  // const mobileTabJoints = document.getElementById("mobile-nav-tab-joints");
+  // const mobileTabTally = document.getElementById("mobile-nav-tab-tally");
 
-  if (tabJoints) tabJoints.addEventListener("click", () => switchTab("joints"));
-  if (tabTally) tabTally.addEventListener("click", () => switchTab("tally"));
-  if (mobileTabJoints)
-    mobileTabJoints.addEventListener("click", () => switchTab("joints"));
-  if (mobileTabTally)
-    mobileTabTally.addEventListener("click", () => switchTab("tally"));
+  // if (tabJoints) tabJoints.addEventListener("click", () => switchTab("joints"));
+  // if (tabTally) tabTally.addEventListener("click", () => switchTab("tally"));
+  // if (mobileTabJoints)
+  //   mobileTabJoints.addEventListener("click", () => switchTab("joints"));
+  // if (mobileTabTally)
+  //   mobileTabTally.addEventListener("click", () => switchTab("tally"));
   // ▲▲▲ 追加ここまで ▲▲▲
 }); // document.addEventListener('DOMContentLoaded', ...) の終わり

@@ -36,6 +36,7 @@ import {
   populateJointDropdownForEdit,
   renderBulkMemberInputs,
   toggleQuickNav,
+  makeDraggable,
   closeQuickNavIfOutside,
 } from "./ui.js"; // ui.jsで作った関数を使う
 
@@ -135,6 +136,10 @@ export function setupEventListeners() {
   setupBulkMemberActionEvents(); //部材の一括追加イベント
 
   setupQuickNavEvents(); //クイックナビゲーション（FABメニュー等）のイベント設定
+
+  setupDraggableModals(); //ドラッグ可能にするイベント
+
+  setupTabNavigationEvents(); // タブ切り替えイベント
 }
 
 //登録用フローティングボタンイベント
@@ -3429,4 +3434,55 @@ function setupQuickNavEvents() {
     // 判定と処理は ui.js に委譲する
     closeQuickNavIfOutside(e.target);
   });
+}
+
+/**
+ * モーダルのドラッグ機能を有効化する設定
+ */
+function setupDraggableModals() {
+  // ドラッグ可能にしたいモーダルのIDリスト
+  const modalIds = [
+    "edit-joint-modal",
+    "edit-member-modal",
+    "bulk-add-member-modal",
+    "temp-bolt-mapping-modal",
+    // 必要に応じて追加（例: "bolt-size-settings-modal" など）
+  ];
+
+  modalIds.forEach((id) => {
+    const modal = document.getElementById(id);
+    if (modal) {
+      makeDraggable(modal);
+    }
+  });
+}
+
+/**
+ * タブ切り替えナビゲーション（デスクトップ・モバイル）のイベント設定
+ */
+function setupTabNavigationEvents() {
+  // デスクトップ用タブ
+  const tabJoints = document.getElementById("nav-tab-joints");
+  const tabTally = document.getElementById("nav-tab-tally");
+
+  // モバイル用タブ
+  const mobileTabJoints = document.getElementById("mobile-nav-tab-joints");
+  const mobileTabTally = document.getElementById("mobile-nav-tab-tally");
+
+  // イベントリスナー登録
+  if (tabJoints) {
+    tabJoints.addEventListener("click", () => switchTab("joints"));
+  }
+
+  if (tabTally) {
+    tabTally.addEventListener("click", () => switchTab("tally"));
+  }
+
+  if (mobileTabJoints) {
+    mobileTabJoints.addEventListener("click", () => switchTab("joints"));
+  }
+
+  if (mobileTabTally) {
+    mobileTabTally.addEventListener("click", () => switchTab("tally"));
+  }
 }
