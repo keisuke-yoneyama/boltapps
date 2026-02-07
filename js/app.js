@@ -174,3 +174,11 @@ const loadProjects = (loader) => {
 
 // DOM読み込み完了時にアプリを起動
 document.addEventListener("DOMContentLoaded", initApp);
+
+// すでに読み込みが完了している場合は、イベントを待たずに即実行
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", initApp);
+} else {
+  // すでに "interactive" または "complete" の場合
+  initApp();
+}
