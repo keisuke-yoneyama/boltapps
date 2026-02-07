@@ -45,8 +45,8 @@ const initApp = async () => {
     setupEventListeners();
 
     // 4. グローバル設定の読み込み (Boltサイズなど)
-    await loadGlobalSettings();
-    populateGlobalBoltSelectorModal();
+    // await loadGlobalSettings();
+    // populateGlobalBoltSelectorModal();
 
     // 5. 認証とデータ同期の開始 (ここがエンジンの始動)
     startAuthAndDataSync(loader);
@@ -88,6 +88,9 @@ const loadGlobalSettings = async () => {
 const startAuthAndDataSync = (loader) => {
   onAuthStateChanged(auth, async (user) => {
     if (user) {
+      // ▼▼▼ 【ここに追加】 ログイン済みなので、安全に設定を読み込めます ▼▼▼
+      await loadGlobalSettings();
+      populateGlobalBoltSelectorModal();
       // ログイン済みならプロジェクトデータを読み込む
       loadProjects(loader);
     } else {
