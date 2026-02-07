@@ -22,19 +22,42 @@ import {
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // --- Firebase Configuration ---
+// const netlifyFirebaseConfig = {
+//   apiKey: "AIzaSyD91klyordRm3DGALHb-pYyxJzVY4NmCn0",←古いキー
+//   authDomain: "bolt-calculator-3b175.firebaseapp.com",
+//   projectId: "bolt-calculator-3b175",
+//   storageBucket: "bolt-calculator-3b175.firebasestorage.app",
+//   messagingSenderId: "809544857551",
+//   appId: "1:809544857551:web:9e191c0267e315e80b44ba",
+//   measurementId: "G-ELKPMVBL71",
+// };
+
+// 自動生成されるファイルをインポート
+// ※ ローカル開発時はこのファイルがないのでエラーにならないよう工夫が必要
+let firebaseEnv = {};
+try {
+  const env = await import("./firebase-env.js");
+  firebaseEnv = env.firebaseEnv;
+} catch (e) {
+  console.log("firebase-env.js not found, using fallback or local config");
+}
+
+// Netlifyの設定 (環境変数から生成されたオブジェクトを使用)
 const netlifyFirebaseConfig = {
-  apiKey: "AIzaSyD91klyordRm3DGALHb-pYyxJzVY4NmCn0",
-  authDomain: "bolt-calculator-3b175.firebaseapp.com",
-  projectId: "bolt-calculator-3b175",
-  storageBucket: "bolt-calculator-3b175.firebasestorage.app",
-  messagingSenderId: "809544857551",
-  appId: "1:809544857551:web:9e191c0267e315e80b44ba",
-  measurementId: "G-ELKPMVBL71",
+  apiKey: firebaseEnv.apiKey,
+  authDomain: firebaseEnv.authDomain,
+  projectId: firebaseEnv.projectId,
+  storageBucket: firebaseEnv.storageBucket,
+  messagingSenderId: firebaseEnv.messagingSenderId,
+  appId: firebaseEnv.appId,
+  measurementId: firebaseEnv.measurementId,
 };
+
 const firebaseConfig =
   typeof __firebase_config !== "undefined"
     ? JSON.parse(__firebase_config)
     : netlifyFirebaseConfig;
+
 export const isDevelopmentEnvironment =
   typeof __firebase_config !== "undefined";
 

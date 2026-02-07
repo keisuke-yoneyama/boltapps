@@ -4,7 +4,7 @@
 .env.development.local
 .env.test.local
 .env.production.local
-
+firebase-env.js
 # 依存パッケージ
 node_modules/
 
