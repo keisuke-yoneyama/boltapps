@@ -38,6 +38,7 @@ let firebaseEnv = {};
 try {
   const env = await import("./firebase-env.js");
   firebaseEnv = env.firebaseEnv;
+  console.log("✅ firebase.js: Loaded configuration from firebase-env.js");
 } catch (e) {
   console.log("firebase-env.js not found, using fallback or local config");
 }
@@ -52,6 +53,17 @@ const netlifyFirebaseConfig = {
   appId: firebaseEnv.appId,
   measurementId: firebaseEnv.measurementId,
 };
+
+// --- 3. 最終的な設定値の確認 ---
+// ※ 重要: APIキーが空になっていないかコンソールで確認してください
+console.log(
+  "🔥 firebase.js: Final Config API Key:",
+  netlifyFirebaseConfig.apiKey ? "OK (Exists)" : "MISSING (Empty!)",
+);
+console.log(
+  "🔥 firebase.js: Final Config Project ID:",
+  netlifyFirebaseConfig.projectId,
+);
 
 const firebaseConfig =
   typeof __firebase_config !== "undefined"
