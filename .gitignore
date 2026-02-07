@@ -1,0 +1,18 @@
+# 環境変数ファイル（これを隠すのが今回の最優先事項）
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# 依存パッケージ
+node_modules/
+
+# ビルド成果物（Netlifyが生成するもの）
+dist/
+build/
+.netlify/
+
+# OSの設定ファイル
+.DS_Store
+Thumbs.db
