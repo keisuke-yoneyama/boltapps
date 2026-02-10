@@ -160,6 +160,8 @@ export function setupEventListeners() {
   setupJointSelectorEvents(); // 部材登録用：継手選択モーダルのイベント設定
 
   setupGlobalActionEvents(); //汎用アクション確認モーダル（実行・キャンセル）のイベント設定
+
+  setupBoltSettingsEvents(); //ボルト設定モーダルの設定
 }
 
 //登録用フローティングボタンイベント
@@ -3977,4 +3979,88 @@ function setupTallyClipboardEvents() {
       }
     }
   });
+}
+
+/**
+ * ボルト設定画面のイベントリスナー (旧 setupBoltSettingsUI)
+ */
+function setupBoltSettingsEvents() {
+  const navBtnBoltSettings = document.getElementById("nav-btn-bolt-settings");
+  const newBoltTypeSelect = document.getElementById("new-bolt-type-select");
+  const boltSizeSettingsModal = document.getElementById(
+    "bolt-size-settings-modal",
+  ); // ID確認要
+  const addBoltSizeBtn = document.getElementById("add-bolt-size-btn"); // ID確認要
+  const newBoltLengthInput = document.getElementById("new-bolt-length-input"); // ID確認要
+  const boltSizeList = document.getElementById("bolt-size-list");
+
+  // 1. 設定モーダルを開く
+  if (navBtnBoltSettings) {
+    navBtnBoltSettings.classList.remove("hidden");
+    navBtnBoltSettings.addEventListener("click", () => {
+      console.log("🔧 設定ボタンがクリックされました");
+      if (newBoltTypeSelect) {
+        console.log(
+          "✅ セレクトボックスが見つかりました。選択肢を生成します。",
+        );
+        newBoltTypeSelect.innerHTML = "";
+        BOLT_TYPES.forEach((type) => {
+          const opt = document.createElement("option");
+          opt.value = type;
+          opt.textContent = type;
+          newBoltTypeSelect.appendChild(opt);
+        });
+        newBoltTypeSelect.value = "M16";
+      } else {
+        console.error(
+          "❌ エラー: id='new-bolt-type-select' の要素が見つかりません！",
+        );
+      }
+      renderBoltSizeSettings();
+      openModal(boltSizeSettingsModal);
+    });
+  }
+
+  // 2. 新規追加ボタン
+  if (addBoltSizeBtn) {
+    addBoltSizeBtn.addEventListener("click", async () => {
+      const type = newBoltTypeSelect.value;
+      const length = parseInt(newBoltLengthInput.value);
+
+      if (!length || length <= 0) {
+        showToast("長さを正しく入力してください");
+        return;
+      }
+
+      const newId = `${type}×${length}`;
+
+      if (state.globalBoltSizes.some((b) => b.id === newId)) {
+        showToast("このサイズは既に登録されています");
+        return;
+      }
+
+      state.globalBoltSizes.push({
+        id: newId,
+        label: newId,
+        type: type,
+        length: length,
+      });
+
+      sortGlobalBoltSizes();
+      renderBoltSizeSettings();
+      populateGlobalBoltSelectorModal(); // 必要なら
+      await saveGlobalBoltSizes(state.globalBoltSizes);
+
+      newBoltLengthInput.value = "";
+      newBoltLengthInput.focus();
+
+      setTimeout(() => {
+        const newItem = Array.from(boltSizeList.children).find((li) =>
+          li.innerHTML.includes(newId),
+        );
+        if (newItem)
+          newItem.scrollIntoView({ behavior: "smooth", block: "center" });
+      }, 100);
+    });
+  }
 }
