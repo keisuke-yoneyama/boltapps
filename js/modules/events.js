@@ -944,7 +944,7 @@ function setupBoltSettingsEvents() {
   );
   const newBoltTypeSelect = document.getElementById("new-bolt-type-select");
   const addBoltSizeBtn = document.getElementById("add-bolt-size-btn");
-  const newBoltLengthInput = document.getElementById("new-bolt-length");
+  const newBoltLengthInput = document.getElementById("new-bolt-length-input");
   const boltSizeList = document.getElementById("bolt-size-list");
 
   const closeBoltSizeModalBtn = document.getElementById(
