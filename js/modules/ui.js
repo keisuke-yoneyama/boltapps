@@ -4679,6 +4679,9 @@ export const switchView = (viewName) => {
 
   if (!viewList || !viewDetail) return;
 
+  // ▼▼▼ 追加：FABコンテナの要素を取得 ▼▼▼
+  const fabContainer = document.getElementById("fab-container");
+
   // スクロールリセット
   window.scrollTo(0, 0);
 
@@ -4701,6 +4704,8 @@ export const switchView = (viewName) => {
     // 詳細を表示
     viewDetail.classList.remove("hidden");
     viewDetail.style.display = "block";
+
+    if (fabContainer) fabContainer.classList.remove("hidden");
 
     // ナビゲーション制御
     if (navElements.fixedNav) navElements.fixedNav.classList.remove("hidden");
@@ -4752,6 +4757,25 @@ export const switchView = (viewName) => {
     // FAB等を隠す
     const quickNav = document.getElementById("quick-nav-container");
     if (quickNav) quickNav.classList.add("hidden");
+
+    // ▼▼▼ 追加：物件一覧に戻るタイミングですべて非表示にする ▼▼▼
+    if (fabContainer) {
+      fabContainer.classList.add("hidden");
+
+      // 開きっぱなしのメニューやアイコンの状態もリセットしておく（次回表示時のため）
+      const fabIcon = document.getElementById("fab-icon-plus");
+      if (fabIcon) fabIcon.classList.remove("rotate-45");
+
+      const subButtons = fabContainer.querySelectorAll(".fab-sub-button");
+      subButtons.forEach((btn) => {
+        btn.classList.remove(
+          "translate-y-0",
+          "opacity-100",
+          "pointer-events-auto",
+        );
+        btn.classList.add("translate-y-10", "opacity-0", "pointer-events-none");
+      });
+    }
 
     state.currentProjectId = null;
   }
