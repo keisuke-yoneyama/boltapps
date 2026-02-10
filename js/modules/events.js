@@ -986,6 +986,7 @@ function setupBoltSettingsEvents() {
 
   // 3. 新規追加ボタン
   if (addBoltSizeBtn) {
+    console.log("✅ 追加ボタンクリック。");
     addBoltSizeBtn.addEventListener("click", async () => {
       // DOM要素がない場合は何もしない
       if (!newBoltTypeSelect || !newBoltLengthInput) return;
@@ -1065,6 +1066,8 @@ function setupBoltSettingsEvents() {
         }
       }, 100);
     });
+  } else {
+    console.error("✅ 追加ボタンidが無効。");
   }
 
   // 4. 閉じるボタンの処理 (finalizeBoltSettings)
