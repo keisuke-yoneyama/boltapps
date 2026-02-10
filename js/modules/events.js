@@ -987,19 +987,38 @@ function setupBoltSettingsEvents() {
   // 3. 新規追加ボタン
   if (addBoltSizeBtn) {
     addBoltSizeBtn.addEventListener("click", async () => {
-      const type = newBoltTypeSelect.value;
-      const length = parseInt(newBoltLengthInput.value);
+      // DOM要素がない場合は何もしない
+      if (!newBoltTypeSelect || !newBoltLengthInput) return;
 
-      if (!length || length <= 0) {
-        showToast("長さを正しく入力してください");
-        return;
+      const type = newBoltTypeSelect.value;
+      const inputValue = newBoltLengthInput.value.trim(); // 前後の空白を除去
+
+      // ▼▼▼ 修正: 入力チェックを強化 ▼▼▼
+
+      // 1. 空欄チェック
+      if (inputValue === "") {
+        showToast("長さを入力してください。");
+        newBoltLengthInput.focus(); // 入力欄にカーソルを戻す
+        return; // ここで処理を止める
       }
+
+      const length = parseInt(inputValue, 10);
+
+      // 2. 数値チェック (数字でない、または0以下の場合)
+      if (isNaN(length) || length <= 0) {
+        showToast("長さは「正の整数」で入力してください。");
+        newBoltLengthInput.focus();
+        return; // ここで処理を止める
+      }
+
+      // ▲▲▲ 修正ここまで ▲▲▲
 
       const newId = `${type}×${length}`;
 
       // 重複チェック
       if (state.globalBoltSizes.some((b) => b.id === newId)) {
         showToast("このサイズは既に登録されています");
+        newBoltLengthInput.focus();
         return;
       }
 
@@ -1015,7 +1034,14 @@ function setupBoltSettingsEvents() {
       sortGlobalBoltSizes();
       renderBoltSizeSettings(); // 現在のタブで再描画
       populateGlobalBoltSelectorModal(); // セレクタの更新
-      await saveGlobalBoltSizes(state.globalBoltSizes);
+      // DB保存
+      try {
+        await saveGlobalBoltSizes(state.globalBoltSizes);
+        showToast(`サイズ「${newId}」を追加しました。`); // 成功メッセージも出すと親切
+      } catch (e) {
+        showToast("保存に失敗しました。");
+        console.error(e);
+      }
 
       // 入力クリア
       newBoltLengthInput.value = "";
@@ -1029,6 +1055,13 @@ function setupBoltSettingsEvents() {
           );
           if (newItem)
             newItem.scrollIntoView({ behavior: "smooth", block: "center" });
+          // 追加された項目を一瞬光らせるなどの演出を入れても良い
+          newItem.classList.add("bg-yellow-100", "dark:bg-yellow-900");
+          setTimeout(
+            () =>
+              newItem.classList.remove("bg-yellow-100", "dark:bg-yellow-900"),
+            1000,
+          );
         }
       }, 100);
     });
