@@ -5270,7 +5270,7 @@ export const renderBoltSizeSettings = (activeBoltTab = "all") => {
  */
 export const setupBoltSettingsUI = () => {
   const navBtnBoltSettings = document.getElementById("nav-btn-bolt-settings");
-  const newBoltTypeSelect = document.getElementById("new-bolt-type"); // ID確認要
+  const newBoltTypeSelect = document.getElementById("new-bolt-type-select");
   const boltSizeSettingsModal = document.getElementById(
     "bolt-size-settings-modal",
   ); // ID確認要
