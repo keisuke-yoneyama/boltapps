@@ -5282,7 +5282,11 @@ export const setupBoltSettingsUI = () => {
   if (navBtnBoltSettings) {
     navBtnBoltSettings.classList.remove("hidden");
     navBtnBoltSettings.addEventListener("click", () => {
+      console.log("🔧 設定ボタンがクリックされました");
       if (newBoltTypeSelect) {
+        console.log(
+          "✅ セレクトボックスが見つかりました。選択肢を生成します。",
+        );
         newBoltTypeSelect.innerHTML = "";
         BOLT_TYPES.forEach((type) => {
           const opt = document.createElement("option");
@@ -5291,6 +5295,10 @@ export const setupBoltSettingsUI = () => {
           newBoltTypeSelect.appendChild(opt);
         });
         newBoltTypeSelect.value = "M16";
+      } else {
+        console.error(
+          "❌ エラー: id='new-bolt-type-select' の要素が見つかりません！",
+        );
       }
       renderBoltSizeSettings();
       openModal(boltSizeSettingsModal);
