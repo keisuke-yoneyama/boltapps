@@ -1196,12 +1196,22 @@ export function renderGroupingControls(
 }
 
 /**
- * テーブル群を描画する関数（汎用版）
- * * @param {HTMLElement} container  描画先のdiv要素
+ * テーブル群を描画する関数（汎用版・修正版）
+ * @param {HTMLElement} container  描画先のdiv要素
  * @param {Object} aggregatedCounts [本ボルト用] 合算されたデータ { "1F": { "M16...": 10 } }
  * @param {Array} sortedKeys        [本ボルト用] 表示順序のキー配列 ["M2F", "2F", ...]
  * @param {Object} specialBolts     [特殊用] { dLock: {...}, naka: {...}, column: {...} }
  * @param {boolean} onlySpecial     trueなら本ボルト(aggregatedCounts)の描画をスキップする
+ * @param {boolean} isTempBolt      ★追加: trueなら仮ボルトモード（重量なし、種別ハイフン）
+ */
+/**
+ * テーブル群を描画する関数（汎用版）
+ * @param {HTMLElement} container  描画先のdiv要素
+ * @param {Object} aggregatedCounts [本ボルト用] 合算されたデータ { "1F": { "M16...": 10 } }
+ * @param {Array} sortedKeys        [本ボルト用] 表示順序のキー配列 ["M2F", "2F", ...]
+ * @param {Object} specialBolts     [特殊用] { dLock: {...}, naka: {...}, column: {...} }
+ * @param {boolean} onlySpecial     trueなら本ボルト(aggregatedCounts)の描画をスキップする
+ * @param {boolean} isTempBolt      // ▼▼▼ 変更: 引数を追加 (デフォルトはfalse)
  */
 export function renderAggregatedTables(
   container,
@@ -1209,6 +1219,7 @@ export function renderAggregatedTables(
   sortedKeys,
   specialBolts = {},
   onlySpecial = false,
+  isTempBolt = false, // ▼▼▼ 変更: ここに追加しました
 ) {
   // コンテナのクリア
   container.innerHTML = "";
@@ -1217,32 +1228,66 @@ export function renderAggregatedTables(
   const renderTableHtml = (title, data, color, customHeader = null) => {
     if (!data || Object.keys(data).length === 0) return "";
 
-    // 通常ヘッダー
-    const defaultHeader = `<tr>
+    // ▼▼▼ 変更: ヘッダー生成ロジックを修正 (重量列の出し分け) ▼▼▼
+    let headers = "";
+    if (customHeader) {
+      headers = customHeader;
+    } else {
+      // 通常ヘッダー
+      // 重量列は isTempBolt が false の場合のみ表示する
+      const weightHeader = !isTempBolt
+        ? `<th class="px-4 py-2 border border-${color}-300 dark:border-slate-600 text-center bg-${color}-200 dark:bg-slate-700 text-${color}-800 dark:text-${color}-200 whitespace-nowrap">重量(kg)</th>`
+        : "";
+
+      headers = `<tr>
             <th class="px-4 py-2 border border-${color}-300 dark:border-slate-600 text-center bg-${color}-200 dark:bg-slate-700 text-${color}-800 dark:text-${color}-200 whitespace-nowrap">種別</th>
             <th class="px-4 py-2 border border-${color}-300 dark:border-slate-600 text-center bg-${color}-200 dark:bg-slate-700 text-${color}-800 dark:text-${color}-200 whitespace-nowrap">ボルトサイズ</th>
             <th class="px-4 py-2 border border-${color}-300 dark:border-slate-600 text-center bg-${color}-200 dark:bg-slate-700 text-${color}-800 dark:text-${color}-200 whitespace-nowrap">本数</th>
-            <th class="px-4 py-2 border border-${color}-300 dark:border-slate-600 text-center bg-${color}-200 dark:bg-slate-700 text-${color}-800 dark:text-${color}-200 whitespace-nowrap">重量(kg)</th>
+            ${weightHeader}
         </tr>`;
+    }
+    // ▲▲▲ 変更ここまで ▲▲▲
 
-    const headers = customHeader || defaultHeader;
     let body = "";
     let tableTotalWeight = 0;
 
     Object.keys(data)
       .sort(boltSort)
       .forEach((key) => {
-        const boltCount = data[key];
-        const singleWeightG = getBoltWeight(key);
-        const rowWeightKg = (boltCount * singleWeightG) / 1000;
-        tableTotalWeight += rowWeightKg;
+        // ▼▼▼ 変更: データ構造の正規化 (totalプロパティがある場合と数値そのままの場合に対応) ▼▼▼
+        const rawValue = data[key];
+        const boltCount =
+          typeof rawValue === "object" &&
+          rawValue !== null &&
+          rawValue.total !== undefined
+            ? rawValue.total
+            : rawValue;
+        // ▲▲▲ 変更ここまで ▲▲▲
 
-        const weightValue = rowWeightKg > 0 ? rowWeightKg.toFixed(1) : "-";
-        const weightTooltip =
-          singleWeightG > 0 ? `単体重量: ${singleWeightG} g` : "";
-        // ▼▼▼ 修正: 末尾チェック(endsWith)から、文字を含むか(includes)に変更 ▼▼▼
-        const type = key.includes("■") ? "F8T" : "S10T";
-        // ▲▲▲ 修正ここまで ▲▲▲
+        let rowWeightKg = 0;
+        let weightValue = "-";
+        let weightTooltip = "";
+
+        // ▼▼▼ 変更: 重量計算ロジック (仮ボルト以外の場合のみ実行) ▼▼▼
+        if (!isTempBolt) {
+          const singleWeightG = getBoltWeight(key);
+          rowWeightKg = (boltCount * singleWeightG) / 1000;
+          tableTotalWeight += rowWeightKg;
+
+          weightValue = rowWeightKg > 0 ? rowWeightKg.toFixed(1) : "-";
+          weightTooltip =
+            singleWeightG > 0 ? `単体重量: ${singleWeightG} g` : "";
+        }
+        // ▲▲▲ 変更ここまで ▲▲▲
+
+        // ▼▼▼ 変更: 種別判定ロジック (仮ボルトはハイフン、それ以外はS10T/F8T判定) ▼▼▼
+        let type = "-";
+        if (!isTempBolt) {
+          // 末尾チェック(endsWith)から、文字を含むか(includes)に変更済みのコード
+          type = key.includes("■") ? "F8T" : "S10T";
+        }
+        // ▲▲▲ 変更ここまで ▲▲▲
+
         const commonCellClass = `px-4 py-2 border border-${color}-200 dark:border-slate-700 text-center`;
 
         let rowContent = "";
@@ -1255,23 +1300,32 @@ export function renderAggregatedTables(
         } else {
           // 通常版
           const displayKey = title === "柱用" ? key.replace("(本柱)", "") : key;
+
+          // ▼▼▼ 変更: 行のHTML生成 (重量セルの出し分け) ▼▼▼
+          const weightCell = !isTempBolt
+            ? `<td class="${commonCellClass} text-slate-500" title="${weightTooltip}">${weightValue}</td>`
+            : "";
+
           rowContent = `
                     <td class="${commonCellClass}">${type}</td>
                     <td class="${commonCellClass}">${displayKey}</td>
                     <td class="${commonCellClass} font-medium">${boltCount.toLocaleString()}</td>
-                    <td class="${commonCellClass} text-slate-500" title="${weightTooltip}">${weightValue}</td>
+                    ${weightCell}
                 `;
+          // ▲▲▲ 変更ここまで ▲▲▲
         }
 
         body += `<tr class="hover:bg-${color}-50 dark:hover:bg-slate-700/50">${rowContent}</tr>`;
       });
 
+    // ▼▼▼ 変更: 合計重量の表示条件 (仮ボルトの場合は表示しない) ▼▼▼
     const totalWeightDisplay =
-      !customHeader && tableTotalWeight > 0
+      !isTempBolt && !customHeader && tableTotalWeight > 0
         ? `<span class="ml-auto text-sm font-bold text-red-600 dark:text-red-400">合計: ${tableTotalWeight.toFixed(
             1,
           )} kg</span>`
         : "";
+    // ▲▲▲ 変更ここまで ▲▲▲
 
     return `
             <div class="min-w-[320px] flex-grow-0 flex-shrink-0 bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden mb-6">
@@ -1291,23 +1345,38 @@ export function renderAggregatedTables(
 
   // 1. 通常データ（本ボルトなど）の描画
   // onlySpecialがfalseのときだけ実行される（本ボルトセクション用）
-  if (!onlySpecial && sortedKeys) {
-    // マスタ順序にあるキーを表示
-    sortedKeys.forEach((groupName) => {
+  if (!onlySpecial && aggregatedCounts) {
+    // キー配列がある場合はその順序で、なければオブジェクトのキー順で
+    const keysToRender = sortedKeys || Object.keys(aggregatedCounts);
+
+    keysToRender.forEach((groupName) => {
       if (aggregatedCounts[groupName]) {
+        // ▼▼▼ 変更: ヘッダー色を仮ボルト時はtealに変更 ▼▼▼
+        const headerColor = isTempBolt ? "teal" : "slate";
         tablesHtml += renderTableHtml(
           groupName,
           aggregatedCounts[groupName],
-          "slate",
+          headerColor,
         );
+        // ▲▲▲ 変更ここまで ▲▲▲
       }
     });
+
     // マスタ外（その他）のキーを表示
-    Object.keys(aggregatedCounts).forEach((key) => {
-      if (!sortedKeys.includes(key)) {
-        tablesHtml += renderTableHtml(key, aggregatedCounts[key], "slate");
-      }
-    });
+    if (sortedKeys) {
+      Object.keys(aggregatedCounts).forEach((key) => {
+        if (!sortedKeys.includes(key)) {
+          // ▼▼▼ 変更: ヘッダー色を仮ボルト時はtealに変更 ▼▼▼
+          const headerColor = isTempBolt ? "teal" : "slate";
+          tablesHtml += renderTableHtml(
+            key,
+            aggregatedCounts[key],
+            headerColor,
+          );
+          // ▲▲▲ 変更ここまで ▲▲▲
+        }
+      });
+    }
   }
 
   // 2. 特殊データ（指定があれば描画）
@@ -1967,7 +2036,14 @@ export const renderTempOrderDetails = (
       }
 
       // テーブル描画
-      renderAggregatedTables(tableContainer, data, sortedKeys, {});
+      renderAggregatedTables(
+        tableContainer,
+        data,
+        sortedKeys,
+        {}, // specialBolts (空オブジェクト)
+        false, // onlySpecial (false)
+        true, // ★ isTempBolt (true)
+      );
     };
 
     // イベントリスナー設定
@@ -1983,7 +2059,7 @@ export const renderTempOrderDetails = (
     // 初回実行
     updateView();
   } catch (err) {
-    console.error("renderTempBoltOrderDetailsエラー:", err);
+    console.error("renderTemprderDetailsエラー:", err);
     container.innerHTML = `<div class="p-4 bg-red-100 text-red-700">表示エラー: ${err.message}</div>`;
   }
 };
