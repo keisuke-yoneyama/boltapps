@@ -15,6 +15,7 @@ import {
   calculateShopTempBoltResults,
   sortGlobalBoltSizes,
   calculateAggregatedResults,
+  calculateTempBoltResults,
 } from "./calculator.js";
 
 import { saveGlobalBoltSizes } from "./firebase.js";
@@ -4622,7 +4623,8 @@ export const renderResults = (project) => {
   // 仮ボルト注文明細の描画
   const tempContainer = document.getElementById("temp-order-details-container");
   if (tempContainer) {
-    renderTempOrderDetails(tempContainer, project, resultsByLocation);
+    const tempResults = calculateTempResults(project);
+    renderTempOrderDetails(tempContainer, project, tempResults);
   }
 
   resultsCard.classList.remove("hidden");
