@@ -4630,7 +4630,11 @@ export const renderResults = (project) => {
   const tempContainer = document.getElementById("temp-order-details-container");
   if (tempContainer) {
     const tempResults = calculateTempBoltResults(project);
-    renderTempOrderDetails(tempContainer, project, tempResults);
+    renderTempOrderDetails(
+      tempContainer,
+      project,
+      tempResults.resultsByLocation,
+    );
   }
 
   resultsCard.classList.remove("hidden");
