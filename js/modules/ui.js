@@ -15,7 +15,6 @@ import {
   calculateShopTempBoltResults,
   sortGlobalBoltSizes,
   calculateAggregatedResults,
-  calculateTempBoltResults,
 } from "./calculator.js";
 
 import { saveGlobalBoltSizes } from "./firebase.js";
