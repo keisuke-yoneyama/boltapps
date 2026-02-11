@@ -1204,15 +1204,6 @@ export function renderGroupingControls(
  * @param {boolean} onlySpecial     trueなら本ボルト(aggregatedCounts)の描画をスキップする
  * @param {boolean} isTempBolt      ★追加: trueなら仮ボルトモード（重量なし、種別ハイフン）
  */
-/**
- * テーブル群を描画する関数（汎用版）
- * @param {HTMLElement} container  描画先のdiv要素
- * @param {Object} aggregatedCounts [本ボルト用] 合算されたデータ { "1F": { "M16...": 10 } }
- * @param {Array} sortedKeys        [本ボルト用] 表示順序のキー配列 ["M2F", "2F", ...]
- * @param {Object} specialBolts     [特殊用] { dLock: {...}, naka: {...}, column: {...} }
- * @param {boolean} onlySpecial     trueなら本ボルト(aggregatedCounts)の描画をスキップする
- * @param {boolean} isTempBolt      // ▼▼▼ 変更: 引数を追加 (デフォルトはfalse)
- */
 export function renderAggregatedTables(
   container,
   aggregatedCounts,
@@ -1874,41 +1865,48 @@ export const renderOrderDetails = (container, project, resultsByLocation) => {
 };
 
 /**
- * 仮ボルト注文詳細画面の描画（タブ切り替え対応版）
+ * 仮ボルト注文詳細画面の描画
+ * @param {HTMLElement} container 描画先のDOM要素
+ * @param {Object} project プロジェクトデータ
+ * @param {Object} tempResultsByLocation 仮ボルトの集計データ
  */
 export const renderTempOrderDetails = (
   container,
   project,
-  resultsByLocation,
+  tempResultsByLocation,
 ) => {
+  // ▼▼▼ 変更: コンテナやデータがない場合のガード処理を追加 ▼▼▼
   if (!container) return;
-  if (!project || !resultsByLocation) {
+  if (!project || !tempResultsByLocation) {
     container.innerHTML = "";
-    // データが計算されていない、または渡されていない場合は何も表示しない
     return;
   }
+  // ▲▲▲ 変更ここまで ▲▲▲
 
   try {
     container.innerHTML = ""; // 初期化
 
     // ---------------------------------------------------------
-    // 1. データの前処理
+    // 1. データの前処理 (仮ボルトデータの抽出)
     // ---------------------------------------------------------
     const masterKeys = getMasterOrderedKeys(project);
     // データが存在する工区のみ抽出
-    const targetKeys = new Set(masterKeys.filter((k) => resultsByLocation[k]));
+    const targetKeys = new Set(
+      masterKeys.filter((k) => tempResultsByLocation[k]),
+    );
 
-    const filteredTempBolts = {}; // 仮ボルト用データ箱
+    // ▼▼▼ 変更: 仮ボルト専用のデータ格納オブジェクトを作成 ▼▼▼
+    const filteredTempBolts = {};
 
     masterKeys.forEach((locId) => {
       if (!targetKeys.has(locId)) return;
-      const locationData = resultsByLocation[locId];
 
+      const locationData = tempResultsByLocation[locId];
       filteredTempBolts[locId] = {};
 
       Object.keys(locationData).forEach((size) => {
-        // 必要ならここで特殊なボルトを除外する処理を入れる
-        // 今回はそのまま格納
+        // 仮ボルトのデータ構造に合わせてデータを取り込む
+        // (データ構造が {total: 10, ...} でも 単純な 10 でも対応)
         filteredTempBolts[locId][size] = locationData[size];
       });
 
@@ -1917,10 +1915,11 @@ export const renderTempOrderDetails = (
       }
     });
 
-    // データがなければ非表示で終了
+    // データがなければ終了
     if (Object.keys(filteredTempBolts).length === 0) {
       return;
     }
+    // ▲▲▲ 変更ここまで ▲▲▲
 
     // ---------------------------------------------------------
     // 2. セクションコンテナの作成
@@ -1930,17 +1929,16 @@ export const renderTempOrderDetails = (
     container.appendChild(tempBoltSection);
 
     // ---------------------------------------------------------
-    // 3. 描画ロジック (本ボルトと同様の構造)
+    // 3. まとめ設定（GroupingState）の初期化チェック
     // ---------------------------------------------------------
-
-    // state初期化 (仮ボルト用の変数を操作)
+    // ▼▼▼ 変更: 仮ボルト用のState変数 (currentTempGroupingState) を使用 ▼▼▼
     const dataKeys = Object.keys(filteredTempBolts);
     const shouldReset = dataKeys.some(
       (sec) => !currentTempGroupingState.hasOwnProperty(sec),
     );
 
     if (shouldReset) {
-      // 仮ボルト用stateをクリア
+      // 仮ボルト用stateをクリアして再設定
       for (const key in currentTempGroupingState)
         delete currentTempGroupingState[key];
 
@@ -1948,8 +1946,12 @@ export const renderTempOrderDetails = (
         currentTempGroupingState[section] = index + 1;
       });
     }
+    // ▲▲▲ 変更ここまで ▲▲▲
 
-    // ヘッダー (本ボルトのデザインを踏襲しつつ色を変更: pink -> teal)
+    // ---------------------------------------------------------
+    // 4. ヘッダーの描画 (仮ボルト用カラー: Teal)
+    // ---------------------------------------------------------
+    // ▼▼▼ 変更: タイトル、説明文、タブ切り替えボタンを設置 ▼▼▼
     const headerHtml = `
         <div class="flex flex-col md:flex-row justify-between items-start md:items-end mt-8 mb-10 border-b-2 border-teal-500 pb-4 gap-4">
             <div>
@@ -1966,6 +1968,7 @@ export const renderTempOrderDetails = (
         </div>
     `;
     tempBoltSection.insertAdjacentHTML("beforeend", headerHtml);
+    // ▲▲▲ 変更ここまで ▲▲▲
 
     // コントロール & テーブルエリア
     const controlsContainer = document.createElement("div");
@@ -1976,18 +1979,20 @@ export const renderTempOrderDetails = (
       "flex flex-wrap gap-8 items-start align-top content-start";
     tempBoltSection.appendChild(tableContainer);
 
-    // 更新関数
+    // ---------------------------------------------------------
+    // 5. ビュー更新関数 (Core Logic)
+    // ---------------------------------------------------------
     const updateView = () => {
+      // ▼▼▼ 変更: 仮ボルト用ViewMode変数を使用し、ボタンのスタイルを切り替え ▼▼▼
       const btnDetail = tempBoltSection.querySelector(
         "#temp-view-mode-detailed",
       );
       const btnFloor = tempBoltSection.querySelector("#temp-view-mode-floor");
       const activeClass =
-        "bg-white dark:bg-slate-700 shadow text-teal-600 dark:text-teal-400"; // 色をtealに
+        "bg-white dark:bg-slate-700 shadow text-teal-600 dark:text-teal-400";
       const inactiveClass =
         "text-slate-500 hover:text-slate-700 dark:hover:text-slate-300";
 
-      // 仮ボルト用の変数(currentTempViewMode)を使用
       if (currentTempViewMode === "detailed") {
         btnDetail.className = `px-4 py-2 text-sm font-medium rounded-md transition-all ${activeClass}`;
         btnFloor.className = `px-4 py-2 text-sm font-medium rounded-md transition-all ${inactiveClass}`;
@@ -1995,37 +2000,39 @@ export const renderTempOrderDetails = (
         btnDetail.className = `px-4 py-2 text-sm font-medium rounded-md transition-all ${inactiveClass}`;
         btnFloor.className = `px-4 py-2 text-sm font-medium rounded-md transition-all ${activeClass}`;
       }
+      // ▲▲▲ 変更ここまで ▲▲▲
 
-      // ★ renderGroupingControls に仮ボルト用のStateを渡す
+      // ▼▼▼ 変更: 仮ボルト用のStateとViewModeを渡してコントロールを描画 ▼▼▼
       renderGroupingControls(
         controlsContainer,
-        filteredTempBolts,
+        filteredTempBolts, // 仮ボルトの元データ
         project,
         updateView,
-        currentTempGroupingState, // 仮ボルト用state
-        currentTempViewMode, // 仮ボルト用viewMode
+        currentTempGroupingState, // 仮ボルト用State
+        currentTempViewMode, // 仮ボルト用ViewMode ("floor"なら非表示になる)
       );
+      // ▲▲▲ 変更ここまで ▲▲▲
 
-      let data, sortedKeys;
+      let dataToRender, sortedKeysToRender;
 
+      // ▼▼▼ 変更: モードに応じて仮ボルトデータを集計 ▼▼▼
       if (currentTempViewMode === "floor") {
-        // フロア集計 (本ボルトと同じ関数 aggregateByFloor を使用)
+        // フロア集計 (仮ボルトデータを使用)
         const result = aggregateByFloor(filteredTempBolts, project);
-        data = result.data;
-        sortedKeys = result.order;
+        dataToRender = result.data;
+        sortedKeysToRender = result.order;
       } else {
-        // 工区別集計 (本ボルトと同じ関数 calculateAggregatedData を使用し、仮ボルト用Stateを渡す)
-        data = calculateAggregatedData(
+        // 工区別集計 (仮ボルトデータとStateを使用)
+        dataToRender = calculateAggregatedData(
           filteredTempBolts,
-          currentTempGroupingState, // 仮ボルト用state
+          currentTempGroupingState,
           project,
         );
 
-        const allAggregatedKeys = Object.keys(data);
+        // ソート順の決定
+        const allAggregatedKeys = Object.keys(dataToRender);
         const fullMasterList = getMasterOrderedKeys(project);
-
-        // ソート処理
-        sortedKeys = allAggregatedKeys.sort((a, b) => {
+        sortedKeysToRender = allAggregatedKeys.sort((a, b) => {
           const firstKeyA = a.split(" + ")[0];
           const firstKeyB = b.split(" + ")[0];
           return (
@@ -2034,19 +2041,29 @@ export const renderTempOrderDetails = (
           );
         });
       }
+      // ▲▲▲ 変更ここまで ▲▲▲
 
-      // テーブル描画
+      // ▼▼▼ 変更: 集計結果をテーブル描画関数へ渡す ▼▼▼
+      // 第2引数: 仮ボルトの集計データ
+      // 第3引数: ソートキー
+      // 第4引数: 特殊ボルト (仮ボルトにはないので空オブジェクト)
+      // 第5引数: onlySpecial (false)
+      // 第6引数: isTempBolt (true) -> これにより重量列なし・種別ハイフンになる
       renderAggregatedTables(
         tableContainer,
-        data,
-        sortedKeys,
-        {}, // specialBolts (空オブジェクト)
-        false, // onlySpecial (false)
-        true, // ★ isTempBolt (true)
+        dataToRender,
+        sortedKeysToRender,
+        {},
+        false,
+        true,
       );
+      // ▲▲▲ 変更ここまで ▲▲▲
     };
 
-    // イベントリスナー設定
+    // ---------------------------------------------------------
+    // 6. イベントリスナー設定 & 初回実行
+    // ---------------------------------------------------------
+    // ▼▼▼ 変更: 仮ボルト専用のモード切り替え処理 ▼▼▼
     tempBoltSection.querySelector("#temp-view-mode-detailed").onclick = () => {
       setCurrentTempViewMode("detailed");
       updateView();
@@ -2055,11 +2072,12 @@ export const renderTempOrderDetails = (
       setCurrentTempViewMode("floor");
       updateView();
     };
+    // ▲▲▲ 変更ここまで ▲▲▲
 
-    // 初回実行
+    // 初回描画
     updateView();
   } catch (err) {
-    console.error("renderTemprderDetailsエラー:", err);
+    console.error("renderTempOrderDetailsエラー:", err);
     container.innerHTML = `<div class="p-4 bg-red-100 text-red-700">表示エラー: ${err.message}</div>`;
   }
 };
