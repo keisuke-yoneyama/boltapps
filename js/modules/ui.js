@@ -1075,7 +1075,8 @@ export function renderGroupingControls(
 
   container.innerHTML = "";
 
-  if (currentViewMode === "floor") {
+  // ▼▼▼ 修正: グローバル変数ではなく、引数 targetViewMode を見る ▼▼▼
+  if (targetViewMode === "floor") {
     container.style.display = "none";
     return;
   }
