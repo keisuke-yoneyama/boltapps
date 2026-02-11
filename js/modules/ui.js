@@ -1875,9 +1875,16 @@ export const renderTempOrderDetails = (
   project,
   tempResultsByLocation,
 ) => {
+  // ▼▼▼ デバッグ用ログを追加 ▼▼▼
+  console.log("🔍 renderTempOrderDetails Debug:", {
+    container: !!container,
+    project: !!project,
+    tempResultsByLocation: tempResultsByLocation, // ここが undefined になっているはず
+  });
   // ▼▼▼ 変更: コンテナやデータがない場合のガード処理を追加 ▼▼▼
   if (!container) return;
   if (!project || !tempResultsByLocation) {
+    console.warn("⚠️ データ不足のため描画を中断しました"); // 警告を出す
     container.innerHTML = "";
     return;
   }
@@ -4623,7 +4630,11 @@ export const renderResults = (project) => {
   const tempContainer = document.getElementById("temp-order-details-container");
   if (tempContainer) {
     const tempResults = calculateTempBoltResults(project);
-    renderTempOrderDetails(tempContainer, project, tempResults);
+    renderTempOrderDetails(
+      tempContainer,
+      project,
+      tempResults.resultsByLocation,
+    );
   }
 
   resultsCard.classList.remove("hidden");
