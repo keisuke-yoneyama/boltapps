@@ -1026,6 +1026,10 @@ export function selectStaticColor(color) {
 export let currentGroupingState = {};
 export let currentViewMode = "detailed";
 
+// --- ★新規追加: 仮ボルト用の変数 ---
+export let currentTempGroupingState = {}; // 仮ボルト用まとめ設定
+export let currentTempViewMode = "detailed"; // 仮ボルト用ビューモード (detailed | floor)
+
 // 外部からモードを変更するためのセッター関数（あると便利）
 export function setCurrentViewMode(mode) {
   currentViewMode = mode;
@@ -1034,6 +1038,23 @@ export function resetCurrentGroupingState() {
   currentGroupingState = {};
 }
 
+// セッター関数
+export function setCurrentTempViewMode(mode) {
+  currentTempViewMode = mode;
+}
+export function resetCurrentTempGroupingState() {
+  currentTempGroupingState = {};
+}
+
+/**
+ * 工区まとめ設定UIを描画する関数（汎用化修正版）
+ * @param {HTMLElement} container - 描画先コンテナ
+ * @param {Object} originalResults - データ
+ * @param {Object} project - プロジェクト情報
+ * @param {Function} onUpdate - 更新時のコールバック
+ * @param {Object} targetState - ★追加: 操作対象の状態オブジェクト (currentGroupingState または currentTempGroupingState)
+ * @param {string} targetViewMode - ★追加: 現在のビューモード
+ */
 /**
  * 工区まとめ設定UIを描画する関数
  */
@@ -1042,6 +1063,8 @@ export function renderGroupingControls(
   originalResults,
   project,
   onUpdate,
+  targetState, // ★受け取るオブジェクトを変更
+  targetViewMode, // ★現在のモードを受け取る
 ) {
   // 安全対策
   if (!container) return;
@@ -1052,7 +1075,6 @@ export function renderGroupingControls(
 
   container.innerHTML = "";
 
-  // 変数は同じファイル内にあるのでそのまま参照可能
   if (currentViewMode === "floor") {
     container.style.display = "none";
     return;
@@ -1115,8 +1137,7 @@ export function renderGroupingControls(
   resetBtn.onclick = (e) => {
     e.stopPropagation();
     targetKeys.forEach((key, index) => {
-      // 同じファイル内の変数なので直接更新OK
-      currentGroupingState[key] = index + 1;
+      targetState[key] = index + 1;
     });
     onUpdate(); // コールバック実行
   };
@@ -1149,14 +1170,14 @@ export function renderGroupingControls(
       const option = document.createElement("option");
       option.value = i;
       option.textContent = `No.${i}`;
-      if (currentGroupingState[section] === i) {
+      if (targetState[section] === i) {
         option.selected = true;
       }
       select.appendChild(option);
     }
 
     select.addEventListener("change", (e) => {
-      currentGroupingState[section] = Number(e.target.value);
+      targetState[section] = Number(e.target.value);
       onUpdate();
     });
 
@@ -1660,6 +1681,8 @@ export const renderOrderDetails = (container, project, resultsByLocation) => {
           filteredHonBolts,
           project,
           updateView,
+          currentGroupingState, // 本ボルト用のStateを渡す
+          currentViewMode, // 本ボルト用のViewModeを渡す
         );
 
         let data, sortedKeys;
@@ -1781,277 +1804,186 @@ export const renderOrderDetails = (container, project, resultsByLocation) => {
 };
 
 /**
- * 仮ボルト注文明細のレンダリング関数
+ * 仮ボルト注文詳細画面の描画（タブ切り替え対応版）
  */
-export const renderTempOrderDetails = (container, project) => {
-  if (!container || !project) return;
-
-  container.innerHTML = ""; // クリア
-
-  // stateはui.js内でimportされているので直接参照可能
-  const viewMode = state.tempOrderDetailsView || "section";
-  const toggleButtonText =
-    viewMode === "location"
-      ? "エリア・フロア別表示に切替"
-      : "フロア工区別表示に切替";
-
-  // ▼▼▼ 工区まとめ設定（チェックボックスとグループ化単位） ▼▼▼
-  let settingsHtml = "";
-  if (viewMode === "section") {
-    const isGroupAll = state.tempOrderDetailsGroupAll;
-    const groupKey = state.tempOrderDetailsGroupKey || "section"; // 'section' or 'floor'
-
-    const disabledClass = isGroupAll ? "opacity-50 pointer-events-none" : "";
-
-    settingsHtml = `
-                <div class="flex items-center gap-3 bg-white dark:bg-slate-700 px-3 py-2 rounded-md border border-slate-300 dark:border-slate-600 shadow-sm">
-                    <label class="flex items-center gap-2 cursor-pointer text-sm font-medium text-slate-700 dark:text-slate-300">
-                        <input type="checkbox" id="temp-order-group-all-checkbox" class="h-4 w-4 rounded border-gray-300 text-green-600 focus:ring-green-500" ${
-                          isGroupAll ? "checked" : ""
-                        }>
-                        <span>工区まとめ (全工区合算)</span>
-                    </label>
-                    <div class="h-4 w-px bg-slate-300 dark:bg-slate-500 mx-1"></div>
-                    <div class="flex items-center gap-2 text-sm ${disabledClass}" id="temp-order-group-key-container">
-                        <span class="text-slate-600 dark:text-slate-400 font-normal">グループ化:</span>
-                        <label class="inline-flex items-center cursor-pointer">
-                            <input type="radio" name="temp-order-group-key" value="section" class="text-green-600 focus:ring-green-500" ${
-                              groupKey === "section" ? "checked" : ""
-                            }>
-                            <span class="ml-1 text-slate-700 dark:text-slate-300">工区ごと</span>
-                        </label>
-                        <label class="inline-flex items-center cursor-pointer">
-                            <input type="radio" name="temp-order-group-key" value="floor" class="text-green-600 focus:ring-green-500" ${
-                              groupKey === "floor" ? "checked" : ""
-                            }>
-                            <span class="ml-1 text-slate-700 dark:text-slate-300">フロアごと</span>
-                        </label>
-                    </div>
-                </div>
-             `;
+export const renderTempOrderDetails = (
+  container,
+  project,
+  resultsByLocation,
+) => {
+  if (!container) return;
+  if (!project) {
+    container.innerHTML = "";
+    return;
   }
 
-  const headerHtml = `
-        <div class="flex flex-col sm:flex-row justify-between sm:items-center mt-8 mb-4 border-b-2 border-green-400 pb-2 gap-3">
-            <h2 class="text-2xl font-bold text-slate-900 dark:text-slate-100">仮ボルト注文明細</h2>
-            <div class="flex flex-wrap gap-2 items-center self-end">
-                ${settingsHtml}
-                <button id="toggle-temp-order-view-btn" class="px-3 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 rounded text-sm font-medium transition-colors border border-slate-300 dark:border-slate-600">${toggleButtonText}</button>
-            </div>
-        </div>`;
+  try {
+    container.innerHTML = ""; // 初期化
 
-  // データ計算
-  const { resultsByLocation } = calculateTempBoltResults(project);
+    // ---------------------------------------------------------
+    // 1. データの前処理
+    // ---------------------------------------------------------
+    const masterKeys = getMasterOrderedKeys(project);
+    // データが存在する工区のみ抽出
+    const targetKeys = new Set(masterKeys.filter((k) => resultsByLocation[k]));
 
-  // 表示対象のロケーションIDを特定
-  const targetLocationIds = new Set();
-  if (project.mode === "advanced") {
-    project.customLevels.forEach((level) => {
-      if (state.activeTallyLevel !== "all" && state.activeTallyLevel !== level)
-        return;
-      project.customAreas.forEach((area) =>
-        targetLocationIds.add(`${level}-${area}`),
-      );
-    });
-  } else {
-    for (let f = 2; f <= project.floors; f++) {
-      if (
-        state.activeTallyLevel !== "all" &&
-        state.activeTallyLevel !== f.toString()
-      )
-        continue;
-      for (let s = 1; s <= project.sections; s++)
-        targetLocationIds.add(`${f}-${s}`);
-    }
-    if (state.activeTallyLevel === "all" || state.activeTallyLevel === "R") {
-      for (let s = 1; s <= project.sections; s++)
-        targetLocationIds.add(`R-${s}`);
-    }
-    if (project.hasPH) {
-      if (state.activeTallyLevel === "all" || state.activeTallyLevel === "PH") {
-        for (let s = 1; s <= project.sections; s++)
-          targetLocationIds.add(`PH-${s}`);
-      }
-    }
-  }
+    const filteredTempBolts = {}; // 仮ボルト用データ箱
 
-  // テーブル生成用ヘルパー
-  const createTable = (title, data) => {
-    if (Object.keys(data).length === 0) return "";
+    masterKeys.forEach((locId) => {
+      if (!targetKeys.has(locId)) return;
+      const locationData = resultsByLocation[locId];
 
-    let body = "";
-    // サイズ順にソート（boltSortを利用）
-    Object.keys(data)
-      .sort(boltSort)
-      .forEach((size) => {
-        const count = data[size];
-        body += `
-                <tr class="hover:bg-green-50 dark:hover:bg-slate-700/50">
-                    <td class="px-4 py-2 border border-green-200 dark:border-slate-700 text-center">${size}</td>
-                    <td class="px-4 py-2 border border-green-200 dark:border-slate-700 text-center">${count.toLocaleString()}</td>
-                </tr>`;
+      filteredTempBolts[locId] = {};
+
+      Object.keys(locationData).forEach((size) => {
+        // 必要ならここで特殊なボルトを除外する処理を入れる
+        // 今回はそのまま格納
+        filteredTempBolts[locId][size] = locationData[size];
       });
 
-    return `
-            <div class="min-w-[200px] max-w-full flex-grow bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
-                <h4 class="text-sm font-bold bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 px-4 py-2 border-b border-green-200 dark:border-slate-700">${title}</h4>
-                <table class="text-sm border-collapse w-full">
-                    <thead class="bg-green-50 dark:bg-slate-700 text-xs text-green-800 dark:text-green-200">
-                        <tr>
-                            <th class="px-4 py-2 border border-green-200 dark:border-slate-600 text-center w-1/2">サイズ</th>
-                            <th class="px-4 py-2 border border-green-200 dark:border-slate-600 text-center w-1/2">本数</th>
-                        </tr>
-                    </thead>
-                    <tbody class="dark:bg-slate-800">${body}</tbody>
-                </table>
-            </div>`;
-  };
-
-  let contentHtml = "";
-  let hasContent = false;
-
-  if (viewMode === "location") {
-    // エリア・フロア別
-    targetLocationIds.forEach((locId) => {
-      let label = locId;
-      if (project.mode === "advanced") {
-        label = locId.replace("-", " - ");
-      } else {
-        const parts = locId.split("-");
-        if (["R", "PH"].includes(parts[0]))
-          label = `${parts[0]}階 ${parts[1]}工区`;
-        else label = `${parts[0]}階 ${parts[1]}工区`;
-      }
-
-      const locData = resultsByLocation[locId];
-      if (locData) {
-        const sizeCounts = {};
-        let total = 0;
-        Object.keys(locData).forEach((size) => {
-          if (locData[size].total > 0) {
-            sizeCounts[size] = locData[size].total;
-            total += locData[size].total;
-          }
-        });
-
-        if (total > 0) {
-          contentHtml += createTable(label, sizeCounts);
-          hasContent = true;
-        }
+      if (Object.keys(filteredTempBolts[locId]).length === 0) {
+        delete filteredTempBolts[locId];
       }
     });
-  } else {
-    // フロア/工区別 (Group View)
-    const resultsByGroup = {};
 
-    const getGroupName = (locationId) => {
-      if (state.tempOrderDetailsGroupAll) {
-        return "全工区合計";
-      }
+    // データがなければ非表示で終了
+    if (Object.keys(filteredTempBolts).length === 0) {
+      return;
+    }
 
-      const groupKey = state.tempOrderDetailsGroupKey || "section";
+    // ---------------------------------------------------------
+    // 2. セクションコンテナの作成
+    // ---------------------------------------------------------
+    const tempBoltSection = document.createElement("section");
+    tempBoltSection.className = "mb-16";
+    container.appendChild(tempBoltSection);
 
-      if (project.mode === "advanced") {
-        const sortedLevels = [...project.customLevels].sort(
-          (a, b) => b.length - a.length,
-        );
-        for (const level of sortedLevels) {
-          if (locationId.startsWith(level + "-")) {
-            // const area = locationId.substring(level.length + 1); // 未使用変数削除
-            if (groupKey === "floor") {
-              return level;
-            } else {
-              return locationId.substring(level.length + 1); // area
-            }
-          }
-        }
-        return locationId;
+    // ---------------------------------------------------------
+    // 3. 描画ロジック (本ボルトと同様の構造)
+    // ---------------------------------------------------------
+
+    // state初期化 (仮ボルト用の変数を操作)
+    const dataKeys = Object.keys(filteredTempBolts);
+    const shouldReset = dataKeys.some(
+      (sec) => !currentTempGroupingState.hasOwnProperty(sec),
+    );
+
+    if (shouldReset) {
+      // 仮ボルト用stateをクリア
+      for (const key in currentTempGroupingState)
+        delete currentTempGroupingState[key];
+
+      dataKeys.forEach((section, index) => {
+        currentTempGroupingState[section] = index + 1;
+      });
+    }
+
+    // ヘッダー (本ボルトのデザインを踏襲しつつ色を変更: pink -> teal)
+    const headerHtml = `
+        <div class="flex flex-col md:flex-row justify-between items-start md:items-end mt-8 mb-10 border-b-2 border-teal-500 pb-4 gap-4">
+            <div>
+                <h2 class="text-2xl font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+                    <span class="text-teal-500">■</span> 仮ボルト注文明細
+                </h2>
+                <p class="text-sm text-slate-500 dark:text-slate-400 pl-6 mt-1">現場建方用ボルト</p>
+            </div>
+            
+            <div class="flex bg-slate-100 dark:bg-slate-800 p-1 rounded-lg border border-slate-200 dark:border-slate-700">
+                <button id="temp-view-mode-detailed" type="button" class="px-4 py-2 text-sm font-medium rounded-md transition-all">工区別 (詳細)</button>
+                <button id="temp-view-mode-floor" type="button" class="px-4 py-2 text-sm font-medium rounded-md transition-all">フロア別 (集計)</button>
+            </div>
+        </div>
+    `;
+    tempBoltSection.insertAdjacentHTML("beforeend", headerHtml);
+
+    // コントロール & テーブルエリア
+    const controlsContainer = document.createElement("div");
+    tempBoltSection.appendChild(controlsContainer);
+
+    const tableContainer = document.createElement("div");
+    tableContainer.className =
+      "flex flex-wrap gap-8 items-start align-top content-start";
+    tempBoltSection.appendChild(tableContainer);
+
+    // 更新関数
+    const updateView = () => {
+      const btnDetail = tempBoltSection.querySelector(
+        "#temp-view-mode-detailed",
+      );
+      const btnFloor = tempBoltSection.querySelector("#temp-view-mode-floor");
+      const activeClass =
+        "bg-white dark:bg-slate-700 shadow text-teal-600 dark:text-teal-400"; // 色をtealに
+      const inactiveClass =
+        "text-slate-500 hover:text-slate-700 dark:hover:text-slate-300";
+
+      // 仮ボルト用の変数(currentTempViewMode)を使用
+      if (currentTempViewMode === "detailed") {
+        btnDetail.className = `px-4 py-2 text-sm font-medium rounded-md transition-all ${activeClass}`;
+        btnFloor.className = `px-4 py-2 text-sm font-medium rounded-md transition-all ${inactiveClass}`;
       } else {
-        const parts = locationId.split("-");
-        if (groupKey === "floor") {
-          return `${parts[0]}階`;
-        } else {
-          return `${parts[1]}工区`;
-        }
+        btnDetail.className = `px-4 py-2 text-sm font-medium rounded-md transition-all ${inactiveClass}`;
+        btnFloor.className = `px-4 py-2 text-sm font-medium rounded-md transition-all ${activeClass}`;
       }
+
+      // ★ renderGroupingControls に仮ボルト用のStateを渡す
+      renderGroupingControls(
+        controlsContainer,
+        filteredTempBolts,
+        project,
+        updateView,
+        currentTempGroupingState, // 仮ボルト用state
+        currentTempViewMode, // 仮ボルト用viewMode
+      );
+
+      let data, sortedKeys;
+
+      if (currentTempViewMode === "floor") {
+        // フロア集計 (本ボルトと同じ関数 aggregateByFloor を使用)
+        const result = aggregateByFloor(filteredTempBolts, project);
+        data = result.data;
+        sortedKeys = result.order;
+      } else {
+        // 工区別集計 (本ボルトと同じ関数 calculateAggregatedData を使用し、仮ボルト用Stateを渡す)
+        data = calculateAggregatedData(
+          filteredTempBolts,
+          currentTempGroupingState, // 仮ボルト用state
+          project,
+        );
+
+        const allAggregatedKeys = Object.keys(data);
+        const fullMasterList = getMasterOrderedKeys(project);
+
+        // ソート処理
+        sortedKeys = allAggregatedKeys.sort((a, b) => {
+          const firstKeyA = a.split(" + ")[0];
+          const firstKeyB = b.split(" + ")[0];
+          return (
+            fullMasterList.indexOf(firstKeyA) -
+            fullMasterList.indexOf(firstKeyB)
+          );
+        });
+      }
+
+      // テーブル描画
+      renderAggregatedTables(tableContainer, data, sortedKeys, {});
     };
 
-    targetLocationIds.forEach((locId) => {
-      const groupName = getGroupName(locId);
-      const locData = resultsByLocation[locId];
-      if (locData) {
-        if (!resultsByGroup[groupName]) resultsByGroup[groupName] = {};
-        Object.keys(locData).forEach((size) => {
-          if (locData[size].total > 0) {
-            resultsByGroup[groupName][size] =
-              (resultsByGroup[groupName][size] || 0) + locData[size].total;
-          }
-        });
-      }
-    });
+    // イベントリスナー設定
+    tempBoltSection.querySelector("#temp-view-mode-detailed").onclick = () => {
+      setCurrentTempViewMode("detailed");
+      updateView();
+    };
+    tempBoltSection.querySelector("#temp-view-mode-floor").onclick = () => {
+      setCurrentTempViewMode("floor");
+      updateView();
+    };
 
-    Object.keys(resultsByGroup)
-      .sort((a, b) => {
-        const numA = parseInt(a.replace(/\D/g, "")) || 0;
-        const numB = parseInt(b.replace(/\D/g, "")) || 0;
-        if (numA !== numB) return numA - numB;
-        return a.localeCompare(b);
-      })
-      .forEach((groupName) => {
-        if (Object.keys(resultsByGroup[groupName]).length > 0) {
-          contentHtml += createTable(groupName, resultsByGroup[groupName]);
-          hasContent = true;
-        }
-      });
+    // 初回実行
+    updateView();
+  } catch (err) {
+    console.error("renderTempBoltOrderDetailsエラー:", err);
+    container.innerHTML = `<div class="p-4 bg-red-100 text-red-700">表示エラー: ${err.message}</div>`;
   }
-
-  // ★ HTMLを描画
-  if (hasContent) {
-    container.innerHTML =
-      headerHtml +
-      `<div class="flex flex-wrap gap-4 items-start content-start">${contentHtml}</div>`;
-  } else {
-    container.innerHTML =
-      headerHtml +
-      '<p class="text-gray-500 w-full text-center py-4">表示対象の仮ボルトはありません。</p>';
-  }
-
-  // ▼▼▼ イベントリスナーの再設定 (DOM生成直後に実行) ▼▼▼
-
-  // 1. 表示モード切替ボタン
-  const toggleBtn = container.querySelector("#toggle-temp-order-view-btn");
-  if (toggleBtn) {
-    toggleBtn.addEventListener("click", () => {
-      // stateを更新して再描画
-      state.tempOrderDetailsView =
-        viewMode === "location" ? "section" : "location";
-      renderTempOrderDetails(container, project);
-    });
-  }
-
-  // 2. 「全工区まとめ」チェックボックス
-  const groupAllCheckbox = container.querySelector(
-    "#temp-order-group-all-checkbox",
-  );
-  if (groupAllCheckbox) {
-    groupAllCheckbox.addEventListener("change", (e) => {
-      state.tempOrderDetailsGroupAll = e.target.checked;
-      renderTempOrderDetails(container, project);
-    });
-  }
-
-  // 3. グループ化単位のラジオボタン
-  const groupKeyRadios = container.querySelectorAll(
-    'input[name="temp-order-group-key"]',
-  );
-  groupKeyRadios.forEach((radio) => {
-    radio.addEventListener("change", (e) => {
-      if (e.target.checked) {
-        state.tempOrderDetailsGroupKey = e.target.value;
-        renderTempOrderDetails(container, project);
-      }
-    });
-  });
 };
 
 /**
