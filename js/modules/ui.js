@@ -1812,8 +1812,9 @@ export const renderTempOrderDetails = (
   resultsByLocation,
 ) => {
   if (!container) return;
-  if (!project) {
+  if (!project || !resultsByLocation) {
     container.innerHTML = "";
+    // データが計算されていない、または渡されていない場合は何も表示しない
     return;
   }
 
@@ -4526,7 +4527,7 @@ export const renderResults = (project) => {
   // 仮ボルト注文明細の描画
   const tempContainer = document.getElementById("temp-order-details-container");
   if (tempContainer) {
-    renderTempOrderDetails(tempContainer, project);
+    renderTempOrderDetails(tempContainer, project, resultsByLocation);
   }
 
   resultsCard.classList.remove("hidden");
