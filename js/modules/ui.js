@@ -4622,7 +4622,7 @@ export const renderResults = (project) => {
   // 仮ボルト注文明細の描画
   const tempContainer = document.getElementById("temp-order-details-container");
   if (tempContainer) {
-    const tempResults = calculateTempResults(project);
+    const tempResults = calculateTempBoltResults(project);
     renderTempOrderDetails(tempContainer, project, tempResults);
   }
 
