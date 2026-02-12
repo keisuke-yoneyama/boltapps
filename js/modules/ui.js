@@ -2929,7 +2929,7 @@ export const renderJointsList = (project) => {
                                             <button data-id="${joint.id}" class="delete-joint-btn text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300 font-semibold">削除</button>
                                         </div>
                                     </td>
-                                    <td class="px-4 py-3 font-medium text-gray-900 dark:text-gray-100 border-b border-r ${borderColor} ${darkBorderColor}">
+                                    <td class="px-4 py-3 font-medium text-gray-900 dark:text-gray-100 border-b border-r js-searchable-name ${borderColor} ${darkBorderColor}">
                                         ${joint.name}${colorBadge}
                                     </td>
                                     ${boltInfo}
@@ -3286,7 +3286,7 @@ export const renderJointsList = (project) => {
                                             <button data-id="${joint.id}" class="delete-joint-btn text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300 font-semibold">削除</button>
                                         </div>
                                     </td>
-                                    <td class="px-4 py-3 font-medium text-gray-900 dark:text-gray-100 border-b border-r ${borderColor} ${darkBorderColor}">
+                                    <td class="px-4 py-3 font-medium text-gray-900 dark:text-gray-100 border-b border-r js-searchable-name ${borderColor} ${darkBorderColor}">
                                         ${joint.name}${colorBadge}
                                     </td>
                                     <td class="px-4 py-3 border-b border-r ${borderColor} ${darkBorderColor}">${typeName}</td>
@@ -3550,7 +3550,7 @@ export const renderMemberLists = (project) => {
                     <td class="px-4 py-3 text-center border-b border-r ${borderColor} ${darkBorderColor}">
                         <div class="flex justify-center gap-2 whitespace-nowrap">${actionsHtml}</div>
                     </td>
-                    <td class="px-4 py-3 font-medium text-gray-900 dark:text-gray-100 border-b border-r ${borderColor} ${darkBorderColor}">
+                    <td class="px-4 py-3 font-medium text-gray-900 dark:text-gray-100 border-b border-r js-searchable-name ${borderColor} ${darkBorderColor}">
                         ${member.name}${floorBadge}
                     </td>
                     <td class="px-4 py-3 border-b border-r ${borderColor} ${darkBorderColor}">

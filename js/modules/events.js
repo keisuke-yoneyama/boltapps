@@ -4121,53 +4121,51 @@ export function setupSearchFunctionality() {
     }
 
     if (!targetContainer) return;
-
-    // 検索対象のテキストノードを探索 (TreeWalkerを使用)
-    const walker = document.createTreeWalker(
-      targetContainer,
-      NodeFilter.SHOW_TEXT,
-      {
-        acceptNode: (node) => {
-          // 空白のみ、またはscript/styleタグの中身は除外
-          if (!node.nodeValue.trim()) return NodeFilter.FILTER_REJECT;
-          if (
-            node.parentNode.tagName === "SCRIPT" ||
-            node.parentNode.tagName === "STYLE"
-          )
-            return NodeFilter.FILTER_REJECT;
-          return NodeFilter.FILTER_ACCEPT;
-        },
-      },
+    // ▼▼▼ 修正: 名前クラスを持つ要素だけを取得 ▼▼▼
+    const nameElements = targetContainer.querySelectorAll(
+      ".js-searchable-name",
     );
 
-    const textNodes = [];
-    while (walker.nextNode()) textNodes.push(walker.currentNode);
+    nameElements.forEach((element) => {
+      // 要素内のテキストノードを探索 (TreeWalkerを使用)
+      // ※要素内にさらにタグがある場合にも対応するためTreeWalkerを使います
+      const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT, {
+        acceptNode: (node) => {
+          if (!node.nodeValue.trim()) return NodeFilter.FILTER_REJECT;
+          return NodeFilter.FILTER_ACCEPT;
+        },
+      });
 
-    // マッチする箇所をハイライト
-    textNodes.forEach((node) => {
-      const text = node.nodeValue;
-      const index = text.toLowerCase().indexOf(lowerQuery);
+      const textNodes = [];
+      while (walker.nextNode()) textNodes.push(walker.currentNode);
 
-      if (index !== -1) {
-        // マッチした場合、spanタグで囲む
-        const span = document.createElement("span");
-        span.className = "search-highlight";
-        span.textContent = text.substr(index, query.length);
+      // マッチする箇所をハイライト
+      textNodes.forEach((node) => {
+        const text = node.nodeValue;
+        const index = text.toLowerCase().indexOf(lowerQuery);
 
-        const before = document.createTextNode(text.substr(0, index));
-        const after = document.createTextNode(
-          text.substr(index + query.length),
-        );
+        if (index !== -1) {
+          // マッチした場合、spanタグで囲む
+          const span = document.createElement("span");
+          span.className = "search-highlight";
+          span.textContent = text.substr(index, query.length);
 
-        const parent = node.parentNode;
-        parent.insertBefore(before, node);
-        parent.insertBefore(span, before.nextSibling);
-        parent.insertBefore(after, span.nextSibling);
-        parent.removeChild(node);
+          const before = document.createTextNode(text.substr(0, index));
+          const after = document.createTextNode(
+            text.substr(index + query.length),
+          );
 
-        matches.push(span);
-      }
+          const parent = node.parentNode;
+          parent.insertBefore(before, node);
+          parent.insertBefore(span, before.nextSibling);
+          parent.insertBefore(after, span.nextSibling);
+          parent.removeChild(node);
+
+          matches.push(span);
+        }
+      });
     });
+    // ▲▲▲ 修正ここまで ▲▲▲
 
     if (matches.length > 0) {
       currentIndex = 0;
