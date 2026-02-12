@@ -4030,6 +4030,9 @@ export function setupSearchFunctionality() {
   const nextBtn = document.getElementById("search-next-btn");
   const closeBtn = document.getElementById("search-close-btn");
   const fabTrigger = document.getElementById("fab-search-trigger");
+  // ▼▼▼ 追加: 戻るボタンの取得 ▼▼▼
+  const backBtn = document.getElementById("nav-back-to-list-btn");
+  const mobileBackBtn = document.getElementById("mobile-nav-back-to-list-btn");
 
   if (!widget || !input) return;
 
@@ -4238,6 +4241,14 @@ export function setupSearchFunctionality() {
   prevBtn.addEventListener("click", prevMatch);
   nextBtn.addEventListener("click", nextMatch);
   closeBtn.addEventListener("click", closeSearch);
+
+  // ▼▼▼ 追加: 一覧に戻るボタンが押されたら検索バーを閉じる ▼▼▼
+  if (backBtn) {
+    backBtn.addEventListener("click", closeSearch);
+  }
+  if (mobileBackBtn) {
+    mobileBackBtn.addEventListener("click", closeSearch);
+  }
 
   // --- 4. ドラッグ機能 (簡易実装) ---
   const handle = widget.querySelector(".drag-handle");
