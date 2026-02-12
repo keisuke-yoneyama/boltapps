@@ -2262,7 +2262,7 @@ export const renderTempBoltResults = (project) => {
 
   const sortedSizes = Array.from(filteredBoltSizes).sort(boltSort);
 
-  let floorTable = `<div id="anchor-temp-bolt" data-section-title="仮ボルト集計" data-section-color="green" class="scroll-mt-24">
+  let floorTable = `<div id="anchor-temp-bolt" data-section-title="仮ボルト集計：フロア工区別" data-section-color="green" class="scroll-mt-24">
                     <h2 class="text-2xl font-bold mt-8 mb-4 border-b-2 border-green-400 pb-2 text-slate-900 dark:text-slate-100">仮ボルト本数集計</h2>
                       <h3 class="text-xl font-semibold text-slate-800 dark:text-slate-200 mb-2">フロア工区別</h3>
                       <div class="overflow-x-auto custom-scrollbar">
@@ -4694,7 +4694,7 @@ export const renderResults = (project) => {
   floorTable += `</div>`;
 
   // 各種コンテナHTML生成
-  const orderDetailsContainer = `<div id="order-details-container" data-section-title="注文明細" data-section-color="pink" class="scroll-mt-24"></div>`;
+  const orderDetailsContainer = `<div id="order-details-container" data-section-title="本ボルト注文明細" data-section-color="pink" class="scroll-mt-24"></div>`;
   const tempOrderDetailsContainer = `<div id="temp-order-details-container" data-section-title="仮ボルト注文明細" data-section-color="purple" class="scroll-mt-24"></div>`;
 
   // HTML生成 (ui.js内関数呼び出し)
