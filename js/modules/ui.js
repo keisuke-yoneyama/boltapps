@@ -1879,9 +1879,7 @@ export const renderOrderDetails = (container, project, resultsByLocation) => {
 };
 
 /**
- * データを工区(エリア)ごとに集計するヘルパー関数
- * 入力: { "2F-1": {...}, "3F-1": {...} }
- * 出力: { "1工区": {...}, "2工区": {...} }
+ * データを工区(エリア)ごとに集計するヘルパー関数 (修正版)
  */
 const aggregateTempBySection = (sourceData, project) => {
   const result = {};
@@ -1891,8 +1889,16 @@ const aggregateTempBySection = (sourceData, project) => {
     const parts = locId.split("-");
     const areaPart = parts[parts.length - 1]; // ハイフンの後ろを取得
 
-    // 表示名を作成 (数字なら"〇工区"、それ以外ならそのまま)
-    const sectionKey = isNaN(areaPart) ? areaPart : `${areaPart}工区`;
+    // ▼▼▼ 修正: キー名の生成ルールをプロジェクト設定と合わせる ▼▼▼
+    let sectionKey = areaPart;
+    if (project.mode !== "advanced") {
+      // 標準モードなら "1" -> "1工区" に統一
+      sectionKey = `${areaPart}工区`;
+    } else {
+      // Advancedモードなら、エリア名をそのまま使う ("A", "1" など)
+      sectionKey = areaPart;
+    }
+    // ▲▲▲ 修正ここまで ▲▲▲
 
     if (!result[sectionKey]) {
       result[sectionKey] = {};
@@ -1900,7 +1906,7 @@ const aggregateTempBySection = (sourceData, project) => {
 
     const sizes = sourceData[locId];
     Object.keys(sizes).forEach((size) => {
-      // データ構造の揺らぎ吸収 (totalプロパティがある場合と数値そのものの場合)
+      // データ構造の揺らぎ吸収
       const count =
         typeof sizes[size] === "object" && sizes[size].total !== undefined
           ? sizes[size].total
@@ -1917,76 +1923,49 @@ const aggregateTempBySection = (sourceData, project) => {
 };
 
 /**
- * 仮ボルト注文詳細画面の描画（3モード対応版）
- * @param {HTMLElement} container 描画先のDOM要素
- * @param {Object} project プロジェクトデータ
- * @param {Object} tempResultsByLocation 仮ボルトの集計データ
+ * 仮ボルト注文詳細画面の描画（3モード対応・集計ロジック内蔵版）
  */
 export const renderTempOrderDetails = (
   container,
   project,
   tempResultsByLocation,
 ) => {
-  // ▼▼▼ デバッグ用ログ ▼▼▼
-  console.log("🔍 renderTempOrderDetails Debug:", {
-    container: !!container,
-    project: !!project,
-    tempResultsByLocation: tempResultsByLocation,
-  });
-
-  // ▼▼▼ コンテナやデータがない場合のガード処理 ▼▼▼
   if (!container) return;
   if (!project || !tempResultsByLocation) {
-    console.warn("⚠️ データ不足のため描画を中断しました");
     container.innerHTML = "";
     return;
   }
-  // ▲▲▲ 変更ここまで ▲▲▲
 
   try {
-    container.innerHTML = ""; // 初期化
+    container.innerHTML = "";
 
-    // ---------------------------------------------------------
-    // 1. データの前処理 (仮ボルトデータの抽出)
-    // ---------------------------------------------------------
+    // 1. データの前処理
     const masterKeys = getMasterOrderedKeys(project);
     const targetKeys = new Set(
       masterKeys.filter((k) => tempResultsByLocation[k]),
     );
-
     const filteredTempBolts = {};
 
     masterKeys.forEach((locId) => {
       if (!targetKeys.has(locId)) return;
-
       const locationData = tempResultsByLocation[locId];
       filteredTempBolts[locId] = {};
-
       Object.keys(locationData).forEach((size) => {
         filteredTempBolts[locId][size] = locationData[size];
       });
-
       if (Object.keys(filteredTempBolts[locId]).length === 0) {
         delete filteredTempBolts[locId];
       }
     });
 
-    // データがなければ終了
-    if (Object.keys(filteredTempBolts).length === 0) {
-      return;
-    }
+    if (Object.keys(filteredTempBolts).length === 0) return;
 
-    // ---------------------------------------------------------
-    // 2. セクションコンテナの作成
-    // ---------------------------------------------------------
+    // 2. セクション作成
     const tempBoltSection = document.createElement("section");
     tempBoltSection.className = "mb-16";
     container.appendChild(tempBoltSection);
 
-    // ---------------------------------------------------------
-    // 3. ヘッダーの描画 (3つのモード切り替えボタンを設置)
-    // ---------------------------------------------------------
-    // ▼▼▼ 変更: 「工区別 (集計)」ボタンを追加 ▼▼▼
+    // 3. ヘッダー描画
     const headerHtml = `
         <div class="flex flex-col md:flex-row justify-between items-start md:items-end mt-8 mb-10 border-b-2 border-teal-500 pb-4 gap-4">
             <div>
@@ -1995,7 +1974,6 @@ export const renderTempOrderDetails = (
                 </h2>
                 <p class="text-sm text-slate-500 dark:text-slate-400 pl-6 mt-1">現場建方用ボルト</p>
             </div>
-            
             <div class="flex bg-slate-100 dark:bg-slate-800 p-1 rounded-lg border border-slate-200 dark:border-slate-700">
                 <button id="temp-view-mode-detailed" type="button" class="px-4 py-2 text-sm font-medium rounded-md transition-all">工区別 (詳細)</button>
                 <button id="temp-view-mode-section" type="button" class="px-4 py-2 text-sm font-medium rounded-md transition-all">工区別 (集計)</button>
@@ -2004,9 +1982,7 @@ export const renderTempOrderDetails = (
         </div>
     `;
     tempBoltSection.insertAdjacentHTML("beforeend", headerHtml);
-    // ▲▲▲ 変更ここまで ▲▲▲
 
-    // コントロール & テーブルエリア
     const controlsContainer = document.createElement("div");
     tempBoltSection.appendChild(controlsContainer);
 
@@ -2015,57 +1991,74 @@ export const renderTempOrderDetails = (
       "flex flex-wrap gap-8 items-start align-top content-start";
     tempBoltSection.appendChild(tableContainer);
 
-    // ---------------------------------------------------------
-    // 4. ビュー更新関数 (Core Logic)
-    // ---------------------------------------------------------
+    // ▼▼▼ 追加: 内部専用の集計ロジック (外部依存をなくすため) ▼▼▼
+    const calculateLocalAggregation = (source, state) => {
+      const result = {};
+      const groups = {};
+
+      // Stateに基づいてグループ分け
+      Object.keys(state).forEach((key) => {
+        if (source[key]) {
+          // データが存在するキーのみ対象
+          const groupNum = state[key];
+          if (!groups[groupNum]) groups[groupNum] = [];
+          groups[groupNum].push(key);
+        }
+      });
+
+      // 集計実行
+      Object.keys(groups).forEach((groupNum) => {
+        const keys = groups[groupNum];
+        // ラベル作成: "No.1 (1工区)" のような形式
+        const label = `No.${groupNum} (${keys.join(", ")})`;
+        result[label] = {};
+
+        keys.forEach((key) => {
+          const sizes = source[key];
+          Object.keys(sizes).forEach((size) => {
+            const qty =
+              typeof sizes[size] === "object" && sizes[size].total !== undefined
+                ? sizes[size].total
+                : sizes[size];
+            result[label][size] = (result[label][size] || 0) + qty;
+          });
+        });
+      });
+      return result;
+    };
+    // ▲▲▲ 追加ここまで ▲▲▲
+
+    // 4. 更新ロジック
     const updateView = () => {
-      // --- A. ボタンのスタイル切り替え ---
-      // 現在のモードが不正ならデフォルトに戻す
+      // A. ボタン制御
       const validModes = ["detailed", "section", "floor"];
-      if (!validModes.includes(currentTempViewMode)) {
+      if (!validModes.includes(currentTempViewMode))
         currentTempViewMode = "detailed";
-      }
 
       const activeClass =
         "bg-white dark:bg-slate-700 shadow text-teal-600 dark:text-teal-400";
       const inactiveClass =
         "text-slate-500 hover:text-slate-700 dark:hover:text-slate-300";
 
-      // ボタン要素の取得とクラス適用
-      const btnDetail = tempBoltSection.querySelector(
-        "#temp-view-mode-detailed",
-      );
-      const btnSection = tempBoltSection.querySelector(
-        "#temp-view-mode-section",
-      );
-      const btnFloor = tempBoltSection.querySelector("#temp-view-mode-floor");
-
-      // 一旦すべて非アクティブに
-      [btnDetail, btnSection, btnFloor].forEach((btn) => {
-        if (btn)
-          btn.className = `px-4 py-2 text-sm font-medium rounded-md transition-all ${inactiveClass}`;
+      const btnMap = {
+        detailed: tempBoltSection.querySelector("#temp-view-mode-detailed"),
+        section: tempBoltSection.querySelector("#temp-view-mode-section"),
+        floor: tempBoltSection.querySelector("#temp-view-mode-floor"),
+      };
+      Object.keys(btnMap).forEach((key) => {
+        if (btnMap[key])
+          btnMap[key].className =
+            `px-4 py-2 text-sm font-medium rounded-md transition-all ${currentTempViewMode === key ? activeClass : inactiveClass}`;
       });
 
-      // アクティブなボタンだけクラスを変更
-      if (currentTempViewMode === "detailed" && btnDetail) {
-        btnDetail.className = `px-4 py-2 text-sm font-medium rounded-md transition-all ${activeClass}`;
-      } else if (currentTempViewMode === "section" && btnSection) {
-        btnSection.className = `px-4 py-2 text-sm font-medium rounded-md transition-all ${activeClass}`;
-      } else if (currentTempViewMode === "floor" && btnFloor) {
-        btnFloor.className = `px-4 py-2 text-sm font-medium rounded-md transition-all ${activeClass}`;
-      }
+      // B. データ準備
+      let dataForControls = {};
+      let customKeysForControls = null;
 
-      // --- B. データの準備とまとめ設定の描画 ---
-
-      let dataForControls = {}; // まとめ設定UIに渡す「元データ」
-      let customKeysForControls = null; // まとめ設定UIに渡す「キー順序」
-
-      // ▼▼▼ 変更: モードに応じた元データの生成 ▼▼▼
       if (currentTempViewMode === "section") {
-        // 【新モード】工区集計データを生成 (例: { "1工区": {...}, "2工区": {...} })
         dataForControls = aggregateTempBySection(filteredTempBolts, project);
 
-        // キー順序を作成 (1工区, 2工区...)
+        // キー順序の生成
         if (project.mode === "advanced") {
           customKeysForControls = [...project.customAreas].sort();
         } else {
@@ -2075,34 +2068,24 @@ export const renderTempOrderDetails = (
           );
         }
       } else if (currentTempViewMode === "detailed") {
-        // 【詳細モード】生データを使用 (例: { "2F-1": {...} })
         dataForControls = filteredTempBolts;
-        customKeysForControls = null; // nullなら getMasterOrderedKeys が使われる
+        customKeysForControls = null;
       }
-      // ▲▲▲ 変更ここまで ▲▲▲
 
-      // --- C. まとめ設定(State)のリセット判定 ---
-      // モード切り替えにより、データのキー(2F-1 と 1工区)が変わるため、不整合があればリセットする
-
+      // C. まとめ設定(State)のリセット
       const currentDataKeys = Object.keys(dataForControls);
       const stateKeys = Object.keys(currentTempGroupingState);
 
-      // Stateにキーがあるのに、現在のデータにそのキーが一つも含まれていない場合はリセット
       const needReset =
         stateKeys.length > 0 &&
         currentDataKeys.length > 0 &&
         !stateKeys.some((k) => currentDataKeys.includes(k));
-
-      // または、Stateが空でデータがある場合（初回など）も初期化
       const needInit = stateKeys.length === 0 && currentDataKeys.length > 0;
 
       if (needReset || needInit) {
-        // Stateをクリア
         for (const key in currentTempGroupingState)
           delete currentTempGroupingState[key];
 
-        // 初期値（連番）をセット
-        // customKeysForControlsがあればその順序で、なければデータキー順で
         const keysToInit = customKeysForControls
           ? customKeysForControls.filter((k) => dataForControls[k])
           : getMasterOrderedKeys(project).filter((k) => dataForControls[k]);
@@ -2112,76 +2095,75 @@ export const renderTempOrderDetails = (
         });
       }
 
-      // ▼▼▼ 変更: renderGroupingControls にカスタムキーを渡す ▼▼▼
+      // コントロール表示
       renderGroupingControls(
         controlsContainer,
-        dataForControls, // モードに応じた元データ
+        dataForControls,
         project,
         updateView,
-        currentTempGroupingState, // 仮ボルト用State
-        currentTempViewMode, // 仮ボルト用ViewMode
-        customKeysForControls, // ★第7引数: カスタムキー順序
+        currentTempGroupingState,
+        currentTempViewMode,
+        customKeysForControls,
       );
-      // ▲▲▲ 変更ここまで ▲▲▲
 
-      // --- D. 最終的な表示データの生成 ---
+      // D. 表示データ生成
       let dataToRender, sortedKeysToRender;
 
       if (currentTempViewMode === "floor") {
-        // [フロア集計]
         const result = aggregateByFloor(filteredTempBolts, project);
         dataToRender = result.data;
         sortedKeysToRender = result.order;
       } else {
-        // [詳細モード] OR [工区集計モード]
-        // どちらも dataForControls (元データ) に対して
-        // currentTempGroupingState (まとめ設定) を適用すればOK
-
-        dataToRender = calculateAggregatedData(
+        // ▼▼▼ 修正: 内部関数 calculateLocalAggregation を使用 ▼▼▼
+        dataToRender = calculateLocalAggregation(
           dataForControls,
           currentTempGroupingState,
-          project,
         );
 
-        // ソート順の決定
+        // ソート
         const allAggregatedKeys = Object.keys(dataToRender);
-
         if (currentTempViewMode === "detailed") {
           const fullMasterList = getMasterOrderedKeys(project);
           sortedKeysToRender = allAggregatedKeys.sort((a, b) => {
-            const firstKeyA = a.split(" + ")[0];
-            const firstKeyB = b.split(" + ")[0];
-            return (
-              fullMasterList.indexOf(firstKeyA) -
-              fullMasterList.indexOf(firstKeyB)
-            );
+            const firstKeyA = a.split(" + ")[0]; // "No.1 (Key)" 形式なら微調整が必要だが、汎用的に前方一致で比較
+            // calculateLocalAggregationのラベル形式 "No.1 (...)" からカッコ内を取り出すのは複雑なので
+            // ここでは単純な文字列ソート、または No. の数字でソートする
+            const numA = parseInt(a.match(/No\.(\d+)/)?.[1] || "0");
+            const numB = parseInt(b.match(/No\.(\d+)/)?.[1] || "0");
+            return numA - numB;
           });
         } else {
-          // 工区集計モードのソート (1工区, 2工区...)
-          // 単純な文字比較、あるいは " + " で結合された先頭のキーで比較
+          // 工区集計モード: No.順にソート
           sortedKeysToRender = allAggregatedKeys.sort((a, b) => {
-            return a.localeCompare(b, undefined, { numeric: true });
+            const numA = parseInt(a.match(/No\.(\d+)/)?.[1] || "0");
+            const numB = parseInt(b.match(/No\.(\d+)/)?.[1] || "0");
+            return numA - numB;
           });
         }
       }
 
-      // --- E. テーブル描画 ---
+      // ▼▼▼ デバッグログ: データが空なら出力 ▼▼▼
+      if (Object.keys(dataToRender).length === 0) {
+        console.warn("⚠️ dataToRender is empty!", {
+          mode: currentTempViewMode,
+          sourceKeys: Object.keys(dataForControls),
+          stateKeys: Object.keys(currentTempGroupingState),
+        });
+      }
+
+      // E. 描画
       renderAggregatedTables(
         tableContainer,
         dataToRender,
         sortedKeysToRender,
         {},
         false,
-        true, // isTempBolt = true (重量なし、種別ハイフン)
+        true, // isTempBolt = true
       );
     };
 
-    // ---------------------------------------------------------
-    // 5. イベントリスナー設定 & 初回実行
-    // ---------------------------------------------------------
-    // モード切り替え処理
+    // 5. イベントリスナー
     const setMode = (mode) => {
-      // モードが変わったらStateをリセットする（キーの種類が変わるため）
       if (currentTempViewMode !== mode) {
         for (const key in currentTempGroupingState)
           delete currentTempGroupingState[key];
@@ -2198,7 +2180,6 @@ export const renderTempOrderDetails = (
     if (btnSection) btnSection.onclick = () => setMode("section");
     if (btnFloor) btnFloor.onclick = () => setMode("floor");
 
-    // 初回描画
     updateView();
   } catch (err) {
     console.error("renderTempOrderDetailsエラー:", err);
