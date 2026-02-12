@@ -667,11 +667,30 @@
             class="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-xl"
           >
             <div
-              class="flex flex-col sm:flex-row justify-between sm:items-center mb-4 border-b-2 border-yellow-400 pb-3 gap-4"
+              class="flex flex-col sm:flex-row justify-between sm:items-center mb-6 border-b-2 border-yellow-400 pb-3 gap-4"
             >
-              <h2 class="text-2xl font-bold text-slate-900 dark:text-slate-100">
-                継手と部材の登録
-              </h2>
+              <div class="flex items-center gap-4">
+                <h2
+                  class="text-2xl font-bold text-slate-900 dark:text-slate-100"
+                >
+                  継手と部材の登録
+                </h2>
+                <div class="flex bg-slate-200 dark:bg-slate-700 rounded-lg p-1">
+                  <button
+                    id="switch-view-joints"
+                    class="px-4 py-1.5 text-sm font-bold rounded-md shadow-sm bg-white dark:bg-slate-600 text-blue-800 dark:text-blue-100 transition-all"
+                  >
+                    継手登録
+                  </button>
+                  <button
+                    id="switch-view-members"
+                    class="px-4 py-1.5 text-sm font-bold rounded-md text-slate-600 dark:text-slate-400 hover:bg-slate-300 dark:hover:bg-slate-600 transition-all"
+                  >
+                    部材登録
+                  </button>
+                </div>
+              </div>
+
               <div class="flex gap-2">
                 <button
                   id="open-temp-bolt-mapping-btn"
@@ -698,547 +717,72 @@
               </div>
             </div>
 
-            <div class="flex flex-col md:flex-row gap-8">
-              <div class="hidden md:block w-full md:w-1/3">
-                <h3
-                  class="text-xl font-semibold mb-3 text-slate-900 dark:text-slate-100"
-                >
-                  継手登録
-                </h3>
-                <div
-                  class="space-y-4 bg-slate-50 dark:bg-slate-800 p-4 rounded-xl border border-slate-200 dark:border-slate-700"
-                >
-                  <div>
-                    <label
-                      for="joint-type"
-                      class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1"
-                      >鉄骨の種類</label
-                    >
-                    <select
-                      id="joint-type"
-                      class="w-full bg-white dark:bg-slate-700 border-slate-300 dark:border-slate-600 text-slate-900 dark:text-slate-100 rounded-lg p-3 focus:ring-yellow-500 focus:border-yellow-500"
-                    >
-                      <option value="girder">大梁</option>
-                      <option value="beam">小梁</option>
-                      <option value="column">本柱</option>
-                      <option value="stud">間柱</option>
-                      <option value="wall_girt">胴縁</option>
-                      <option value="roof_purlin">母屋</option>
-                      <option value="other">その他</option>
-                    </select>
-                  </div>
-
-                  <p
-                    class="text-xs text-slate-600 dark:text-slate-400 bg-slate-100 dark:bg-slate-700/50 p-2 rounded-md border border-slate-200 dark:border-slate-600"
+            <div id="view-joints-area" class="transition-opacity duration-300">
+              <div class="flex flex-col md:flex-row gap-8">
+                <div class="hidden md:block w-full md:w-1/3">
+                  <h3
+                    class="text-xl font-semibold mb-3 text-slate-900 dark:text-slate-100"
                   >
-                    ※仮ボルト本数は、上下フランジ片側、ウェブ片側の本数を表しています。<br />
-                    ※鋼接合はボルト総数を入力してください。(2面せん断及びシングルSPLも)
-                  </p>
-
-                  <div id="temp-bolt-setting-group">
-                    <label
-                      for="temp-bolt-setting"
-                      class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1"
-                      >仮ボルト設定</label
-                    >
-                    <select
-                      id="temp-bolt-setting"
-                      class="w-full bg-white dark:bg-slate-700 border-slate-300 dark:border-slate-600 text-slate-900 dark:text-slate-100 rounded-lg p-3 focus:ring-yellow-500 focus:border-yellow-500"
-                    >
-                      <option value="calculated">規程本数</option>
-                      <option value="none">使用しない</option>
-                    </select>
-                  </div>
-
-                  <div id="shop-temp-bolt-group">
-                    <div id="shop-temp-bolt-group-single" class="hidden">
-                      <div class="grid grid-cols-2 gap-4">
-                        <div class="relative">
-                          <label
-                            for="shop-temp-bolt-size"
-                            class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1"
-                            >手動指定：仮ボルトサイズ</label
-                          >
-                          <input
-                            type="text"
-                            id="shop-temp-bolt-size"
-                            readonly
-                            class="w-full bg-white dark:bg-slate-700 border-slate-300 dark:border-slate-600 text-slate-900 dark:text-slate-100 rounded-lg p-3 pr-10 cursor-pointer modal-trigger-input"
-                            placeholder="サイズ選択"
-                          />
-                          <button
-                            data-target="shop-temp-bolt-size"
-                            class="bolt-select-trigger absolute inset-y-0 right-0 flex items-center px-3 text-slate-500 dark:text-slate-400 hover:text-blue-800 dark:hover:text-blue-400 mt-7"
-                          >
-                            ▼
-                          </button>
-                        </div>
-                        <div>
-                          <label
-                            for="shop-temp-bolt-count"
-                            class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1"
-                            >手動指定：仮ボルト本数</label
-                          >
-                          <input
-                            type="number"
-                            id="shop-temp-bolt-count"
-                            min="1"
-                            class="w-full bg-white dark:bg-slate-700 border-slate-300 dark:border-slate-600 text-slate-900 dark:text-slate-100 rounded-lg p-3 focus:ring-yellow-500 focus:border-yellow-500 dark:placeholder-slate-400"
-                            placeholder="1以上の数値を入力"
-                          />
-                        </div>
-                      </div>
-                    </div>
-                    <div
-                      id="shop-temp-bolt-group-dual"
-                      class="hidden space-y-2"
-                    >
-                      <div class="grid grid-cols-2 gap-4">
-                        <div class="relative">
-                          <label
-                            for="shop-temp-bolt-size-f"
-                            class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1"
-                            >工場用F仮ボルトサイズ</label
-                          >
-                          <input
-                            type="text"
-                            id="shop-temp-bolt-size-f"
-                            readonly
-                            class="w-full bg-white dark:bg-slate-700 border-slate-300 dark:border-slate-600 text-slate-900 dark:text-slate-100 rounded-lg p-3 pr-10 cursor-pointer modal-trigger-input"
-                            placeholder="サイズ選択"
-                          />
-                          <button
-                            data-target="shop-temp-bolt-size-f"
-                            class="bolt-select-trigger absolute inset-y-0 right-0 flex items-center px-3 text-slate-500 dark:text-slate-400 hover:text-blue-800 dark:hover:text-blue-400 mt-7"
-                          >
-                            ▼
-                          </button>
-                        </div>
-                        <div>
-                          <label
-                            for="shop-temp-bolt-count-f"
-                            class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1"
-                            >工場用F仮ボルト本数</label
-                          >
-                          <input
-                            type="number"
-                            id="shop-temp-bolt-count-f"
-                            min="1"
-                            class="w-full bg-white dark:bg-slate-700 border-slate-300 dark:border-slate-600 text-slate-900 dark:text-slate-100 rounded-lg p-3 focus:ring-yellow-500 focus:border-yellow-500 dark:placeholder-slate-400"
-                            placeholder="本数"
-                          />
-                        </div>
-                      </div>
-                      <div class="grid grid-cols-2 gap-4">
-                        <div class="relative">
-                          <label
-                            for="shop-temp-bolt-size-w"
-                            class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1"
-                            >工場用W仮ボルトサイズ</label
-                          >
-                          <input
-                            type="text"
-                            id="shop-temp-bolt-size-w"
-                            readonly
-                            class="w-full bg-white dark:bg-slate-700 border-slate-300 dark:border-slate-600 text-slate-900 dark:text-slate-100 rounded-lg p-3 pr-10 cursor-pointer modal-trigger-input"
-                            placeholder="サイズ選択"
-                          />
-                          <button
-                            data-target="shop-temp-bolt-size-w"
-                            class="bolt-select-trigger absolute inset-y-0 right-0 flex items-center px-3 text-slate-500 dark:text-slate-400 hover:text-blue-800 dark:hover:text-blue-400 mt-7"
-                          >
-                            ▼
-                          </button>
-                        </div>
-                        <div>
-                          <label
-                            for="shop-temp-bolt-count-w"
-                            class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1"
-                            >工場用W仮ボルト本数</label
-                          >
-                          <input
-                            type="number"
-                            id="shop-temp-bolt-count-w"
-                            min="1"
-                            class="w-full bg-white dark:bg-slate-700 border-slate-300 dark:border-slate-600 text-slate-900 dark:text-slate-100 rounded-lg p-3 focus:ring-yellow-500 focus:border-yellow-500 dark:placeholder-slate-400"
-                            placeholder="本数"
-                          />
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div class="flex flex-wrap items-center gap-4">
-                    <div
-                      id="pin-joint-group"
-                      class="hidden flex items-center gap-4"
-                    >
-                      <label class="flex items-center gap-2 cursor-pointer">
-                        <input
-                          type="checkbox"
-                          id="is-pin-joint"
-                          class="h-4 w-4 rounded border-gray-300 text-blue-800 focus:ring-yellow-500"
-                        />
-                        <span
-                          class="text-sm font-medium text-slate-700 dark:text-slate-300"
-                          >ピン取り</span
-                        >
-                      </label>
-                      <div id="double-shear-group" class="hidden">
-                        <label class="flex items-center gap-2 cursor-pointer">
-                          <input
-                            type="checkbox"
-                            id="is-double-shear"
-                            class="h-4 w-4 rounded border-gray-300 text-blue-800 focus:ring-yellow-500"
-                          />
-                          <span
-                            class="text-sm font-medium text-slate-700 dark:text-slate-300"
-                            >2面せん断,シングルSPL</span
-                          >
-                        </label>
-                      </div>
-                      <!-- <div id="bundle-column-group" class="flex items-center mt-2">
-                                            <input type="checkbox" id="is-bundled-with-column"
-                                                class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded">
-                                            <label for="is-bundled-with-column"
-                                                class="ml-2 block text-sm text-gray-900 dark:text-gray-300">
-                                                本柱と同梱 <span class="text-xs text-gray-500">※本ボルト明細で「本柱」に合算されます</span>
-                                            </label>
-                                        </div> -->
-                      <div
-                        id="complex-spl-group"
-                        class="hidden space-y-3 pt-3 border-t border-slate-300 dark:border-slate-600"
-                      >
-                        <label class="flex items-center gap-2 cursor-pointer">
-                          <input
-                            type="checkbox"
-                            id="is-complex-spl"
-                            class="h-4 w-4 rounded border-gray-300 text-blue-800 focus:ring-yellow-500"
-                          />
-                          <span
-                            class="text-sm font-medium text-slate-700 dark:text-slate-300"
-                            >複合型SPL</span
-                          >
-                        </label>
-                        <div id="complex-spl-count-group" class="hidden">
-                          <label
-                            for="complex-spl-count"
-                            class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1"
-                            >スプライス種類数</label
-                          >
-                          <div
-                            class="flex items-center border border-slate-300 dark:border-slate-600 rounded-lg"
-                          >
-                            <button
-                              type="button"
-                              id="decrement-complex-spl-btn"
-                              class="px-3 py-2 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600 rounded-l-lg transition-colors font-bold text-lg"
-                            >
-                              -
-                            </button>
-                            <input
-                              type="text"
-                              id="complex-spl-count"
-                              readonly
-                              class="w-full text-center border-l border-r dark:border-slate-600 bg-white dark:bg-slate-700 p-3 text-slate-900 dark:text-slate-100 focus:outline-none"
-                              value="2"
-                            />
-                            <button
-                              type="button"
-                              id="increment-complex-spl-btn"
-                              class="px-3 py-2 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600 rounded-r-lg transition-colors font-bold text-lg"
-                            >
-                              +
-                            </button>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                    <div id="count-as-member-group">
-                      <label class="flex items-center gap-2 cursor-pointer">
-                        <input
-                          type="checkbox"
-                          id="count-as-member"
-                          class="h-4 w-4 rounded border-gray-300 text-blue-800 focus:ring-yellow-500"
-                        />
-                        <span
-                          class="text-sm font-medium text-slate-700 dark:text-slate-300"
-                          >部材としてカウント</span
-                        >
-                      </label>
-                    </div>
-                    <div
-                      id="shop-spl-group"
-                      class="hidden pt-2 flex items-center space-x-4"
-                    >
-                      <label class="flex items-center gap-2 cursor-pointer">
-                        <input
-                          type="checkbox"
-                          id="has-shop-spl"
-                          class="h-4 w-4 rounded border-gray-300 text-blue-800 focus:ring-yellow-500"
-                        />
-                        <span
-                          class="text-sm font-medium text-slate-700 dark:text-slate-300"
-                          >工場でSPLセットあり</span
-                        >
-                      </label>
-                      <div id="bolt-correction-group">
-                        <label class="flex items-center gap-2 cursor-pointer">
-                          <input
-                            type="checkbox"
-                            id="has-bolt-correction"
-                            class="h-4 w-4 rounded border-gray-300 text-blue-800 focus:ring-yellow-500"
-                          />
-                          <span
-                            class="text-sm font-medium text-slate-700 dark:text-slate-300"
-                            >増しボルト補正あり</span
-                          >
-                        </label>
-                      </div>
-                    </div>
-                    <div
-                      id="bundle-column-group"
-                      class="flex items-center mt-2"
-                    >
-                      <input
-                        type="checkbox"
-                        id="is-bundled-with-column"
-                        class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                      />
+                    継手登録フォーム
+                  </h3>
+                  <div
+                    class="space-y-4 bg-slate-50 dark:bg-slate-800 p-4 rounded-xl border border-slate-200 dark:border-slate-700"
+                  >
+                    <div>
                       <label
-                        for="is-bundled-with-column"
-                        class="ml-2 block text-sm text-gray-900 dark:text-gray-300"
+                        for="joint-type"
+                        class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1"
+                        >鉄骨の種類</label
                       >
-                        本柱と同梱
-                        <span class="text-xs text-gray-500"
-                          >※本ボルト明細で「本柱」に合算</span
-                        >
-                      </label>
-                    </div>
-                  </div>
-                  <input
-                    type="text"
-                    id="joint-name"
-                    class="w-full bg-white dark:bg-slate-700 border-slate-300 dark:border-slate-600 text-slate-900 dark:text-slate-100 rounded-lg p-3 focus:ring-yellow-500 focus:border-yellow-500 dark:placeholder-slate-400"
-                    placeholder="継手名 (例: G1-C1)"
-                  />
-                  <div class="mt-2">
-                    <div class="flex items-center gap-2">
-                      <input
-                        type="checkbox"
-                        id="joint-color-toggle"
-                        class="h-4 w-4 rounded border-gray-300 text-blue-800 focus:ring-yellow-500 cursor-pointer"
-                      />
-                      <label
-                        for="joint-color-toggle"
-                        class="text-sm font-medium text-slate-700 dark:text-slate-300 select-none cursor-pointer"
-                        >色を設定する</label
+                      <select
+                        id="joint-type"
+                        class="w-full bg-white dark:bg-slate-700 border-slate-300 dark:border-slate-600 text-slate-900 dark:text-slate-100 rounded-lg p-3 focus:ring-yellow-500 focus:border-yellow-500"
                       >
+                        <option value="girder">大梁</option>
+                        <option value="beam">小梁</option>
+                        <option value="column">本柱</option>
+                        <option value="stud">間柱</option>
+                        <option value="wall_girt">胴縁</option>
+                        <option value="roof_purlin">母屋</option>
+                        <option value="other">その他</option>
+                      </select>
                     </div>
-                    <div
-                      id="joint-color-section"
-                      class="hidden mt-2 bg-slate-100 dark:bg-slate-700/50 p-3 rounded-lg border border-slate-200 dark:border-slate-600"
-                    >
-                      <div
-                        id="static-color-palette-container"
-                        class="flex flex-wrap gap-2 mb-3"
-                      ></div>
-                      <div
-                        class="flex items-center justify-between pt-2 border-t border-slate-200 dark:border-slate-600"
+                    <button id="add-joint-btn" class="w-full btn btn-primary">
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        width="20"
+                        height="20"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
                       >
-                        <label
-                          class="flex items-center gap-2 cursor-pointer text-sm text-blue-600 hover:text-blue-800 dark:text-blue-400"
-                        >
-                          <div class="relative">
-                            <span
-                              class="block w-8 h-8 rounded-full bg-gradient-to-br from-red-500 via-green-500 to-blue-500 border border-slate-300 shadow-sm"
-                            ></span>
-                            <input
-                              type="color"
-                              id="joint-color-input"
-                              class="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
-                              value="#ffffff"
-                            />
-                          </div>
-                          <span>その他の色...</span>
-                        </label>
-                        <button
-                          type="button"
-                          id="static-clear-joint-color-btn"
-                          class="text-xs text-slate-500 hover:text-red-500 dark:text-slate-400 dark:hover:text-red-400 border border-slate-300 dark:border-slate-600 px-2 py-1 rounded hover:bg-white dark:hover:bg-slate-600 transition-colors bg-white dark:bg-slate-800"
-                        >
-                          選択解除
-                        </button>
-                      </div>
-                    </div>
+                        <line x1="12" y1="5" x2="12" y2="19"></line>
+                        <line x1="5" y1="12" x2="19" y2="12"></line>
+                      </svg>
+                      継手を追加
+                    </button>
                   </div>
-                  <div id="flange-input-group">
-                    <div class="grid grid-cols-2 gap-4">
-                      <div class="relative">
-                        <input
-                          type="text"
-                          id="flange-size"
-                          readonly
-                          class="w-full bg-white dark:bg-slate-700 border-slate-300 dark:border-slate-600 text-slate-900 dark:text-slate-100 rounded-lg p-3 pr-10 cursor-pointer modal-trigger-input dark:placeholder-slate-400"
-                          placeholder="フランジ サイズ"
-                        />
-                        <button
-                          data-target="flange-size"
-                          class="bolt-select-trigger absolute inset-y-0 right-0 flex items-center px-3 text-slate-500 dark:text-slate-400 hover:text-blue-800 dark:hover:text-blue-400"
-                        >
-                          ▼
-                        </button>
-                      </div>
-                      <input
-                        type="number"
-                        id="flange-count"
-                        min="0"
-                        class="w-full bg-white dark:bg-slate-700 border-slate-300 dark:border-slate-600 text-slate-900 dark:text-slate-100 rounded-lg p-3 focus:ring-yellow-500 focus:border-yellow-500 dark:placeholder-slate-400"
-                        placeholder="本数"
-                      />
-                    </div>
-                  </div>
-
-                  <div id="web-input-group">
-                    <div class="grid grid-cols-2 gap-4">
-                      <div class="relative">
-                        <input
-                          type="text"
-                          id="web-size"
-                          readonly
-                          class="w-full bg-white dark:bg-slate-700 border-slate-300 dark:border-slate-600 text-slate-900 dark:text-slate-100 rounded-lg p-3 pr-10 cursor-pointer modal-trigger-input dark:placeholder-slate-400"
-                          placeholder="ウェブ サイズ"
-                        />
-                        <button
-                          data-target="web-size"
-                          class="bolt-select-trigger absolute inset-y-0 right-0 flex items-center px-3 text-slate-500 dark:text-slate-400 hover:text-blue-800 dark:hover:text-blue-400"
-                        >
-                          ▼
-                        </button>
-                      </div>
-                      <input
-                        type="number"
-                        id="web-count"
-                        min="0"
-                        class="w-full bg-white dark:bg-slate-700 border-slate-300 dark:border-slate-600 text-slate-900 dark:text-slate-100 rounded-lg p-3 focus:ring-yellow-500 focus:border-yellow-500 dark:placeholder-slate-400"
-                        placeholder="本数"
-                      />
-                    </div>
-                  </div>
-                  <div id="web-input-group-2" class="hidden">
-                    <div class="grid grid-cols-2 gap-4">
-                      <div class="relative">
-                        <input
-                          type="text"
-                          id="web-size-2"
-                          readonly
-                          class="w-full bg-white dark:bg-slate-700 border-slate-300 dark:border-slate-600 text-slate-900 dark:text-slate-100 rounded-lg p-3 pr-10 cursor-pointer modal-trigger-input dark:placeholder-slate-400"
-                          placeholder="ウェブ サイズ 2"
-                        />
-                        <button
-                          data-target="web-size-2"
-                          class="bolt-select-trigger absolute inset-y-0 right-0 flex items-center px-3 text-slate-500 dark:text-slate-400 hover:text-blue-800 dark:hover:text-blue-400"
-                        >
-                          ▼
-                        </button>
-                      </div>
-                      <input
-                        type="number"
-                        id="web-count-2"
-                        min="0"
-                        class="w-full bg-white dark:bg-slate-700 border-slate-300 dark:border-slate-600 text-slate-900 dark:text-slate-100 rounded-lg p-3 focus:ring-yellow-500 focus:border-yellow-500 dark:placeholder-slate-400"
-                        placeholder="本数"
-                      />
-                    </div>
-                  </div>
-                  <div id="web-input-group-3" class="hidden">
-                    <div class="grid grid-cols-2 gap-4">
-                      <div class="relative">
-                        <input
-                          type="text"
-                          id="web-size-3"
-                          readonly
-                          class="w-full bg-white dark:bg-slate-700 border-slate-300 dark:border-slate-600 text-slate-900 dark:text-slate-100 rounded-lg p-3 pr-10 cursor-pointer modal-trigger-input dark:placeholder-slate-400"
-                          placeholder="ウェブ サイズ 3"
-                        />
-                        <button
-                          data-target="web-size-3"
-                          class="bolt-select-trigger absolute inset-y-0 right-0 flex items-center px-3 text-slate-500 dark:text-slate-400 hover:text-blue-800 dark:hover:text-blue-400"
-                        >
-                          ▼
-                        </button>
-                      </div>
-                      <input
-                        type="number"
-                        id="web-count-3"
-                        min="0"
-                        class="w-full bg-white dark:bg-slate-700 border-slate-300 dark:border-slate-600 text-slate-900 dark:text-slate-100 rounded-lg p-3 focus:ring-yellow-500 focus:border-yellow-500 dark:placeholder-slate-400"
-                        placeholder="本数"
-                      />
-                    </div>
-                  </div>
-                  <div id="web-input-group-4" class="hidden">
-                    <div class="grid grid-cols-2 gap-4">
-                      <div class="relative">
-                        <input
-                          type="text"
-                          id="web-size-4"
-                          readonly
-                          class="w-full bg-white dark:bg-slate-700 border-slate-300 dark:border-slate-600 text-slate-900 dark:text-slate-100 rounded-lg p-3 pr-10 cursor-pointer modal-trigger-input dark:placeholder-slate-400"
-                          placeholder="ウェブ サイズ 4"
-                        />
-                        <button
-                          data-target="web-size-4"
-                          class="bolt-select-trigger absolute inset-y-0 right-0 flex items-center px-3 text-slate-500 dark:text-slate-400 hover:text-blue-800 dark:hover:text-blue-400"
-                        >
-                          ▼
-                        </button>
-                      </div>
-                      <input
-                        type="number"
-                        id="web-count-4"
-                        min="0"
-                        class="w-full bg-white dark:bg-slate-700 border-slate-300 dark:border-slate-600 text-slate-900 dark:text-slate-100 rounded-lg p-3 focus:ring-yellow-500 focus:border-yellow-500 dark:placeholder-slate-400"
-                        placeholder="本数"
-                      />
-                    </div>
-                  </div>
-                  <button id="add-joint-btn" class="w-full btn btn-primary">
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      width="20"
-                      height="20"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      stroke-width="2"
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                    >
-                      <line x1="12" y1="5" x2="12" y2="19"></line>
-                      <line x1="5" y1="12" x2="19" y2="12"></line>
-                    </svg>
-                    継手を追加
-                  </button>
                 </div>
+
+                <div
+                  id="joint-lists-container"
+                  class="w-full md:w-2/3 space-y-6"
+                ></div>
               </div>
-
-              <div
-                id="joint-lists-container"
-                class="w-full md:w-2/3 space-y-6"
-              ></div>
             </div>
-
-            <section
-              id="member-registration-card"
-              class="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-xl mt-8"
+            <div
+              id="view-members-area"
+              class="hidden transition-opacity duration-300"
             >
               <div class="flex flex-col md:flex-row gap-8">
                 <div class="hidden md:block w-full md:w-1/3">
                   <h3
                     class="text-xl font-semibold mb-3 text-slate-900 dark:text-slate-100"
                   >
-                    部材登録
+                    部材登録フォーム
                   </h3>
                   <div
                     class="space-y-4 bg-slate-50 dark:bg-slate-800 p-4 rounded-xl border border-slate-200 dark:border-slate-700"
@@ -1309,7 +853,7 @@
                   <div id="member-lists-container" class="space-y-6"></div>
                 </div>
               </div>
-            </section>
+            </div>
           </section>
         </div>
 
@@ -2807,7 +2351,60 @@
     </div>
 
     <script type="module" src="js/app.js"></script>
+    <script>
+      document.addEventListener("DOMContentLoaded", () => {
+        const btnJoints = document.getElementById("switch-view-joints");
+        const btnMembers = document.getElementById("switch-view-members");
+        const areaJoints = document.getElementById("view-joints-area");
+        const areaMembers = document.getElementById("view-members-area");
 
+        // アクティブなボタンのクラス
+        const activeClass = [
+          "bg-white",
+          "dark:bg-slate-600",
+          "text-blue-800",
+          "dark:text-blue-100",
+          "shadow-sm",
+        ];
+        // 非アクティブなボタンのクラス
+        const inactiveClass = [
+          "text-slate-600",
+          "dark:text-slate-400",
+          "hover:bg-slate-300",
+          "dark:hover:bg-slate-600",
+        ];
+
+        function switchTab(target) {
+          if (target === "joints") {
+            // 表示エリアの切替
+            areaJoints.classList.remove("hidden");
+            areaMembers.classList.add("hidden");
+
+            // ボタンのスタイル更新
+            btnJoints.classList.add(...activeClass);
+            btnJoints.classList.remove(...inactiveClass);
+
+            btnMembers.classList.remove(...activeClass);
+            btnMembers.classList.add(...inactiveClass);
+          } else {
+            // 表示エリアの切替
+            areaJoints.classList.add("hidden");
+            areaMembers.classList.remove("hidden");
+
+            // ボタンのスタイル更新
+            btnMembers.classList.add(...activeClass);
+            btnMembers.classList.remove(...inactiveClass);
+
+            btnJoints.classList.remove(...activeClass);
+            btnJoints.classList.add(...inactiveClass);
+          }
+        }
+
+        // イベントリスナー
+        btnJoints.addEventListener("click", () => switchTab("joints"));
+        btnMembers.addEventListener("click", () => switchTab("members"));
+      });
+    </script>
     <div
       id="details-modal"
       class="modal fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center p-4 hidden opacity-0 z-50"
