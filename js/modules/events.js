@@ -160,6 +160,8 @@ export function setupEventListeners() {
   setupJointSelectorEvents(); // 部材登録用：継手選択モーダルのイベント設定
 
   setupGlobalActionEvents(); //汎用アクション確認モーダル（実行・キャンセル）のイベント設定
+
+  setupSearchFunctionality(); //検索機能イベント
 }
 
 //登録用フローティングボタンイベント
@@ -4015,86 +4017,262 @@ function setupTallyClipboardEvents() {
   });
 }
 
-// /**
-//  * ボルト設定画面のイベントリスナー (旧 setupBoltSettingsUI)
-//  */
-// function setupBoltSettingsEvents() {
-//   const navBtnBoltSettings = document.getElementById("nav-btn-bolt-settings");
-//   const newBoltTypeSelect = document.getElementById("new-bolt-type-select");
-//   const boltSizeSettingsModal = document.getElementById(
-//     "bolt-size-settings-modal",
-//   ); // ID確認要
-//   const addBoltSizeBtn = document.getElementById("add-bolt-size-btn"); // ID確認要
-//   const newBoltLengthInput = document.getElementById("new-bolt-length-input"); // ID確認要
-//   const boltSizeList = document.getElementById("bolt-size-list");
+/**
+ * 検索機能のセットアップ (VSCode風)
+ */
+export function setupSearchFunctionality() {
+  const widget = document.getElementById("search-widget");
+  const input = document.getElementById("search-input");
+  const countDisplay = document.getElementById("search-count");
+  const currentSpan = document.getElementById("search-current");
+  const totalSpan = document.getElementById("search-total");
+  const prevBtn = document.getElementById("search-prev-btn");
+  const nextBtn = document.getElementById("search-next-btn");
+  const closeBtn = document.getElementById("search-close-btn");
+  const fabTrigger = document.getElementById("fab-search-trigger");
 
-//   // 1. 設定モーダルを開く
-//   if (navBtnBoltSettings) {
-//     navBtnBoltSettings.classList.remove("hidden");
-//     navBtnBoltSettings.addEventListener("click", () => {
-//       console.log("🔧 設定ボタンがクリックされました");
-//       if (newBoltTypeSelect) {
-//         console.log(
-//           "✅ セレクトボックスが見つかりました。選択肢を生成します。",
-//         );
-//         newBoltTypeSelect.innerHTML = "";
-//         BOLT_TYPES.forEach((type) => {
-//           const opt = document.createElement("option");
-//           opt.value = type;
-//           opt.textContent = type;
-//           newBoltTypeSelect.appendChild(opt);
-//         });
-//         newBoltTypeSelect.value = "M16";
-//       } else {
-//         console.error(
-//           "❌ エラー: id='new-bolt-type-select' の要素が見つかりません！",
-//         );
-//       }
-//       renderBoltSizeSettings();
-//       openModal(boltSizeSettingsModal);
-//     });
-//   }
+  if (!widget || !input) return;
 
-//   // 2. 新規追加ボタン
-//   if (addBoltSizeBtn) {
-//     addBoltSizeBtn.addEventListener("click", async () => {
-//       const type = newBoltTypeSelect.value;
-//       const length = parseInt(newBoltLengthInput.value);
+  // 状態管理
+  let matches = []; // ヒットしたDOM要素の配列
+  let currentIndex = -1;
+  let isOpen = false;
 
-//       if (!length || length <= 0) {
-//         showToast("長さを正しく入力してください");
-//         return;
-//       }
+  // --- 1. ウィジェットの開閉 ---
+  const openSearch = () => {
+    isOpen = true;
+    widget.classList.add("open");
+    input.focus();
+    input.select();
+    performSearch(input.value); // 開いたときに再検索
+  };
 
-//       const newId = `${type}×${length}`;
+  const closeSearch = () => {
+    isOpen = false;
+    widget.classList.remove("open");
+    clearHighlights();
+    // フォーカスを外す
+    input.blur();
+  };
 
-//       if (state.globalBoltSizes.some((b) => b.id === newId)) {
-//         showToast("このサイズは既に登録されています");
-//         return;
-//       }
+  const toggleSearch = () => {
+    if (isOpen) closeSearch();
+    else openSearch();
+  };
 
-//       state.globalBoltSizes.push({
-//         id: newId,
-//         label: newId,
-//         type: type,
-//         length: length,
-//       });
+  // FABクリック
+  if (fabTrigger) {
+    fabTrigger.addEventListener("click", toggleSearch);
+  }
 
-//       sortGlobalBoltSizes();
-//       renderBoltSizeSettings();
-//       populateGlobalBoltSelectorModal(); // 必要なら
-//       await saveGlobalBoltSizes(state.globalBoltSizes);
+  // キーボードショートカット (Ctrl+F, Esc)
+  document.addEventListener("keydown", (e) => {
+    if ((e.ctrlKey || e.metaKey) && e.key === "f") {
+      e.preventDefault();
+      openSearch();
+    }
+    if (e.key === "Escape" && isOpen) {
+      e.preventDefault();
+      closeSearch();
+    }
+  });
 
-//       newBoltLengthInput.value = "";
-//       newBoltLengthInput.focus();
+  // --- 2. 検索ロジック ---
+  // ハイライトを解除
+  const clearHighlights = () => {
+    document.querySelectorAll(".search-highlight").forEach((el) => {
+      // 元のテキストに戻す (単純な置き換えだとイベントリスナーが壊れる可能性があるため、クラス削除で対応したいが、
+      // テキストノード置換を行っているため、親要素のinnerHTMLを復元するのはリスクがある。
+      // ここでは span タグを解除する処理を行う)
+      const parent = el.parentNode;
+      if (parent) {
+        parent.replaceChild(document.createTextNode(el.textContent), el);
+        parent.normalize(); // 隣接するテキストノードを結合
+      }
+    });
+    matches = [];
+    currentIndex = -1;
+    updateCountUI();
+  };
 
-//       setTimeout(() => {
-//         const newItem = Array.from(boltSizeList.children).find((li) =>
-//           li.innerHTML.includes(newId),
-//         );
-//         if (newItem)
-//           newItem.scrollIntoView({ behavior: "smooth", block: "center" });
-//       }, 100);
-//     });
-//   }
-// }
+  // 検索実行
+  const performSearch = (query) => {
+    clearHighlights();
+
+    if (!query || query.trim() === "") {
+      updateCountUI();
+      return;
+    }
+
+    const lowerQuery = query.toLowerCase();
+
+    // 現在表示されているエリアを判定 (継手 or 部材)
+    const jointsArea = document.getElementById("view-joints-area");
+    const membersArea = document.getElementById("view-members-area");
+
+    let targetContainer = null;
+    if (jointsArea && !jointsArea.classList.contains("hidden")) {
+      targetContainer = document.getElementById("joint-lists-container");
+    } else if (membersArea && !membersArea.classList.contains("hidden")) {
+      targetContainer = document.getElementById("member-lists-container");
+    }
+
+    if (!targetContainer) return;
+
+    // 検索対象のテキストノードを探索 (TreeWalkerを使用)
+    const walker = document.createTreeWalker(
+      targetContainer,
+      NodeFilter.SHOW_TEXT,
+      {
+        acceptNode: (node) => {
+          // 空白のみ、またはscript/styleタグの中身は除外
+          if (!node.nodeValue.trim()) return NodeFilter.FILTER_REJECT;
+          if (
+            node.parentNode.tagName === "SCRIPT" ||
+            node.parentNode.tagName === "STYLE"
+          )
+            return NodeFilter.FILTER_REJECT;
+          return NodeFilter.FILTER_ACCEPT;
+        },
+      },
+    );
+
+    const textNodes = [];
+    while (walker.nextNode()) textNodes.push(walker.currentNode);
+
+    // マッチする箇所をハイライト
+    textNodes.forEach((node) => {
+      const text = node.nodeValue;
+      const index = text.toLowerCase().indexOf(lowerQuery);
+
+      if (index !== -1) {
+        // マッチした場合、spanタグで囲む
+        const span = document.createElement("span");
+        span.className = "search-highlight";
+        span.textContent = text.substr(index, query.length);
+
+        const before = document.createTextNode(text.substr(0, index));
+        const after = document.createTextNode(
+          text.substr(index + query.length),
+        );
+
+        const parent = node.parentNode;
+        parent.insertBefore(before, node);
+        parent.insertBefore(span, before.nextSibling);
+        parent.insertBefore(after, span.nextSibling);
+        parent.removeChild(node);
+
+        matches.push(span);
+      }
+    });
+
+    if (matches.length > 0) {
+      currentIndex = 0;
+      highlightCurrent();
+    }
+
+    updateCountUI();
+  };
+
+  // --- 3. ナビゲーション (次へ/前へ) ---
+  const highlightCurrent = () => {
+    // 全てのactiveクラスを除去
+    matches.forEach((m) => m.classList.remove("active"));
+
+    if (currentIndex >= 0 && currentIndex < matches.length) {
+      const current = matches[currentIndex];
+      current.classList.add("active");
+
+      // スクロール (スムーズに)
+      current.scrollIntoView({
+        behavior: "smooth",
+        block: "center",
+        inline: "center",
+      });
+    }
+    updateCountUI();
+  };
+
+  const nextMatch = () => {
+    if (matches.length === 0) return;
+    currentIndex = (currentIndex + 1) % matches.length;
+    highlightCurrent();
+  };
+
+  const prevMatch = () => {
+    if (matches.length === 0) return;
+    currentIndex = (currentIndex - 1 + matches.length) % matches.length;
+    highlightCurrent();
+  };
+
+  const updateCountUI = () => {
+    if (matches.length > 0) {
+      countDisplay.classList.remove("hidden");
+      currentSpan.textContent = currentIndex + 1;
+      totalSpan.textContent = matches.length;
+      prevBtn.disabled = false;
+      nextBtn.disabled = false;
+    } else {
+      countDisplay.classList.add("hidden");
+      prevBtn.disabled = true;
+      nextBtn.disabled = true;
+    }
+  };
+
+  // --- イベントリスナー登録 ---
+
+  // 入力イベント (Debounceなしで即時反応させるのがVSCode流)
+  input.addEventListener("input", (e) => {
+    performSearch(e.target.value);
+  });
+
+  // Enterキーで次へ/前へ
+  input.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      if (e.shiftKey) prevMatch();
+      else nextMatch();
+    }
+  });
+
+  prevBtn.addEventListener("click", prevMatch);
+  nextBtn.addEventListener("click", nextMatch);
+  closeBtn.addEventListener("click", closeSearch);
+
+  // --- 4. ドラッグ機能 (簡易実装) ---
+  const handle = widget.querySelector(".drag-handle");
+  let isDragging = false;
+  let startX, startY, initialLeft, initialTop;
+
+  handle.addEventListener("mousedown", (e) => {
+    isDragging = true;
+    startX = e.clientX;
+    startY = e.clientY;
+
+    // 現在の位置を取得 (computed style)
+    const rect = widget.getBoundingClientRect();
+    initialLeft = rect.left;
+    initialTop = rect.top;
+
+    // fixed配置なので、位置をstyleに直接書き込む準備
+    widget.style.right = "auto"; // right指定を解除
+    widget.style.left = `${initialLeft}px`;
+    widget.style.top = `${initialTop}px`;
+
+    document.body.style.cursor = "move";
+  });
+
+  document.addEventListener("mousemove", (e) => {
+    if (!isDragging) return;
+    e.preventDefault();
+    const dx = e.clientX - startX;
+    const dy = e.clientY - startY;
+    widget.style.left = `${initialLeft + dx}px`;
+    widget.style.top = `${initialTop + dy}px`;
+  });
+
+  document.addEventListener("mouseup", () => {
+    isDragging = false;
+    document.body.style.cursor = "default";
+  });
+}

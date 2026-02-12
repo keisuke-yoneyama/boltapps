@@ -41,6 +41,26 @@
     <link rel="icon" href="favicon.ico" type="image/x-icon" />
 
     <style type="text/tailwindcss">
+      /* ▼▼▼ 検索機能用CSS (追加) ▼▼▼ */
+      .search-highlight {
+        @apply bg-yellow-200 text-slate-900 dark:bg-yellow-600/50 dark:text-white rounded px-0.5 transition-colors duration-200;
+      }
+      .search-highlight.active {
+        @apply bg-orange-500 text-white ring-2 ring-orange-300 dark:ring-orange-700 z-10 relative;
+      }
+
+      /* 検索ウィジェットのスタイル */
+      #search-widget {
+        @apply fixed top-24 right-10 z-[100] bg-white dark:bg-slate-800 shadow-2xl rounded-lg border border-slate-200 dark:border-slate-600 flex items-center p-1 gap-1 w-80 transition-opacity duration-200 opacity-0 pointer-events-none;
+      }
+      #search-widget.open {
+        @apply opacity-100 pointer-events-auto;
+      }
+
+      /* ドラッグハンドル */
+      .drag-handle {
+        @apply cursor-move text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 px-1;
+      }
       /* ▼▼▼ このCSSを追記 ▼▼▼ */
       .cell-selected > input {
         @apply ring-2 ring-blue-600 ring-inset z-20 dark:ring-yellow-400;
@@ -3010,7 +3030,26 @@
           ></path>
         </svg>
       </button>
-
+      <button
+        id="fab-search-trigger"
+        class="bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-200 w-14 h-14 rounded-full shadow-lg flex items-center justify-center transition-transform hover:scale-105 focus:outline-none z-50 pointer-events-auto border border-slate-200 dark:border-slate-600"
+        title="検索を開く"
+      >
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          width="24"
+          height="24"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <circle cx="11" cy="11" r="8"></circle>
+          <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+        </svg>
+      </button>
       <button
         id="fab-toggle"
         class="bg-yellow-500 hover:bg-yellow-600 text-slate-900 w-14 h-14 rounded-full shadow-lg flex items-center justify-center transition-transform hover:scale-105 focus:outline-none focus:ring-4 focus:ring-yellow-300 z-50 pointer-events-auto"
@@ -3194,6 +3233,103 @@
           </button>
         </div>
       </div>
+    </div>
+    <div id="search-widget">
+      <div class="drag-handle" title="移動">
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          width="16"
+          height="16"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <circle cx="9" cy="12" r="1"></circle>
+          <circle cx="9" cy="5" r="1"></circle>
+          <circle cx="9" cy="19" r="1"></circle>
+          <circle cx="15" cy="12" r="1"></circle>
+          <circle cx="15" cy="5" r="1"></circle>
+          <circle cx="15" cy="19" r="1"></circle>
+        </svg>
+      </div>
+
+      <div class="relative flex-1">
+        <input
+          type="text"
+          id="search-input"
+          class="w-full bg-slate-100 dark:bg-slate-700 border-none rounded text-sm py-1.5 pl-2 pr-16 focus:ring-1 focus:ring-blue-500 text-slate-800 dark:text-slate-100 placeholder-slate-400"
+          placeholder="検索 (Ctrl+F)"
+        />
+
+        <div
+          id="search-count"
+          class="absolute right-2 top-1/2 transform -translate-y-1/2 text-xs text-slate-400 font-mono hidden"
+        >
+          <span id="search-current">0</span>/<span id="search-total">0</span>
+        </div>
+      </div>
+
+      <button
+        id="search-prev-btn"
+        class="p-1.5 rounded hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 disabled:opacity-30"
+        title="前へ (Shift+Enter)"
+      >
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          width="16"
+          height="16"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <path d="M18 15l-6-6-6 6" />
+        </svg>
+      </button>
+      <button
+        id="search-next-btn"
+        class="p-1.5 rounded hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 disabled:opacity-30"
+        title="次へ (Enter)"
+      >
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          width="16"
+          height="16"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <path d="M6 9l6 6 6-6" />
+        </svg>
+      </button>
+      <button
+        id="search-close-btn"
+        class="p-1.5 rounded hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 ml-1"
+        title="閉じる (Esc)"
+      >
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          width="16"
+          height="16"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <line x1="18" y1="6" x2="6" y2="18"></line>
+          <line x1="6" y1="6" x2="18" y2="18"></line>
+        </svg>
+      </button>
     </div>
   </body>
 </html>
