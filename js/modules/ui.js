@@ -1057,14 +1057,16 @@ export function resetCurrentTempGroupingState() {
  */
 /**
  * 工区まとめ設定UIを描画する関数
+ * @param {Array} customKeys ★追加: キーのリストを強制指定する場合に使用 (デフォルトはnull)
  */
 export function renderGroupingControls(
   container,
   originalResults,
   project,
   onUpdate,
-  targetState, // ★受け取るオブジェクトを変更
-  targetViewMode, // ★現在のモードを受け取る
+  targetState,
+  targetViewMode,
+  customKeys = null, // ▼▼▼ 修正: 第7引数を追加 (デフォルトnull) ▼▼▼
 ) {
   // 安全対策
   if (!container) return;
@@ -1075,16 +1077,26 @@ export function renderGroupingControls(
 
   container.innerHTML = "";
 
-  // ▼▼▼ 修正: グローバル変数ではなく、引数 targetViewMode を見る ▼▼▼
   if (targetViewMode === "floor") {
     container.style.display = "none";
     return;
   }
   container.style.display = "block";
 
-  // ★ getMasterOrderedKeys は import したものを使用
-  const masterKeys = getMasterOrderedKeys(project);
-  const targetKeys = masterKeys.filter((k) => originalResults[k]);
+  // ▼▼▼ 修正: キーリストの決定ロジックを変更 ▼▼▼
+  // customKeysが渡されていればそれを使い、なければ従来通り getMasterOrderedKeys を使う
+  let targetKeys;
+
+  if (customKeys && Array.isArray(customKeys)) {
+    // 【新機能用】外部からキーが指定された場合 (例: 工区集計モード)
+    // データ(originalResults)に存在するキーだけを抽出
+    targetKeys = customKeys.filter((k) => originalResults[k]);
+  } else {
+    // 【従来通り】詳細モードなど
+    const masterKeys = getMasterOrderedKeys(project);
+    targetKeys = masterKeys.filter((k) => originalResults[k]);
+  }
+  // ▲▲▲ 修正ここまで ▲▲▲
 
   const details = document.createElement("details");
   details.className =
@@ -1137,9 +1149,11 @@ export function renderGroupingControls(
 
   resetBtn.onclick = (e) => {
     e.stopPropagation();
+    // ▼▼▼ 修正: 上記で決定した targetKeys に基づいてリセットを行う ▼▼▼
     targetKeys.forEach((key, index) => {
       targetState[key] = index + 1;
     });
+    // ▲▲▲ 修正ここまで ▲▲▲
     onUpdate(); // コールバック実行
   };
 
@@ -1865,7 +1879,45 @@ export const renderOrderDetails = (container, project, resultsByLocation) => {
 };
 
 /**
- * 仮ボルト注文詳細画面の描画
+ * データを工区(エリア)ごとに集計するヘルパー関数
+ * 入力: { "2F-1": {...}, "3F-1": {...} }
+ * 出力: { "1工区": {...}, "2工区": {...} }
+ */
+const aggregateTempBySection = (sourceData, project) => {
+  const result = {};
+
+  Object.keys(sourceData).forEach((locId) => {
+    // locId (例: "2F-1", "M2階-Aエリア") から工区/エリア部分を抽出
+    const parts = locId.split("-");
+    const areaPart = parts[parts.length - 1]; // ハイフンの後ろを取得
+
+    // 表示名を作成 (数字なら"〇工区"、それ以外ならそのまま)
+    const sectionKey = isNaN(areaPart) ? areaPart : `${areaPart}工区`;
+
+    if (!result[sectionKey]) {
+      result[sectionKey] = {};
+    }
+
+    const sizes = sourceData[locId];
+    Object.keys(sizes).forEach((size) => {
+      // データ構造の揺らぎ吸収 (totalプロパティがある場合と数値そのものの場合)
+      const count =
+        typeof sizes[size] === "object" && sizes[size].total !== undefined
+          ? sizes[size].total
+          : sizes[size];
+
+      if (!result[sectionKey][size]) {
+        result[sectionKey][size] = 0;
+      }
+      result[sectionKey][size] += count;
+    });
+  });
+
+  return result;
+};
+
+/**
+ * 仮ボルト注文詳細画面の描画（3モード対応版）
  * @param {HTMLElement} container 描画先のDOM要素
  * @param {Object} project プロジェクトデータ
  * @param {Object} tempResultsByLocation 仮ボルトの集計データ
@@ -1875,16 +1927,17 @@ export const renderTempOrderDetails = (
   project,
   tempResultsByLocation,
 ) => {
-  // ▼▼▼ デバッグ用ログを追加 ▼▼▼
+  // ▼▼▼ デバッグ用ログ ▼▼▼
   console.log("🔍 renderTempOrderDetails Debug:", {
     container: !!container,
     project: !!project,
-    tempResultsByLocation: tempResultsByLocation, // ここが undefined になっているはず
+    tempResultsByLocation: tempResultsByLocation,
   });
-  // ▼▼▼ 変更: コンテナやデータがない場合のガード処理を追加 ▼▼▼
+
+  // ▼▼▼ コンテナやデータがない場合のガード処理 ▼▼▼
   if (!container) return;
   if (!project || !tempResultsByLocation) {
-    console.warn("⚠️ データ不足のため描画を中断しました"); // 警告を出す
+    console.warn("⚠️ データ不足のため描画を中断しました");
     container.innerHTML = "";
     return;
   }
@@ -1897,12 +1950,10 @@ export const renderTempOrderDetails = (
     // 1. データの前処理 (仮ボルトデータの抽出)
     // ---------------------------------------------------------
     const masterKeys = getMasterOrderedKeys(project);
-    // データが存在する工区のみ抽出
     const targetKeys = new Set(
       masterKeys.filter((k) => tempResultsByLocation[k]),
     );
 
-    // ▼▼▼ 変更: 仮ボルト専用のデータ格納オブジェクトを作成 ▼▼▼
     const filteredTempBolts = {};
 
     masterKeys.forEach((locId) => {
@@ -1912,8 +1963,6 @@ export const renderTempOrderDetails = (
       filteredTempBolts[locId] = {};
 
       Object.keys(locationData).forEach((size) => {
-        // 仮ボルトのデータ構造に合わせてデータを取り込む
-        // (データ構造が {total: 10, ...} でも 単純な 10 でも対応)
         filteredTempBolts[locId][size] = locationData[size];
       });
 
@@ -1926,7 +1975,6 @@ export const renderTempOrderDetails = (
     if (Object.keys(filteredTempBolts).length === 0) {
       return;
     }
-    // ▲▲▲ 変更ここまで ▲▲▲
 
     // ---------------------------------------------------------
     // 2. セクションコンテナの作成
@@ -1936,29 +1984,9 @@ export const renderTempOrderDetails = (
     container.appendChild(tempBoltSection);
 
     // ---------------------------------------------------------
-    // 3. まとめ設定（GroupingState）の初期化チェック
+    // 3. ヘッダーの描画 (3つのモード切り替えボタンを設置)
     // ---------------------------------------------------------
-    // ▼▼▼ 変更: 仮ボルト用のState変数 (currentTempGroupingState) を使用 ▼▼▼
-    const dataKeys = Object.keys(filteredTempBolts);
-    const shouldReset = dataKeys.some(
-      (sec) => !currentTempGroupingState.hasOwnProperty(sec),
-    );
-
-    if (shouldReset) {
-      // 仮ボルト用stateをクリアして再設定
-      for (const key in currentTempGroupingState)
-        delete currentTempGroupingState[key];
-
-      dataKeys.forEach((section, index) => {
-        currentTempGroupingState[section] = index + 1;
-      });
-    }
-    // ▲▲▲ 変更ここまで ▲▲▲
-
-    // ---------------------------------------------------------
-    // 4. ヘッダーの描画 (仮ボルト用カラー: Teal)
-    // ---------------------------------------------------------
-    // ▼▼▼ 変更: タイトル、説明文、タブ切り替えボタンを設置 ▼▼▼
+    // ▼▼▼ 変更: 「工区別 (集計)」ボタンを追加 ▼▼▼
     const headerHtml = `
         <div class="flex flex-col md:flex-row justify-between items-start md:items-end mt-8 mb-10 border-b-2 border-teal-500 pb-4 gap-4">
             <div>
@@ -1970,6 +1998,7 @@ export const renderTempOrderDetails = (
             
             <div class="flex bg-slate-100 dark:bg-slate-800 p-1 rounded-lg border border-slate-200 dark:border-slate-700">
                 <button id="temp-view-mode-detailed" type="button" class="px-4 py-2 text-sm font-medium rounded-md transition-all">工区別 (詳細)</button>
+                <button id="temp-view-mode-section" type="button" class="px-4 py-2 text-sm font-medium rounded-md transition-all">工区別 (集計)</button>
                 <button id="temp-view-mode-floor" type="button" class="px-4 py-2 text-sm font-medium rounded-md transition-all">フロア別 (集計)</button>
             </div>
         </div>
@@ -1987,99 +2016,187 @@ export const renderTempOrderDetails = (
     tempBoltSection.appendChild(tableContainer);
 
     // ---------------------------------------------------------
-    // 5. ビュー更新関数 (Core Logic)
+    // 4. ビュー更新関数 (Core Logic)
     // ---------------------------------------------------------
     const updateView = () => {
-      // ▼▼▼ 変更: 仮ボルト用ViewMode変数を使用し、ボタンのスタイルを切り替え ▼▼▼
-      const btnDetail = tempBoltSection.querySelector(
-        "#temp-view-mode-detailed",
-      );
-      const btnFloor = tempBoltSection.querySelector("#temp-view-mode-floor");
+      // --- A. ボタンのスタイル切り替え ---
+      // 現在のモードが不正ならデフォルトに戻す
+      const validModes = ["detailed", "section", "floor"];
+      if (!validModes.includes(currentTempViewMode)) {
+        currentTempViewMode = "detailed";
+      }
+
       const activeClass =
         "bg-white dark:bg-slate-700 shadow text-teal-600 dark:text-teal-400";
       const inactiveClass =
         "text-slate-500 hover:text-slate-700 dark:hover:text-slate-300";
 
-      if (currentTempViewMode === "detailed") {
+      // ボタン要素の取得とクラス適用
+      const btnDetail = tempBoltSection.querySelector(
+        "#temp-view-mode-detailed",
+      );
+      const btnSection = tempBoltSection.querySelector(
+        "#temp-view-mode-section",
+      );
+      const btnFloor = tempBoltSection.querySelector("#temp-view-mode-floor");
+
+      // 一旦すべて非アクティブに
+      [btnDetail, btnSection, btnFloor].forEach((btn) => {
+        if (btn)
+          btn.className = `px-4 py-2 text-sm font-medium rounded-md transition-all ${inactiveClass}`;
+      });
+
+      // アクティブなボタンだけクラスを変更
+      if (currentTempViewMode === "detailed" && btnDetail) {
         btnDetail.className = `px-4 py-2 text-sm font-medium rounded-md transition-all ${activeClass}`;
-        btnFloor.className = `px-4 py-2 text-sm font-medium rounded-md transition-all ${inactiveClass}`;
-      } else {
-        btnDetail.className = `px-4 py-2 text-sm font-medium rounded-md transition-all ${inactiveClass}`;
+      } else if (currentTempViewMode === "section" && btnSection) {
+        btnSection.className = `px-4 py-2 text-sm font-medium rounded-md transition-all ${activeClass}`;
+      } else if (currentTempViewMode === "floor" && btnFloor) {
         btnFloor.className = `px-4 py-2 text-sm font-medium rounded-md transition-all ${activeClass}`;
+      }
+
+      // --- B. データの準備とまとめ設定の描画 ---
+
+      let dataForControls = {}; // まとめ設定UIに渡す「元データ」
+      let customKeysForControls = null; // まとめ設定UIに渡す「キー順序」
+
+      // ▼▼▼ 変更: モードに応じた元データの生成 ▼▼▼
+      if (currentTempViewMode === "section") {
+        // 【新モード】工区集計データを生成 (例: { "1工区": {...}, "2工区": {...} })
+        dataForControls = aggregateTempBySection(filteredTempBolts, project);
+
+        // キー順序を作成 (1工区, 2工区...)
+        if (project.mode === "advanced") {
+          customKeysForControls = [...project.customAreas].sort();
+        } else {
+          customKeysForControls = Array.from(
+            { length: project.sections },
+            (_, i) => `${i + 1}工区`,
+          );
+        }
+      } else if (currentTempViewMode === "detailed") {
+        // 【詳細モード】生データを使用 (例: { "2F-1": {...} })
+        dataForControls = filteredTempBolts;
+        customKeysForControls = null; // nullなら getMasterOrderedKeys が使われる
       }
       // ▲▲▲ 変更ここまで ▲▲▲
 
-      // ▼▼▼ 変更: 仮ボルト用のStateとViewModeを渡してコントロールを描画 ▼▼▼
+      // --- C. まとめ設定(State)のリセット判定 ---
+      // モード切り替えにより、データのキー(2F-1 と 1工区)が変わるため、不整合があればリセットする
+
+      const currentDataKeys = Object.keys(dataForControls);
+      const stateKeys = Object.keys(currentTempGroupingState);
+
+      // Stateにキーがあるのに、現在のデータにそのキーが一つも含まれていない場合はリセット
+      const needReset =
+        stateKeys.length > 0 &&
+        currentDataKeys.length > 0 &&
+        !stateKeys.some((k) => currentDataKeys.includes(k));
+
+      // または、Stateが空でデータがある場合（初回など）も初期化
+      const needInit = stateKeys.length === 0 && currentDataKeys.length > 0;
+
+      if (needReset || needInit) {
+        // Stateをクリア
+        for (const key in currentTempGroupingState)
+          delete currentTempGroupingState[key];
+
+        // 初期値（連番）をセット
+        // customKeysForControlsがあればその順序で、なければデータキー順で
+        const keysToInit = customKeysForControls
+          ? customKeysForControls.filter((k) => dataForControls[k])
+          : getMasterOrderedKeys(project).filter((k) => dataForControls[k]);
+
+        keysToInit.forEach((key, index) => {
+          currentTempGroupingState[key] = index + 1;
+        });
+      }
+
+      // ▼▼▼ 変更: renderGroupingControls にカスタムキーを渡す ▼▼▼
       renderGroupingControls(
         controlsContainer,
-        filteredTempBolts, // 仮ボルトの元データ
+        dataForControls, // モードに応じた元データ
         project,
         updateView,
         currentTempGroupingState, // 仮ボルト用State
-        currentTempViewMode, // 仮ボルト用ViewMode ("floor"なら非表示になる)
+        currentTempViewMode, // 仮ボルト用ViewMode
+        customKeysForControls, // ★第7引数: カスタムキー順序
       );
       // ▲▲▲ 変更ここまで ▲▲▲
 
+      // --- D. 最終的な表示データの生成 ---
       let dataToRender, sortedKeysToRender;
 
-      // ▼▼▼ 変更: モードに応じて仮ボルトデータを集計 ▼▼▼
       if (currentTempViewMode === "floor") {
-        // フロア集計 (仮ボルトデータを使用)
+        // [フロア集計]
         const result = aggregateByFloor(filteredTempBolts, project);
         dataToRender = result.data;
         sortedKeysToRender = result.order;
       } else {
-        // 工区別集計 (仮ボルトデータとStateを使用)
+        // [詳細モード] OR [工区集計モード]
+        // どちらも dataForControls (元データ) に対して
+        // currentTempGroupingState (まとめ設定) を適用すればOK
+
         dataToRender = calculateAggregatedData(
-          filteredTempBolts,
+          dataForControls,
           currentTempGroupingState,
           project,
         );
 
         // ソート順の決定
         const allAggregatedKeys = Object.keys(dataToRender);
-        const fullMasterList = getMasterOrderedKeys(project);
-        sortedKeysToRender = allAggregatedKeys.sort((a, b) => {
-          const firstKeyA = a.split(" + ")[0];
-          const firstKeyB = b.split(" + ")[0];
-          return (
-            fullMasterList.indexOf(firstKeyA) -
-            fullMasterList.indexOf(firstKeyB)
-          );
-        });
-      }
-      // ▲▲▲ 変更ここまで ▲▲▲
 
-      // ▼▼▼ 変更: 集計結果をテーブル描画関数へ渡す ▼▼▼
-      // 第2引数: 仮ボルトの集計データ
-      // 第3引数: ソートキー
-      // 第4引数: 特殊ボルト (仮ボルトにはないので空オブジェクト)
-      // 第5引数: onlySpecial (false)
-      // 第6引数: isTempBolt (true) -> これにより重量列なし・種別ハイフンになる
+        if (currentTempViewMode === "detailed") {
+          const fullMasterList = getMasterOrderedKeys(project);
+          sortedKeysToRender = allAggregatedKeys.sort((a, b) => {
+            const firstKeyA = a.split(" + ")[0];
+            const firstKeyB = b.split(" + ")[0];
+            return (
+              fullMasterList.indexOf(firstKeyA) -
+              fullMasterList.indexOf(firstKeyB)
+            );
+          });
+        } else {
+          // 工区集計モードのソート (1工区, 2工区...)
+          // 単純な文字比較、あるいは " + " で結合された先頭のキーで比較
+          sortedKeysToRender = allAggregatedKeys.sort((a, b) => {
+            return a.localeCompare(b, undefined, { numeric: true });
+          });
+        }
+      }
+
+      // --- E. テーブル描画 ---
       renderAggregatedTables(
         tableContainer,
         dataToRender,
         sortedKeysToRender,
         {},
         false,
-        true,
+        true, // isTempBolt = true (重量なし、種別ハイフン)
       );
-      // ▲▲▲ 変更ここまで ▲▲▲
     };
 
     // ---------------------------------------------------------
-    // 6. イベントリスナー設定 & 初回実行
+    // 5. イベントリスナー設定 & 初回実行
     // ---------------------------------------------------------
-    // ▼▼▼ 変更: 仮ボルト専用のモード切り替え処理 ▼▼▼
-    tempBoltSection.querySelector("#temp-view-mode-detailed").onclick = () => {
-      setCurrentTempViewMode("detailed");
+    // モード切り替え処理
+    const setMode = (mode) => {
+      // モードが変わったらStateをリセットする（キーの種類が変わるため）
+      if (currentTempViewMode !== mode) {
+        for (const key in currentTempGroupingState)
+          delete currentTempGroupingState[key];
+      }
+      setCurrentTempViewMode(mode);
       updateView();
     };
-    tempBoltSection.querySelector("#temp-view-mode-floor").onclick = () => {
-      setCurrentTempViewMode("floor");
-      updateView();
-    };
-    // ▲▲▲ 変更ここまで ▲▲▲
+
+    const btnDetail = tempBoltSection.querySelector("#temp-view-mode-detailed");
+    const btnSection = tempBoltSection.querySelector("#temp-view-mode-section");
+    const btnFloor = tempBoltSection.querySelector("#temp-view-mode-floor");
+
+    if (btnDetail) btnDetail.onclick = () => setMode("detailed");
+    if (btnSection) btnSection.onclick = () => setMode("section");
+    if (btnFloor) btnFloor.onclick = () => setMode("floor");
 
     // 初回描画
     updateView();
