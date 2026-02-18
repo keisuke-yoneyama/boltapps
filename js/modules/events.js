@@ -2273,8 +2273,8 @@ function setupAddActionEvents() {
   // --- 部材追加フォームの要素 ---
   const addMemberBtn = document.getElementById("add-member-btn");
   const memberNameInput = document.getElementById("member-name");
-  const memberJointSelectId = document.getElementById("member-joint-select"); // ID要確認
-  // const memberJointSelectInput = document.getElementById("member-joint-select-input"); // 表示用inputがある場合
+  const memberJointSelectId = document.getElementById("member-joint-select-id"); // ID要確認
+  const memberJointSelectInput = document.getElementById("member-joint-select-input"); // 表示用inputがある場合
 
   // 1. 継手追加ボタン
   if (addJointBtn) {
@@ -2541,7 +2541,7 @@ function setupAddActionEvents() {
         });
       if (!jointId)
         return showCustomAlert("使用する継手を選択してください。", {
-          invalidElements: [memberJointSelectId], // ID確認
+          invalidElements: [memberJointSelectInput], // ID確認
         });
 
       // チェックされた階層を取得
