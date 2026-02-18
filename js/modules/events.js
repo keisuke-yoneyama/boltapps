@@ -3846,7 +3846,7 @@ function setupJointSelectorEvents() {
   const memberJointSelectInput = document.getElementById(
     "member-joint-select-input",
   ); // 表示用(readonly)
-  const memberJointSelectId = document.getElementById("member-joint-select"); // 送信用(hidden)
+  const memberJointSelectId = document.getElementById("member-joint-select-id"); // 送信用(hidden)
 
   // 1. 「▼」ボタンクリックでモーダルを開く
   if (openJointSelectorBtn) {
