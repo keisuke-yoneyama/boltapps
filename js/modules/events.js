@@ -2568,9 +2568,9 @@ function setupAddActionEvents() {
         .forEach((cb) => (cb.checked = false));
 
       // 継手名を取得して表示 (リストから選択中のテキストを取得)
-      const jointSelect = memberJointSelectId;
-      const jointName = jointSelect.options[jointSelect.selectedIndex].text;
-
+      // const jointSelect = memberJointSelectId;
+      // const jointName = jointSelect.options[jointSelect.selectedIndex].text;
+      const jointName = memberJointSelectInput.value;
       showToast(`部材「${name}」を登録しました (使用継手: ${jointName})`);
       memberNameInput.focus();
 
