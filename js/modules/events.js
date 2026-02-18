@@ -2264,7 +2264,7 @@ function setupAddActionEvents() {
   const complexSplCountInput = document.getElementById("complex-spl-count");
 
   const jointColorToggle = document.getElementById("joint-color-toggle");
-  const jointColorInput = document.getElementById("joint-color");
+  const jointColorInput = document.getElementById("joint-color-input");
 
   const confirmAddModal = document.getElementById("confirm-add-modal");
   const confirmAddMessage = document.getElementById("confirm-add-message");
