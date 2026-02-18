@@ -783,7 +783,7 @@ export function openNewJointModal() {
 
   updateJointFormUI(true);
 
-  const modal = document.getElementById("edit-joint-modal"); // ID確認
+  const modal = document.getElementById("edit-joint-modal");
   openModal(modal);
 }
 
@@ -1016,7 +1016,7 @@ export function selectStaticColor(color) {
   }
 
   // 3. 入力欄の更新
-  const input = document.getElementById("joint-color"); // ※ID確認
+  const input = document.getElementById("joint-color-input"); 
   if (input) {
     input.value = color;
   }
@@ -1590,7 +1590,7 @@ export const populateGlobalBoltSelectorModal = () => {
           // 処理完了後の後始末
           state.activeBoltTarget = null;
 
-          const modal = document.getElementById("bolt-selector-modal"); // ID確認
+          const modal = document.getElementById("bolt-selector-modal");
           if (modal && typeof closeModal === "function") {
             closeModal(modal);
           }
@@ -5072,7 +5072,7 @@ export const resetJointForm = () => {
   const jointNameInput = document.getElementById("joint-name");
   const jointColorToggle = document.getElementById("joint-color-toggle");
   const jointColorSection = document.getElementById("joint-color-section");
-  const jointColorInput = document.getElementById("joint-color");
+  const jointColorInput = document.getElementById("joint-color-input");
   const editJointColorInput = document.getElementById("edit-joint-color");
   const flangeSizeInput = document.getElementById("flange-size");
   const flangeCountInput = document.getElementById("flange-count");
@@ -5493,8 +5493,8 @@ export const renderBoltSizeSettings = (activeBoltTab = "all") => {
 export const resetMemberForm = () => {
   // HTMLのIDに合わせて取得してください
   const memberNameInput = document.getElementById("member-name");
-  const memberJointSelectInput = document.getElementById("member-joint-select"); // または member-joint-name ?
-  const memberJointSelectId = document.getElementById("member-joint-id");
+  const memberJointSelectInput = document.getElementById("member-joint-select-input");
+  const memberJointSelectId = document.getElementById("member-joint-select-id");
 
   if (memberNameInput) memberNameInput.value = "";
   if (memberJointSelectInput) memberJointSelectInput.value = "";
