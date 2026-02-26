@@ -5153,12 +5153,13 @@ export const updateDynamicInputs = (
   prefix,
   change,
 ) => {
-  // 1. 現在の入力値をDOMから読み取り、キャッシュ配列を更新する
-  const currentInputs = inputsContainer.querySelectorAll("input");
+  // 1. 現在の入力値をDOMから読み取り、キャッシュ配列を強制更新する
+  // ※ input[type='text'] を明示的に指定して確実に取得
+  const currentInputs = inputsContainer.querySelectorAll("input[type='text']");
   currentInputs.forEach((input, index) => {
-    if (index < cache.length) {
-      cache[index] = input.value;
-    }
+    // ▼▼▼ 修正: if (index < cache.length) の制限を削除して確実に保存 ▼▼▼
+    cache[index] = input.value;
+    // ▲▲▲ 修正ここまで ▲▲▲
   });
 
   // 2. 新しい項目数を計算する
