@@ -5216,11 +5216,13 @@ export const renderBulkMemberInputs = (count, currentValues = []) => {
 // };
 
 // ヘルパー関数: リンクボタンの作成
+// ヘルパー関数: リンクボタンの作成 (マスターFAB対応版)
 const addQuickNavLink = (text, onClick, extraClasses = "", container) => {
   if (!container) return;
   const btn = document.createElement("button");
   btn.textContent = text;
-  btn.className = `text-left w-full px-4 py-3 text-sm font-medium rounded-md transition-colors ${extraClasses}`;
+  // w-full と truncate を入れておくと文字が溢れても綺麗です
+  btn.className = `text-left w-full px-4 py-3 text-sm font-bold rounded-md transition-colors truncate border-l-2 border-transparent ${extraClasses}`;
 
   if (!extraClasses.includes("text-")) {
     btn.classList.add(
@@ -5228,12 +5230,15 @@ const addQuickNavLink = (text, onClick, extraClasses = "", container) => {
       "dark:text-slate-200",
       "hover:bg-slate-100",
       "dark:hover:bg-slate-700",
+      "hover:border-indigo-500"
     );
   }
 
   btn.addEventListener("click", () => {
     onClick();
-    toggleQuickNav(); // クリックしたら閉じる
+    // マスターFABのトグルボタンを探して、クリックイベントを発火させて閉じる
+    const masterFabToggle = document.getElementById("master-fab-toggle");
+    if (masterFabToggle) masterFabToggle.click();
   });
   container.appendChild(btn);
 };
@@ -5632,49 +5637,44 @@ export const resetBulkDeleteState = () => {
 
 
 /**
- * セクション移動（目次）のリンクを動的に生成して更新する
+ * セクション移動（目次）のリンクを更新する
  */
 export function updateQuickNavLinks() {
   const linksContainer = document.getElementById("quick-nav-links");
   if (!linksContainer) return;
 
-  // 現在画面に表示されている（裏に隠れていない）セクションのタイトルを取得
+  // 中身を一度空にする
+  linksContainer.innerHTML = "";
+
+  // 1. 固定リンク: 一番上へ
+  addQuickNavLink(
+    "↑ ページ最上部へ",
+    () => window.scrollTo({ top: 0, behavior: "smooth" }),
+    "text-blue-600 dark:text-blue-400 border-blue-500 mb-2 bg-blue-50/50 dark:bg-blue-900/20",
+    linksContainer
+  );
+
+  // 2. 動的リンク: 各セクション (data-section-title を持っている要素)
   const sections = Array.from(document.querySelectorAll("div[data-section-title]")).filter(el => {
-    return !el.closest(".hidden"); // hiddenクラスの中にあるものは除外
+    return !el.closest(".hidden");
   });
 
-  // セクションが1つもない場合の表示
   if (sections.length === 0) {
-    linksContainer.innerHTML = '<div class="text-sm text-slate-500 p-2 text-center">セクションがありません</div>';
-    return;
-  }
-
-  // 目次ボタンのHTMLを生成
-  linksContainer.innerHTML = sections.map(sec => {
-    const title = sec.dataset.sectionTitle;
-    const id = sec.id;
-    return `
-      <button data-target="${id}" class="quick-nav-link text-left px-3 py-2 text-sm rounded-md hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors text-slate-700 dark:text-slate-200 w-full truncate border-l-2 border-slate-300 dark:border-slate-600 hover:border-indigo-500 dark:hover:border-indigo-400 font-medium">
-        ${title}
-      </button>
-    `;
-  }).join("");
-
-  // 生成したボタンに「スクロール＆メニューを閉じる」機能をつける
-  linksContainer.querySelectorAll(".quick-nav-link").forEach(btn => {
-    btn.addEventListener("click", () => {
-      const targetId = btn.dataset.target;
-      const targetEl = document.getElementById(targetId);
-      if (targetEl) {
-        // 対象のセクションへ少し余裕を持たせてスムーズスクロール
-        targetEl.scrollIntoView({ behavior: "smooth", block: "start" });
-        
-        // マスターFABのメニューを閉じる
-        const masterFabToggle = document.getElementById("master-fab-toggle");
-        if (masterFabToggle) {
-          masterFabToggle.click();
-        }
-      }
+    const emptyMsg = document.createElement("div");
+    emptyMsg.className = "text-xs text-slate-500 p-4 text-center";
+    emptyMsg.textContent = "表示中のセクションはありません";
+    linksContainer.appendChild(emptyMsg);
+  } else {
+    sections.forEach(sec => {
+      const title = sec.dataset.sectionTitle;
+      const color = sec.dataset.sectionColor || "slate"; // セクションに設定された色を取得
+      
+      addQuickNavLink(
+        title,
+        () => sec.scrollIntoView({ behavior: "smooth", block: "start" }),
+        `hover:text-${color}-600 dark:hover:text-${color}-400 hover:border-${color}-500`, 
+        linksContainer
+      );
     });
-  });
+  }
 }
