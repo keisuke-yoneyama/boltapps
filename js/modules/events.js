@@ -1790,11 +1790,10 @@ function setupDeleteExecutionEvents() {
           showToast(`${deleteCount} 件のデータを一括削除しました。`);
           renderDetailView();
           
-          // 削除完了後にボタンを隠す
-          const bulkDeleteBtn = document.getElementById("bulk-delete-btn");
-          if (bulkDeleteBtn) {
-              bulkDeleteBtn.classList.add("hidden");
-              bulkDeleteBtn.classList.remove("flex");
+// 削除完了後にフローティングバー全体を隠す
+          const bulkDeleteBar = document.getElementById("bulk-delete-bar");
+          if (bulkDeleteBar) {
+              bulkDeleteBar.classList.add("translate-y-24", "opacity-0", "pointer-events-none");
           }
 
           closeModal(confirmDeleteModal);
