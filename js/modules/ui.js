@@ -5677,4 +5677,15 @@ export function updateQuickNavLinks() {
       );
     });
   }
+    // 3. ページ最下部へ
+  addQuickNavLink(
+    "▼ ページ最下部へ",
+    () =>
+      window.scrollTo({
+        top: document.body.scrollHeight,
+        behavior: "smooth",
+      }),
+    "bg-gray-100 dark:bg-slate-700 font-bold border-t border-gray-200 dark:border-slate-600 mt-1",
+    quickNavLinks,
+  );
 }
