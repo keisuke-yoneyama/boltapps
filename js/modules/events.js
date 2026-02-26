@@ -4419,26 +4419,27 @@ export function setupSearchFunctionality() {
 }
 
 /**
- * 一括削除（複数選択）機能のイベント設定
+ * 一括削除（複数選択）機能のイベント設定 (フローティング対応版)
  */
 function setupBulkDeleteEvents() {
+    const bulkDeleteBar = document.getElementById("bulk-delete-bar");
     const bulkDeleteBtn = document.getElementById("bulk-delete-btn");
     const bulkDeleteCount = document.getElementById("bulk-delete-count");
     
-    // UIを更新する関数（件数表示と背景色の変更）
+    // UIを更新する関数
     const updateBulkDeleteUI = () => {
         const checkedBoxes = document.querySelectorAll(".item-checkbox:checked");
         const count = checkedBoxes.length;
         
-        // ボタンの表示切替
-        if (bulkDeleteBtn && bulkDeleteCount) {
+        // フローティングバーの表示切替
+        if (bulkDeleteBar && bulkDeleteCount) {
             if (count > 0) {
-                bulkDeleteBtn.classList.remove("hidden");
-                bulkDeleteBtn.classList.add("flex");
                 bulkDeleteCount.textContent = count;
+                // 下からスッと表示する
+                bulkDeleteBar.classList.remove("translate-y-24", "opacity-0", "pointer-events-none");
             } else {
-                bulkDeleteBtn.classList.add("hidden");
-                bulkDeleteBtn.classList.remove("flex");
+                // 隠す
+                bulkDeleteBar.classList.add("translate-y-24", "opacity-0", "pointer-events-none");
             }
         }
         
@@ -4455,7 +4456,6 @@ function setupBulkDeleteEvents() {
 
     // リストコンテナ内のクリックイベント（イベント委譲）
     const handleCheckboxChange = (e) => {
-        // 全選択チェックボックスの場合
         if (e.target.classList.contains("select-all-checkbox")) {
             const table = e.target.closest("table");
             if (table) {
@@ -4466,7 +4466,6 @@ function setupBulkDeleteEvents() {
             }
             updateBulkDeleteUI();
         }
-        // 個別チェックボックスの場合
         else if (e.target.classList.contains("item-checkbox")) {
             const table = e.target.closest("table");
             if (table) {
@@ -4479,7 +4478,6 @@ function setupBulkDeleteEvents() {
         }
     };
 
-    // 継手と部材のリストコンテナにイベントを登録
     const jointsContainer = document.getElementById("joint-lists-container");
     const membersContainer = document.getElementById("member-lists-container");
     
@@ -4492,7 +4490,6 @@ function setupBulkDeleteEvents() {
             const checkedBoxes = document.querySelectorAll(".item-checkbox:checked");
             if (checkedBoxes.length === 0) return;
 
-            // 削除対象のIDと種類をリストアップ
             const targets = Array.from(checkedBoxes).map(cb => ({
                 id: cb.dataset.id,
                 type: cb.dataset.type
@@ -4509,13 +4506,19 @@ function setupBulkDeleteEvents() {
                 const jointCount = targets.filter(t => t.type === 'joint').length;
                 const memberCount = targets.filter(t => t.type === 'member').length;
                 
-                let msg = `選択された ${targets.length} 件のデータを削除しますか？\n`;
-                if (jointCount > 0) msg += `・継手: ${jointCount} 件\n`;
-                if (memberCount > 0) msg += `・部材: ${memberCount} 件\n`;
-                msg += `\n※データは復元できません。`;
+                let msg = `選択された ${targets.length} 件のデータを削除しますか？<br><br>`;
+                if (jointCount > 0) msg += `<span class="text-blue-600 font-bold">・継手: ${jointCount} 件</span><br>`;
+                if (memberCount > 0) msg += `<span class="text-green-600 font-bold">・部材: ${memberCount} 件</span><br>`;
+                msg += `<br><span class="text-red-600 text-sm">※この操作は元に戻せません。</span>`;
                 
-                confirmDeleteMessage.textContent = msg;
-                openModal(confirmDeleteModal); // ui.js の関数を呼び出し
+                confirmDeleteMessage.innerHTML = msg; // HTMLとしてパースする
+                
+                // ui.js の関数を呼び出してモーダルを開く
+                const modal = document.getElementById("confirm-delete-modal");
+                if (modal) {
+                    modal.classList.remove("hidden");
+                    setTimeout(() => modal.classList.remove("opacity-0"), 10);
+                }
             }
         });
     }
