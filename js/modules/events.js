@@ -6,7 +6,7 @@ import {
   selectColor,
   updateEditComplexSplCacheItem,
   selectStaticColor,
-  toggleFab,
+  // toggleFab,
   // closeFabIfOutside,
   openNewJointModal,
   openConfirmDeleteModal,
