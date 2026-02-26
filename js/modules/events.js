@@ -4017,7 +4017,7 @@ function setupTallyClipboardEvents() {
   });
 }
 /**
- * 検索機能のセットアップ (VSCode風・スマホ対応・状態維持・確実な画面判定版)
+ * 検索機能のセットアップ (VSCode風・全角半角変換・履歴機能追加版)
  */
 export function setupSearchFunctionality() {
   const widget = document.getElementById("search-widget");
@@ -4033,42 +4033,37 @@ export function setupSearchFunctionality() {
   const backBtn = document.getElementById("nav-back-to-list-btn");
   const mobileBackBtn = document.getElementById("mobile-nav-back-to-list-btn");
 
-  // HTML要素が存在しない場合は警告を出して終了
   if (!widget || !input) {
-      console.error("⚠️ 検索ウィジェットのHTML要素が見つかりません。index.htmlに追加されているか確認してください。");
+      console.error("⚠️ 検索ウィジェットのHTML要素が見つかりません。");
       return;
   }
 
+  // --- 状態管理 ---
   let matches = [];
   let currentIndex = -1;
   let isOpen = false;
 
-  // --- 1. 検索が有効な画面かどうか判定する関数 (強化版) ---
+  // ▼▼▼ 追加: 検索履歴の管理用変数 ▼▼▼
+  const MAX_HISTORY = 10;
+  let searchHistory = [];
+  let historyIndex = -1; // -1 は履歴を辿っていない状態（現在の入力中）
+  let currentDraft = ""; // 履歴を辿る前の書きかけの文字を保存
+  // ▲▲▲ 追加ここまで ▲▲▲
+
+  // 1. 検索が有効な画面かどうか判定
   const isSearchAllowed = () => {
     const detailView = document.getElementById("project-detail-view");
     const jointsSection = document.getElementById("joints-section");
-    
     if (!detailView || !jointsSection) return false;
 
-    // クラスの有無だけでなく、実際に画面に要素が描画されているか (offsetWidth > 0) で確実な判定を行う
     const isDetailActive = detailView.classList.contains("active") || detailView.offsetWidth > 0;
     const isJointsVisible = !jointsSection.classList.contains("hidden") && jointsSection.offsetWidth > 0;
-
-    // デバッグログ: F12コンソールで判定結果を確認できます
-    console.log("🔍 [検索許可判定]", { 
-        isDetailActive: isDetailActive, 
-        isJointsVisible: isJointsVisible 
-    });
-
     return isDetailActive && isJointsVisible;
   };
 
-  // --- 2. ウィジェットの開閉 ---
+  // 2. ウィジェットの開閉
   const openSearch = () => {
-    if (!isSearchAllowed()) {
-        console.log("🚫 現在の画面では検索窓の起動がブロックされました");
-        return;
-    }
+    if (!isSearchAllowed()) return;
     isOpen = true;
     widget.classList.add("open");
     input.focus();
@@ -4091,7 +4086,6 @@ export function setupSearchFunctionality() {
   // FABクリック
   if (fabTrigger) {
     fabTrigger.addEventListener("click", () => {
-       console.log("🔘 検索FABがクリックされました");
        if (!isSearchAllowed()) return;
        toggleSearch();
     });
@@ -4111,7 +4105,7 @@ export function setupSearchFunctionality() {
     }
   });
 
-  // --- 3. 画面遷移やタブ切り替え時の処理 ---
+  // 3. 画面遷移やタブ切り替え時の処理
   const forceCloseBtns = [
     document.getElementById("nav-back-to-list-btn"),
     document.getElementById("mobile-nav-back-to-list-btn"),
@@ -4138,7 +4132,7 @@ export function setupSearchFunctionality() {
     }
   });
 
-  // --- 4. 検索ロジック ---
+  // 4. 検索ロジック
   const clearHighlights = () => {
     document.querySelectorAll(".search-highlight").forEach((el) => {
       const parent = el.parentNode;
@@ -4222,7 +4216,7 @@ export function setupSearchFunctionality() {
     updateCountUI();
   };
 
-  // --- 5. ナビゲーション (次へ/前へ) ---
+  // 5. ナビゲーション (次へ/前へ)
   const highlightCurrent = () => {
     matches.forEach(m => m.classList.remove('active'));
     if (currentIndex >= 0 && currentIndex < matches.length) {
@@ -4259,21 +4253,94 @@ export function setupSearchFunctionality() {
     }
   };
 
-  input.addEventListener("input", (e) => performSearch(e.target.value));
+  // ▼▼▼ 追加: 全角を半角に変換するヘルパー関数 ▼▼▼
+  const toHalfWidth = (str) => {
+    return str.replace(/[Ａ-Ｚａ-ｚ０-９]/g, function(s) {
+        return String.fromCharCode(s.charCodeAt(0) - 0xFEE0);
+    }).replace(/[－]/g, '-').replace(/　/g, ' '); // ハイフンと全角スペースも変換
+  };
+  // ▲▲▲ 追加ここまで ▲▲▲
 
+  // ▼▼▼ 修正: 入力イベント（半角変換と履歴のリセット） ▼▼▼
+  input.addEventListener("input", (e) => {
+    // IME（日本語入力）の変換中は邪魔しない
+    if (e.isComposing) return; 
+
+    // 全角英数字を半角に変換してカーソル位置を保持
+    const originalValue = e.target.value;
+    const halfWidthValue = toHalfWidth(originalValue);
+    
+    if (originalValue !== halfWidthValue) {
+        const cursorStart = e.target.selectionStart;
+        e.target.value = halfWidthValue;
+        e.target.setSelectionRange(cursorStart, cursorStart);
+    }
+
+    historyIndex = -1; // 文字を入力したら履歴トラッキングをリセット
+    currentDraft = e.target.value;
+    performSearch(e.target.value);
+  });
+
+  // IMEでの日本語入力が確定した瞬間に半角変換する
+  input.addEventListener("compositionend", (e) => {
+    const halfWidthValue = toHalfWidth(e.target.value);
+    e.target.value = halfWidthValue;
+    historyIndex = -1;
+    currentDraft = halfWidthValue;
+    performSearch(halfWidthValue);
+  });
+  // ▲▲▲ 修正ここまで ▲▲▲
+
+  // ▼▼▼ 修正: キーボードイベント（Enterでの履歴保存、上下キーでの履歴呼び出し） ▼▼▼
   input.addEventListener("keydown", (e) => {
+    // 日本語変換中のEnterキーや上下キーは無視する
+    if (e.isComposing) return;
+
     if (e.key === "Enter") {
         e.preventDefault();
+        
+        // 検索履歴に追加（空文字は除外、重複は最新に移動）
+        const val = input.value.trim();
+        if (val) {
+            searchHistory = searchHistory.filter(item => item !== val); // 重複削除
+            searchHistory.unshift(val); // 先頭に追加
+            if (searchHistory.length > MAX_HISTORY) searchHistory.pop(); // 10件を超えたら古いものを削除
+        }
+        historyIndex = -1; // 履歴トラッキングをリセット
+
+        // 次へ・前へ実行
         if (e.shiftKey) prevMatch();
         else nextMatch();
+    } 
+    else if (e.key === "ArrowUp") {
+        e.preventDefault();
+        if (searchHistory.length > 0 && historyIndex < searchHistory.length - 1) {
+            if (historyIndex === -1) currentDraft = input.value; // 現在の入力を退避
+            historyIndex++;
+            input.value = searchHistory[historyIndex];
+            performSearch(input.value);
+        }
+    } 
+    else if (e.key === "ArrowDown") {
+        e.preventDefault();
+        if (historyIndex > 0) {
+            historyIndex--;
+            input.value = searchHistory[historyIndex];
+            performSearch(input.value);
+        } else if (historyIndex === 0) {
+            historyIndex = -1; // 元の入力に戻る
+            input.value = currentDraft;
+            performSearch(input.value);
+        }
     }
   });
+  // ▲▲▲ 修正ここまで ▲▲▲
 
   prevBtn.addEventListener("click", prevMatch);
   nextBtn.addEventListener("click", nextMatch);
   closeBtn.addEventListener("click", closeSearch);
 
-  // --- 6. ドラッグ機能 (スマホ対応) ---
+  // 6. ドラッグ機能 (スマホ対応)
   const handle = widget.querySelector(".drag-handle");
   let isDragging = false;
   let startX, startY, initialLeft, initialTop;
