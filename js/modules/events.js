@@ -4016,7 +4016,6 @@ function setupTallyClipboardEvents() {
     }
   });
 }
-
 /**
  * 検索機能のセットアップ (VSCode風)
  */
@@ -4030,7 +4029,8 @@ export function setupSearchFunctionality() {
   const nextBtn = document.getElementById("search-next-btn");
   const closeBtn = document.getElementById("search-close-btn");
   const fabTrigger = document.getElementById("fab-search-trigger");
-  // ▼▼▼ 追加: 戻るボタンの取得 ▼▼▼
+  
+  // 戻るボタンの取得
   const backBtn = document.getElementById("nav-back-to-list-btn");
   const mobileBackBtn = document.getElementById("mobile-nav-back-to-list-btn");
 
@@ -4041,8 +4041,20 @@ export function setupSearchFunctionality() {
   let currentIndex = -1;
   let isOpen = false;
 
+  // ▼▼▼ 修正: 1. & 2. 検索が有効な画面かどうか判定する関数 ▼▼▼
+  const isSearchAllowed = () => {
+    const detailView = document.getElementById("project-detail-view");
+    const jointsSection = document.getElementById("joints-section");
+    // プロジェクト詳細画面であり、かつ継手/部材セクションが表示されている場合のみ許可
+    return detailView && detailView.classList.contains("active") && 
+           jointsSection && !jointsSection.classList.contains("hidden");
+  };
+  // ▲▲▲ 修正ここまで ▲▲▲
+
   // --- 1. ウィジェットの開閉 ---
   const openSearch = () => {
+    if (!isSearchAllowed()) return; // ▼▼▼ 修正: 許可されていない画面なら開かない ▼▼▼
+
     isOpen = true;
     widget.classList.add("open");
     input.focus();
@@ -4065,14 +4077,21 @@ export function setupSearchFunctionality() {
 
   // FABクリック
   if (fabTrigger) {
-    fabTrigger.addEventListener("click", toggleSearch);
+    fabTrigger.addEventListener("click", () => {
+       // ▼▼▼ 修正: 許可されていない画面でFABが押された場合は無視 ▼▼▼
+       if (!isSearchAllowed()) return;
+       toggleSearch();
+    });
   }
 
   // キーボードショートカット (Ctrl+F, Esc)
   document.addEventListener("keydown", (e) => {
     if ((e.ctrlKey || e.metaKey) && e.key === "f") {
-      e.preventDefault();
-      openSearch();
+      // ▼▼▼ 修正: 許可されている画面のみブラウザ標準検索を無効化してウィジェットを開く ▼▼▼
+      if (isSearchAllowed()) {
+        e.preventDefault();
+        openSearch();
+      }
     }
     if (e.key === "Escape" && isOpen) {
       e.preventDefault();
@@ -4121,10 +4140,10 @@ export function setupSearchFunctionality() {
     }
 
     if (!targetContainer) return;
-    // ▼▼▼ 修正: 名前クラスを持つ要素だけを取得 ▼▼▼
-    const nameElements = targetContainer.querySelectorAll(
-      ".js-searchable-name",
-    );
+
+    // 名前クラスを持つ要素だけを取得
+    // ▼▼▼ 修正: querySelectorAll の使い方を修正 (ターゲットが明確になるように) ▼▼▼
+    const nameElements = targetContainer.querySelectorAll(".js-searchable-name");
 
     nameElements.forEach((element) => {
       // 要素内のテキストノードを探索 (TreeWalkerを使用)
@@ -4240,7 +4259,7 @@ export function setupSearchFunctionality() {
   nextBtn.addEventListener("click", nextMatch);
   closeBtn.addEventListener("click", closeSearch);
 
-  // ▼▼▼ 追加: 一覧に戻るボタンが押されたら検索バーを閉じる ▼▼▼
+  // 一覧に戻るボタンが押されたら検索バーを閉じる
   if (backBtn) {
     backBtn.addEventListener("click", closeSearch);
   }
@@ -4248,15 +4267,49 @@ export function setupSearchFunctionality() {
     mobileBackBtn.addEventListener("click", closeSearch);
   }
 
-  // --- 4. ドラッグ機能 (簡易実装) ---
+  // ▼▼▼ 追加: 入力と集計タブが押されたら検索バーを閉じる ▼▼▼
+  const tallyTab = document.getElementById("nav-tab-tally");
+  const mobileTallyTab = document.getElementById("mobile-nav-tab-tally");
+  if (tallyTab) tallyTab.addEventListener("click", closeSearch);
+  if (mobileTallyTab) mobileTallyTab.addEventListener("click", closeSearch);
+  // ▲▲▲ 追加ここまで ▲▲▲
+
+  // ▼▼▼ 追加: 4. 継手⇔部材のトグル切り替え時の再検索 ▼▼▼
+  const switchJointsBtn = document.getElementById("switch-view-joints");
+  const switchMembersBtn = document.getElementById("switch-view-members");
+  
+  const handleToggleReSearch = () => {
+      if (isOpen) {
+          // DOMの切り替え（hiddenの着脱）が完了するのを少し待ってから検索を実行
+          setTimeout(() => {
+              performSearch(input.value);
+          }, 50);
+      }
+  };
+
+  if (switchJointsBtn) switchJointsBtn.addEventListener("click", handleToggleReSearch);
+  if (switchMembersBtn) switchMembersBtn.addEventListener("click", handleToggleReSearch);
+  // ▲▲▲ 追加ここまで ▲▲▲
+
+
+  // --- 4. ドラッグ機能 (スマホ対応版に修正) ---
   const handle = widget.querySelector(".drag-handle");
   let isDragging = false;
   let startX, startY, initialLeft, initialTop;
 
-  handle.addEventListener("mousedown", (e) => {
+  // ▼▼▼ 修正: 3. タッチイベントとマウスイベントの座標取得を共通化 ▼▼▼
+  const getCoords = (e) => {
+    if (e.touches && e.touches.length > 0) {
+      return { x: e.touches[0].clientX, y: e.touches[0].clientY };
+    }
+    return { x: e.clientX, y: e.clientY };
+  };
+
+  const onDragStart = (e) => {
     isDragging = true;
-    startX = e.clientX;
-    startY = e.clientY;
+    const coords = getCoords(e);
+    startX = coords.x;
+    startY = coords.y;
 
     // 現在の位置を取得 (computed style)
     const rect = widget.getBoundingClientRect();
@@ -4269,19 +4322,41 @@ export function setupSearchFunctionality() {
     widget.style.top = `${initialTop}px`;
 
     document.body.style.cursor = "move";
-  });
+    
+    // スマホでの予期せぬスクロールを防ぐ
+    if (e.type === 'touchstart') {
+       // e.preventDefault(); を入れると、ハンドル内の他の操作がブロックされることがあるが、
+       // ドラッグハンドル専用なら入れておく方が安定する
+       e.preventDefault(); 
+    }
+  };
 
-  document.addEventListener("mousemove", (e) => {
+  const onDragMove = (e) => {
     if (!isDragging) return;
-    e.preventDefault();
-    const dx = e.clientX - startX;
-    const dy = e.clientY - startY;
+    
+    // 画面スクロールやテキスト選択を防ぐ
+    e.preventDefault(); 
+    
+    const coords = getCoords(e);
+    const dx = coords.x - startX;
+    const dy = coords.y - startY;
     widget.style.left = `${initialLeft + dx}px`;
     widget.style.top = `${initialTop + dy}px`;
-  });
+  };
 
-  document.addEventListener("mouseup", () => {
+  const onDragEnd = () => {
     isDragging = false;
     document.body.style.cursor = "default";
-  });
+  };
+
+  // マウスイベント (PC)
+  handle.addEventListener("mousedown", onDragStart);
+  document.addEventListener("mousemove", onDragMove);
+  document.addEventListener("mouseup", onDragEnd);
+
+  // タッチイベント (スマホ) - passive: false を指定して preventDefault() を有効にする
+  handle.addEventListener("touchstart", onDragStart, { passive: false });
+  document.addEventListener("touchmove", onDragMove, { passive: false });
+  document.addEventListener("touchend", onDragEnd);
+  // ▲▲▲ 修正ここまで ▲▲▲
 }
