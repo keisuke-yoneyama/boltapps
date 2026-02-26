@@ -232,40 +232,58 @@ function setupMasterFabEvents(){
   if (triggerAdd) triggerAdd.addEventListener("click", (e) => toggleSubMenu(subMenuAdd, e));
   if (triggerQuickNav) triggerQuickNav.addEventListener("click", (e) => toggleSubMenu(subMenuQuickNav, e));
 
-  // 画面移動の実行
+// =========================================================
+  // 画面移動の実行 (検索窓の自動クローズ付き)
+  // =========================================================
   const fabNavListBtn = document.getElementById("fab-nav-list-btn");
   const fabNavTallyBtn = document.getElementById("fab-nav-tally-btn");
   const fabNavJointsBtn = document.getElementById("fab-nav-joints-btn");
 
+  /**
+   * 検索窓を閉じる共通の内部処理
+   */
+  const closeSearchWidget = () => {
+    const searchWidget = document.getElementById("search-widget");
+    if (searchWidget && searchWidget.classList.contains("open")) {
+      searchWidget.classList.remove("open");
+      // 必要に応じて入力をクリアしたい場合は、以下のコメントを外してください
+      // const searchInput = document.getElementById("search-input");
+      // if (searchInput) searchInput.value = "";
+    }
+  };
+
+  // 物件一覧に戻る
   if (fabNavListBtn) {
     fabNavListBtn.addEventListener("click", () => {
-      masterFabToggle.click(); // メニューを閉じる
+      closeSearchWidget(); // 検索窓を閉じる
+      if (masterFabToggle && !masterFabMenu.classList.contains("opacity-0")) {
+          masterFabToggle.click(); // メニューを閉じる
+      }
       switchView("project-list");
     });
   }
+
+  // 入力と集計へ移動
   if (fabNavTallyBtn) {
     fabNavTallyBtn.addEventListener("click", () => {
-      masterFabToggle.click(); // メニューを閉じる
+      closeSearchWidget(); // 検索窓を閉じる
+      if (masterFabToggle && !masterFabMenu.classList.contains("opacity-0")) {
+          masterFabToggle.click(); // メニューを閉じる
+      }
       switchTab("tally");
     });
   }
-  // ▼▼▼ 追加: 継手タブへの切り替え ▼▼▼
+
+  // 継手と部材へ移動
   if (fabNavJointsBtn) {
     fabNavJointsBtn.addEventListener("click", () => {
-      masterFabToggle.click();
+      closeSearchWidget(); // 検索窓を閉じる
+      if (masterFabToggle && !masterFabMenu.classList.contains("opacity-0")) {
+          masterFabToggle.click(); // メニューを閉じる
+      }
       switchTab("joints");
     });
   }
-
-  // どこか他の場所をクリックしたらメニューを閉じる
-  document.addEventListener("click", (e) => {
-     if (masterFabMenu && !masterFabMenu.classList.contains("opacity-0")) {
-        const isClickInside = e.target.closest("#master-fab-container");
-        if (!isClickInside) {
-           masterFabToggle.click(); 
-        }
-     }
-  });
 
   // 追加系などのアクションボタンを押した時もメニューを閉じる
   document.querySelectorAll(".fab-action-btn").forEach(btn => {
