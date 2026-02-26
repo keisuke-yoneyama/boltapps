@@ -4302,6 +4302,8 @@ export const switchTab = (tabName) => {
 
     if (elements.navTabJoints) elements.navTabJoints.classList.add("active");
     if (elements.mobileNavTabJoints) elements.mobileNavTabJoints.classList.add("active");
+    if (btnToTally) btnToTally.classList.remove("hidden");
+    if (btnToJoints) btnToJoints.classList.add("hidden");
   } else if (tabName === "tally") {
     if (elements.jointsSection) elements.jointsSection.classList.add("hidden");
     if (elements.settingsCard) elements.settingsCard.classList.add("hidden");
@@ -4310,7 +4312,9 @@ export const switchTab = (tabName) => {
 
     if (elements.navTabTally) elements.navTabTally.classList.add("active");
     if (elements.mobileNavTabTally) elements.mobileNavTabTally.classList.add("active");
-
+    // ▼▼▼ 追加: FAB内のボタン切り替え ▼▼▼
+    if (btnToTally) btnToTally.classList.add("hidden");
+    if (btnToJoints) btnToJoints.classList.remove("hidden");
     // 「入力と集計」に切り替わった時に一括削除の状態をリセット
     if (typeof resetBulkDeleteState === "function") {
         resetBulkDeleteState();

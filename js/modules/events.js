@@ -235,6 +235,7 @@ function setupMasterFabEvents(){
   // 画面移動の実行
   const fabNavListBtn = document.getElementById("fab-nav-list-btn");
   const fabNavTallyBtn = document.getElementById("fab-nav-tally-btn");
+  const fabNavJointsBtn = document.getElementById("fab-nav-joints-btn");
 
   if (fabNavListBtn) {
     fabNavListBtn.addEventListener("click", () => {
@@ -246,6 +247,13 @@ function setupMasterFabEvents(){
     fabNavTallyBtn.addEventListener("click", () => {
       masterFabToggle.click(); // メニューを閉じる
       switchTab("tally");
+    });
+  }
+  // ▼▼▼ 追加: 継手タブへの切り替え ▼▼▼
+  if (fabNavJointsBtn) {
+    fabNavJointsBtn.addEventListener("click", () => {
+      masterFabToggle.click();
+      switchTab("joints");
     });
   }
 
