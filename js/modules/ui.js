@@ -5153,13 +5153,17 @@ export const updateDynamicInputs = (
   prefix,
   change,
 ) => {
-  // 1. 現在の入力値をDOMから読み取り、キャッシュ配列を強制更新する
-  // ※ input[type='text'] を明示的に指定して確実に取得
-  const currentInputs = inputsContainer.querySelectorAll("input[type='text']");
+  // 1. 現在の入力値をDOMから読み取る
+  const currentInputs = inputsContainer.querySelectorAll("input");
+
+  // ▼▼▼ 追加: キャッシュの長さを、現在の入力欄の数に強制的に合わせる ▼▼▼
+  // （例：前に7個あっても、今画面に1個しかなければ、後ろの6個の古いデータを消去する）
+  cache.length = currentInputs.length;
+  // ▲▲▲ 追加ここまで ▲▲▲
+
+  // 現在の値をキャッシュに上書き
   currentInputs.forEach((input, index) => {
-    // ▼▼▼ 修正: if (index < cache.length) の制限を削除して確実に保存 ▼▼▼
     cache[index] = input.value;
-    // ▲▲▲ 修正ここまで ▲▲▲
   });
 
   // 2. 新しい項目数を計算する
@@ -5172,16 +5176,14 @@ export const updateDynamicInputs = (
   if (newCount > currentCacheSize) {
     // 項目が増えた場合、新しい空の要素をキャッシュに追加
     for (let i = 0; i < newCount - currentCacheSize; i++) {
-      cache.push("");
+      cache.push(""); // 古いデータが消えているので、確実に空欄（""）が追加されます
     }
   }
-  // ※項目数が減ってもキャッシュは削除しない（データ保持のため）
 
   // 4. 表示されている項目数を更新する
   countInputElement.value = newCount;
 
   // 5. 更新されたキャッシュを元に入力欄を再生成する
-  // generateCustomInputFields は同じ ui.js 内にある前提
   generateCustomInputFields(newCount, inputsContainer, prefix, cache);
 };
 
