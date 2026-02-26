@@ -4282,6 +4282,9 @@ export const switchTab = (tabName) => {
     if (elements.navTabTally) elements.navTabTally.classList.add("active");
     if (elements.mobileNavTabTally)
       elements.mobileNavTabTally.classList.add("active");
+
+    // ▼▼▼ 追加: 「入力と集計」に切り替わった時に一括削除の状態をリセット ▼▼▼
+    resetBulkDeleteState();
   }
 
   // スクロール位置復元
@@ -4406,7 +4409,8 @@ export const switchView = (viewName) => {
         btn.classList.add("translate-y-10", "opacity-0", "pointer-events-none");
       });
     }
-
+    // ▼▼▼ 追加: 物件一覧に戻った時に一括削除の状態をリセット ▼▼▼
+    resetBulkDeleteState();
     state.currentProjectId = null;
   }
 };
@@ -5579,4 +5583,30 @@ export const initializeJointFormState = () => {
       }
     }
   }
+};
+
+/**
+ * 一括削除の選択状態とUIを初期状態にリセットする
+ */
+export const resetBulkDeleteState = () => {
+    // 1. フローティングバーを隠す
+    const bulkBar = document.getElementById("bulk-delete-bar");
+    if (bulkBar) {
+        bulkBar.classList.add("translate-y-24", "opacity-0", "pointer-events-none");
+    }
+
+    // 2. すべてのチェックボックスのチェックを外す
+    document.querySelectorAll(".item-checkbox, .select-all-checkbox").forEach(cb => {
+        cb.checked = false;
+    });
+
+    // 3. 行のハイライト（背景色）を元に戻す
+    document.querySelectorAll(".item-row").forEach(row => {
+        row.classList.remove("!bg-yellow-100", "dark:!bg-yellow-900/40");
+    });
+
+    // 4. 裏側のメモリ（削除対象リスト）をクリア
+    if (state.bulkDeleteTargets) {
+        state.bulkDeleteTargets = null;
+    }
 };
