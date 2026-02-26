@@ -3032,11 +3032,10 @@ export const renderJointsList = (project) => {
     }
   });
 
-  // 描画後、一括削除ボタンを隠す
-  const bulkBtn = document.getElementById('bulk-delete-btn');
-  if (bulkBtn) {
-      bulkBtn.classList.add('hidden');
-      bulkBtn.classList.remove('flex');
+// 描画後、一括削除フローティングバーを隠す
+  const bulkBar = document.getElementById('bulk-delete-bar');
+  if (bulkBar) {
+      bulkBar.classList.add("translate-y-24", "opacity-0", "pointer-events-none");
   }
 };
 /**
@@ -3354,11 +3353,10 @@ export const renderMemberLists = (project) => {
 
   sectionsToRender.forEach((s) => populateMemberTable(s.tbodyId, s.filteredMembers, s.color, s.section));
 
-  // 描画後、一括削除ボタンを隠す
-  const bulkBtn = document.getElementById('bulk-delete-btn');
-  if (bulkBtn) {
-      bulkBtn.classList.add('hidden');
-      bulkBtn.classList.remove('flex');
+// 描画後、一括削除フローティングバーを隠す
+  const bulkBar = document.getElementById('bulk-delete-bar');
+  if (bulkBar) {
+      bulkBar.classList.add("translate-y-24", "opacity-0", "pointer-events-none");
   }
 };
 
