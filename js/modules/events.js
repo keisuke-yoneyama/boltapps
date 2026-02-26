@@ -1,6 +1,5 @@
 import {
   closeModal,
-  resetProjectEditCache,
   changeEditComplexSplCount,
   changeComplexSplCount,
   updateJointFormUI,
@@ -45,7 +44,7 @@ import {
   populateJointSelectorModal,
 } from "./ui.js"; // ui.jsで作った関数を使う
 
-import { resetTempJointData, state } from "./state.js";
+import { resetTempJointData, state,resetProjectEditCache,resetProjectEditNewCache } from "./state.js";
 
 import { updateProjectData, addProject, deleteProject } from "./db.js";
 
@@ -1253,9 +1252,8 @@ function setupProjectActionEvents() {
       addCustomLevelsCountInput.value = "1";
       addCustomAreasCountInput.value = "1";
 
-      // stateキャッシュのリセット (importしたstateを直接操作)
-      state.newLevelNameCache = [];
-      state.newAreaNameCache = [];
+      // stateキャッシュのリセット
+      resetProjectEditNewCache();
 
       customLevelsContainer.innerHTML = "";
       customAreasContainer.innerHTML = "";
@@ -1416,8 +1414,7 @@ function setupProjectActionEvents() {
         if (editProjectModal) closeModal(editProjectModal);
 
         // ★修正: stateのキャッシュをリセット
-        state.levelNameCache = [];
-        state.areaNameCache = [];
+        resetProjectEditCache();
 
         showToast(`工事情報を更新しました。`);
       };

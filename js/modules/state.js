@@ -51,3 +51,33 @@ export const MAX_HISTORY_SIZE = 20;
 export function resetTempJointData() {
   state.tempJointData = null;
 }
+
+/**
+ * キャッシュに値を保存する（app.jsやUI描画ロジックから使う場合）
+ */
+export function updateLevelNameCache(newCache) {
+  state.levelNameCache = newCache;
+}
+
+/**
+ * キャッシュに値を保存する（app.jsやUI描画ロジックから使う場合）
+ */
+export function updateAreaNameCache(newCache) {
+  state.areaNameCache = newCache;
+}
+
+/**
+ * プロジェクト編集モーダルのキャッシュをクリアする
+ */
+export function resetProjectEditCache() {
+  state.levelNameCache = [];
+  state.areaNameCache = [];
+}
+
+/**
+ * プロジェクト編集モーダルのキャッシュをクリアする
+ */
+export function resetProjectEditNewCache() {
+  state.newLevelNameCache = [];
+  state.newAreaNameCache = [];
+}

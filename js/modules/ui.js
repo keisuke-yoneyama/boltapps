@@ -42,8 +42,8 @@ let isQuickNavOpen = false;
 let savedListCallbacks = {};
 
 let isFabOpen = false;
-let levelNameCache = [];
-let areaNameCache = [];
+// let levelNameCache = [];
+// let areaNameCache = [];
 let editComplexSplCache = Array.from({ length: 4 }, () => ({
   size: "",
   count: "",
@@ -54,13 +54,13 @@ let newComplexSplCache = Array.from({ length: 4 }, () => ({
   count: "",
 }));
 
-/**
- * プロジェクト編集モーダルのキャッシュをクリアする
- */
-export function resetProjectEditCache() {
-  levelNameCache = [];
-  areaNameCache = [];
-}
+// /**
+//  * プロジェクト編集モーダルのキャッシュをクリアする
+//  */
+// export function resetProjectEditCache() {
+//   levelNameCache = [];
+//   areaNameCache = [];
+// }
 
 export function resetNewComplexSplCache() {
   newComplexSplCache = Array.from({ length: 4 }, () => ({
@@ -80,18 +80,18 @@ function resetEditComplexSplCache() {
 }
 
 /**
- * キャッシュに値を保存する（app.jsやUI描画ロジックから使う場合）
- */
-export function updateLevelNameCache(newCache) {
-  levelNameCache = newCache;
-}
+//  * キャッシュに値を保存する（app.jsやUI描画ロジックから使う場合）
+//  */
+// export function updateLevelNameCache(newCache) {
+//   levelNameCache = newCache;
+// }
 
-/**
- * キャッシュに値を保存する（app.jsやUI描画ロジックから使う場合）
- */
-export function updateAreaNameCache(newCache) {
-  areaNameCache = newCache;
-}
+// /**
+//  * キャッシュに値を保存する（app.jsやUI描画ロジックから使う場合）
+//  */
+// export function updateAreaNameCache(newCache) {
+//   areaNameCache = newCache;
+// }
 
 // --- ▼ 追加: events.js からキャッシュを更新するための関数 ---
 export function updateEditComplexSplCacheItem(index, key, value) {
@@ -2579,39 +2579,38 @@ export const openEditProjectModal = (project) => {
   if (simpleSettings) simpleSettings.classList.toggle("hidden", isAdvanced);
   if (advancedSettings) advancedSettings.classList.toggle("hidden", !isAdvanced);
 
-  // ▼▼▼ 修正: モードに関係なく、必ず一番最初にキャッシュを完全リセットする ▼▼▼
-  // ※ levelNameCache, areaNameCache は ui.js 上部で let または const 宣言されている前提
-  if (typeof levelNameCache !== 'undefined') levelNameCache.length = 0;
-  if (typeof areaNameCache !== 'undefined') areaNameCache.length = 0;
+  // ▼▼▼ 修正: state.js の変数を直接リセットする形に統一 ▼▼▼
+  state.levelNameCache.length = 0;
+  state.areaNameCache.length = 0;
   // ▲▲▲ 修正ここまで ▲▲▲
 
   if (isAdvanced) {
-    // ▼▼▼ 修正: プロジェクトにデータがある場合のみ、コピーしてキャッシュに格納 ▼▼▼
+    // ▼▼▼ 修正: プロジェクトのデータを state のキャッシュに格納 ▼▼▼
     if (Array.isArray(project.customLevels)) {
-      levelNameCache.push(...project.customLevels);
+      state.levelNameCache.push(...project.customLevels);
     }
     if (Array.isArray(project.customAreas)) {
-      areaNameCache.push(...project.customAreas);
+      state.areaNameCache.push(...project.customAreas);
     }
     // ▲▲▲ 修正ここまで ▲▲▲
 
-    setVal("edit-custom-levels-count", levelNameCache.length);
-    setVal("edit-custom-areas-count", areaNameCache.length);
+    setVal("edit-custom-levels-count", state.levelNameCache.length);
+    setVal("edit-custom-areas-count", state.areaNameCache.length);
 
     const levelsContainer = document.getElementById("edit-custom-levels-container");
     const areasContainer = document.getElementById("edit-custom-areas-container");
 
     generateCustomInputFields(
-      levelNameCache.length, // プロジェクトのlengthではなくキャッシュのlengthを使う
+      state.levelNameCache.length, // stateのlengthを使う
       levelsContainer,
       "edit-level",
-      levelNameCache,
+      state.levelNameCache, // 参照として state を渡す
     );
     generateCustomInputFields(
-      areaNameCache.length,
+      state.areaNameCache.length,
       areasContainer,
       "edit-area",
-      areaNameCache,
+      state.areaNameCache, // 参照として state を渡す
     );
   } else {
     setVal("edit-project-floors", project.floors);
@@ -5153,17 +5152,10 @@ export const updateDynamicInputs = (
   prefix,
   change,
 ) => {
-  // 1. 現在の入力値をDOMから読み取る
-  const currentInputs = inputsContainer.querySelectorAll("input");
-
-  // ▼▼▼ 追加: キャッシュの長さを、現在の入力欄の数に強制的に合わせる ▼▼▼
-  // （例：前に7個あっても、今画面に1個しかなければ、後ろの6個の古いデータを消去する）
-  cache.length = currentInputs.length;
-  // ▲▲▲ 追加ここまで ▲▲▲
-
-  // 現在の値をキャッシュに上書き
+  // 1. 現在の入力値をDOMから読み取る（※ここでは長さを切り捨てない！）
+  const currentInputs = inputsContainer.querySelectorAll("input[type='text']");
   currentInputs.forEach((input, index) => {
-    cache[index] = input.value;
+    cache[index] = input.value; // 入力された値を上書き保存
   });
 
   // 2. 新しい項目数を計算する
@@ -5174,9 +5166,9 @@ export const updateDynamicInputs = (
   // 3. 項目数が増える場合のみ、キャッシュ配列の長さを調整する
   const currentCacheSize = cache.length;
   if (newCount > currentCacheSize) {
-    // 項目が増えた場合、新しい空の要素をキャッシュに追加
+    // 未知の領域まで増えた場合だけ、空枠を追加する
     for (let i = 0; i < newCount - currentCacheSize; i++) {
-      cache.push(""); // 古いデータが消えているので、確実に空欄（""）が追加されます
+      cache.push("");
     }
   }
 
