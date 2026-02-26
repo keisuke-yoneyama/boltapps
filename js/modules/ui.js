@@ -4277,6 +4277,7 @@ export const switchTab = (tabName) => {
     settingsCard: document.getElementById("settings-card"),
     memberCard: document.getElementById("member-registration-card"),
   };
+  const searchWrapper = document.getElementById("fab-search-wrapper");
 
   // スクロール位置保存
   const currentScrollY = window.scrollY;
@@ -4295,7 +4296,7 @@ export const switchTab = (tabName) => {
   ].forEach((tab) => {
     if (tab) tab.classList.remove("active");
   });
-
+    //継手と部材
   if (tabName === "joints") {
     if (elements.jointsSection) elements.jointsSection.classList.remove("hidden");
     if (elements.settingsCard) elements.settingsCard.classList.remove("hidden");
@@ -4306,7 +4307,10 @@ export const switchTab = (tabName) => {
     if (elements.mobileNavTabJoints) elements.mobileNavTabJoints.classList.add("active");
     if (elements.btnToTally) elements.btnToTally.classList.remove("hidden");
     if (elements.btnToJoints) elements.btnToJoints.classList.add("hidden");
-  } else if (tabName === "tally") {
+    // ▼ 継手タブでは検索ボタンを表示する
+    if (searchWrapper) searchWrapper.classList.remove("hidden");
+  } else if (tabName === "tally")//入力集計
+     {
     if (elements.jointsSection) elements.jointsSection.classList.add("hidden");
     if (elements.settingsCard) elements.settingsCard.classList.add("hidden");
     if (elements.memberCard) elements.memberCard.classList.add("hidden");
@@ -4314,6 +4318,7 @@ export const switchTab = (tabName) => {
 
     if (elements.navTabTally) elements.navTabTally.classList.add("active");
     if (elements.mobileNavTabTally) elements.mobileNavTabTally.classList.add("active");
+    if (searchWrapper) searchWrapper.classList.add("hidden");
     // ▼▼▼ 追加: FAB内のボタン切り替え ▼▼▼
     if (elements.btnToTally) elements.btnToTally.classList.add("hidden");
     if (elements.btnToJoints) elements.btnToJoints.classList.remove("hidden");
@@ -4329,7 +4334,6 @@ export const switchTab = (tabName) => {
     window.scrollTo(0, newScrollY);
   }, 0);
   updateQuickNavLinks();
-  // 不要になった updateQuickNavVisibility の呼び出しを完全に削除しました
 };
 /**
  * 画面表示を切り替える (一覧画面 <-> 詳細画面)
