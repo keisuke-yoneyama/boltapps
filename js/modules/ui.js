@@ -670,63 +670,63 @@ export const populateJointDropdownForEdit = (selectElement, currentJointId) => {
   });
 };
 
-/**
- * 登録用FAB（フローティングアクションボタン）の開閉を切り替える
- * @param {boolean} [forceState] - 強制的に開く(true)か閉じる(false)か指定したい場合
- */
-export function toggleFab(forceState) {
-  // 1. 新しい状態を決定
-  const newState = typeof forceState === "boolean" ? forceState : !isFabOpen;
-  if (newState === isFabOpen) return;
+// /**
+//  * 登録用FAB（フローティングアクションボタン）の開閉を切り替える
+//  * @param {boolean} [forceState] - 強制的に開く(true)か閉じる(false)か指定したい場合
+//  */
+// export function toggleFab(forceState) {
+//   // 1. 新しい状態を決定
+//   const newState = typeof forceState === "boolean" ? forceState : !isFabOpen;
+//   if (newState === isFabOpen) return;
 
-  isFabOpen = newState;
+//   isFabOpen = newState;
 
-  // 2. DOM要素の取得 (IDはHTMLに合わせてください)
-  const fabIconPlus = document.getElementById("fab-icon-plus");
-  const buttons = [
-    document.getElementById("fab-add-joint"),
-    document.getElementById("fab-add-member"),
-    document.getElementById("fab-bulk-add-member"), // 追加されたボタン
-    document.getElementById("fab-temp-bolt"),
-  ].filter((el) => el !== null); // 存在しない要素は除外
+//   // 2. DOM要素の取得 (IDはHTMLに合わせてください)
+//   const fabIconPlus = document.getElementById("fab-icon-plus");
+//   const buttons = [
+//     document.getElementById("fab-add-joint"),
+//     document.getElementById("fab-add-member"),
+//     document.getElementById("fab-bulk-add-member"), // 追加されたボタン
+//     document.getElementById("fab-temp-bolt"),
+//   ].filter((el) => el !== null); // 存在しない要素は除外
 
-  // 3. クラスの付け替え（アニメーション制御）
-  if (isFabOpen) {
-    if (fabIconPlus) fabIconPlus.style.transform = "rotate(45deg)";
+//   // 3. クラスの付け替え（アニメーション制御）
+//   if (isFabOpen) {
+//     if (fabIconPlus) fabIconPlus.style.transform = "rotate(45deg)";
 
-    buttons.forEach((btn) => {
-      btn.classList.remove(
-        "translate-y-10",
-        "opacity-0",
-        "pointer-events-none",
-      );
-      btn.classList.add("pointer-events-auto");
-    });
-  } else {
-    if (fabIconPlus) fabIconPlus.style.transform = "rotate(0deg)";
+//     buttons.forEach((btn) => {
+//       btn.classList.remove(
+//         "translate-y-10",
+//         "opacity-0",
+//         "pointer-events-none",
+//       );
+//       btn.classList.add("pointer-events-auto");
+//     });
+//   } else {
+//     if (fabIconPlus) fabIconPlus.style.transform = "rotate(0deg)";
 
-    buttons.forEach((btn) => {
-      btn.classList.add("translate-y-10", "opacity-0", "pointer-events-none");
-      btn.classList.remove("pointer-events-auto");
-    });
-  }
-}
+//     buttons.forEach((btn) => {
+//       btn.classList.add("translate-y-10", "opacity-0", "pointer-events-none");
+//       btn.classList.remove("pointer-events-auto");
+//     });
+//   }
+// }
 
-// --- FABの外部クリック判定用 ---
-export function closeFabIfOutside(targetElement) {
-  // isFabOpen は ui.js 内のローカル変数
-  const fabContainer = document.getElementById("fab-container");
-  // FABが開いていて、かつクリックされたのがFABの外側なら閉じる
-  if (isFabOpen && fabContainer && !fabContainer.contains(targetElement)) {
-    toggleFab(false);
-  }
-}
+// // --- FABの外部クリック判定用 ---
+// export function closeFabIfOutside(targetElement) {
+//   // isFabOpen は ui.js 内のローカル変数
+//   const fabContainer = document.getElementById("master-fab-container");
+//   // FABが開いていて、かつクリックされたのがFABの外側なら閉じる
+//   if (isFabOpen && fabContainer && !fabContainer.contains(targetElement)) {
+//     toggleFab(false);
+//   }
+// }
 
 /**
  * 継手の新規登録モーダルを開く（フォームリセット含む）
  */
 export function openNewJointModal() {
-  toggleFab(false); // メニューを閉じる
+  // toggleFab(false); // メニューを閉じる
 
   // タイトル変更
   const title = document.querySelector("#edit-joint-modal h3");
@@ -791,7 +791,7 @@ export function openNewJointModal() {
  * 部材の新規登録モーダルを開く
  */
 export function openNewMemberModal() {
-  toggleFab(false);
+  // toggleFab(false);
 
   const project = state.projects.find((p) => p.id === state.currentProjectId);
   if (!project) return;
@@ -832,7 +832,7 @@ export function openNewMemberModal() {
  * 仮ボルト設定モーダルを開く
  */
 export function openTempBoltSettingsModal() {
-  toggleFab(false);
+  // toggleFab(false);
   const project = state.projects.find((p) => p.id === state.currentProjectId);
 
   // populateTempBoltMappingModal が ui.js にあるか、importしている前提
@@ -938,36 +938,36 @@ export const populateTempBoltMappingModal = (project) => {
   container.innerHTML = `<div class="space-y-3">${rowsHtml}</div>`;
 };
 
-/**
- * クイックナビとFABボタンの表示/非表示を更新する
- */
-export const updateQuickNavVisibility = () => {
-  // 1. 要素の取得 (IDはHTMLに合わせてください)
-  const quickNavContainer = document.getElementById("quick-nav-container");
-  const fabContainer = document.getElementById("fab-container");
+// /**
+//  * クイックナビとFABボタンの表示/非表示を更新する
+//  */
+// export const updateQuickNavVisibility = () => {
+//   // 1. 要素の取得 (IDはHTMLに合わせてください)
+//   const quickNavContainer = document.getElementById("quick-nav-container");
+//   const fabContainer = document.getElementById("fab-container");
 
-  if (!quickNavContainer || !fabContainer) return;
+//   if (!quickNavContainer || !fabContainer) return;
 
-  // 2. 表示ロジック
-  // プロジェクトが開かれているならクイックナビは常に表示
-  if (state.currentProjectId) {
-    quickNavContainer.classList.remove("hidden");
+//   // 2. 表示ロジック
+//   // プロジェクトが開かれているならクイックナビは常に表示
+//   if (state.currentProjectId) {
+//     quickNavContainer.classList.remove("hidden");
 
-    // 登録FABは「継手と部材(joints)」タブの時だけ表示
-    if (state.activeTab === "joints") {
-      fabContainer.classList.remove("hidden");
-    } else {
-      fabContainer.classList.add("hidden");
+//     // 登録FABは「継手と部材(joints)」タブの時だけ表示
+//     if (state.activeTab === "joints") {
+//       fabContainer.classList.remove("hidden");
+//     } else {
+//       fabContainer.classList.add("hidden");
 
-      // FABを強制的に閉じる (falseを渡せば閉じるように作ったはずなのでこれでOK)
-      toggleFab(false);
-    }
-  } else {
-    // プロジェクトが開いていないときは両方隠す
-    quickNavContainer.classList.add("hidden");
-    fabContainer.classList.add("hidden");
-  }
-};
+//       // FABを強制的に閉じる (falseを渡せば閉じるように作ったはずなのでこれでOK)
+//       toggleFab(false);
+//     }
+//   } else {
+//     // プロジェクトが開いていないときは両方隠す
+//     quickNavContainer.classList.add("hidden");
+//     fabContainer.classList.add("hidden");
+//   }
+// };
 
 /**
  * 常設フォーム用のカラーパレットを描画する
@@ -4291,15 +4291,13 @@ export const switchTab = (tabName) => {
   });
 
   if (tabName === "joints") {
-    if (elements.jointsSection)
-      elements.jointsSection.classList.remove("hidden");
+    if (elements.jointsSection) elements.jointsSection.classList.remove("hidden");
     if (elements.settingsCard) elements.settingsCard.classList.remove("hidden");
     if (elements.memberCard) elements.memberCard.classList.remove("hidden");
     if (elements.tallySection) elements.tallySection.classList.add("hidden");
 
     if (elements.navTabJoints) elements.navTabJoints.classList.add("active");
-    if (elements.mobileNavTabJoints)
-      elements.mobileNavTabJoints.classList.add("active");
+    if (elements.mobileNavTabJoints) elements.mobileNavTabJoints.classList.add("active");
   } else if (tabName === "tally") {
     if (elements.jointsSection) elements.jointsSection.classList.add("hidden");
     if (elements.settingsCard) elements.settingsCard.classList.add("hidden");
@@ -4307,25 +4305,22 @@ export const switchTab = (tabName) => {
     if (elements.tallySection) elements.tallySection.classList.remove("hidden");
 
     if (elements.navTabTally) elements.navTabTally.classList.add("active");
-    if (elements.mobileNavTabTally)
-      elements.mobileNavTabTally.classList.add("active");
+    if (elements.mobileNavTabTally) elements.mobileNavTabTally.classList.add("active");
 
-    // ▼▼▼ 追加: 「入力と集計」に切り替わった時に一括削除の状態をリセット ▼▼▼
-    resetBulkDeleteState();
+    // 「入力と集計」に切り替わった時に一括削除の状態をリセット
+    if (typeof resetBulkDeleteState === "function") {
+        resetBulkDeleteState();
+    }
   }
 
   // スクロール位置復元
-  const newScrollY =
-    (state.scrollPositions && state.scrollPositions[tabName]) || 0;
+  const newScrollY = (state.scrollPositions && state.scrollPositions[tabName]) || 0;
   setTimeout(() => {
     window.scrollTo(0, newScrollY);
   }, 0);
-
-  if (typeof updateQuickNavVisibility === "function") {
-    updateQuickNavVisibility();
-  }
+  
+  // 不要になった updateQuickNavVisibility の呼び出しを完全に削除しました
 };
-
 /**
  * 画面表示を切り替える (一覧画面 <-> 詳細画面)
  */
@@ -4339,8 +4334,8 @@ export const switchView = (viewName) => {
 
   if (!viewList || !viewDetail) return;
 
-  // ▼▼▼ 追加：FABコンテナの要素を取得 ▼▼▼
-  const fabContainer = document.getElementById("fab-container");
+  // マスターFABコンテナの要素を取得
+  const masterFab = document.getElementById("master-fab-container");
 
   // スクロールリセット
   window.scrollTo(0, 0);
@@ -4351,9 +4346,7 @@ export const switchView = (viewName) => {
     navListContext: document.getElementById("nav-list-context"),
     navDetailContext: document.getElementById("nav-detail-context"),
     navDetailButtons: document.getElementById("nav-detail-buttons"),
-    mobileNavDetailButtons: document.getElementById(
-      "mobile-nav-detail-buttons",
-    ),
+    mobileNavDetailButtons: document.getElementById("mobile-nav-detail-buttons"),
     navProjectTitle: document.getElementById("nav-project-title"),
   };
 
@@ -4365,14 +4358,13 @@ export const switchView = (viewName) => {
     viewDetail.classList.remove("hidden");
     viewDetail.style.display = "block";
 
-    if (fabContainer) fabContainer.classList.remove("hidden");
+    // マスターFABを表示する
+    if (masterFab) masterFab.classList.remove("hidden");
 
     // ナビゲーション制御
     if (navElements.fixedNav) navElements.fixedNav.classList.remove("hidden");
-    if (navElements.navListContext)
-      navElements.navListContext.classList.add("hidden");
-    if (navElements.navDetailContext)
-      navElements.navDetailContext.classList.remove("hidden");
+    if (navElements.navListContext) navElements.navListContext.classList.add("hidden");
+    if (navElements.navDetailContext) navElements.navDetailContext.classList.remove("hidden");
 
     if (navElements.navDetailButtons) {
       navElements.navDetailButtons.classList.remove("hidden");
@@ -4390,8 +4382,7 @@ export const switchView = (viewName) => {
 
     switchTab("joints");
 
-    if (typeof updateQuickNavVisibility === "function")
-      updateQuickNavVisibility();
+    // ※古い updateQuickNavVisibility() の呼び出しは削除しました
   } else {
     // リストを表示
     viewList.classList.remove("hidden");
@@ -4401,10 +4392,8 @@ export const switchView = (viewName) => {
     viewDetail.style.display = "none";
 
     // ナビゲーション制御
-    if (navElements.navListContext)
-      navElements.navListContext.classList.remove("hidden");
-    if (navElements.navDetailContext)
-      navElements.navDetailContext.classList.add("hidden");
+    if (navElements.navListContext) navElements.navListContext.classList.remove("hidden");
+    if (navElements.navDetailContext) navElements.navDetailContext.classList.add("hidden");
 
     if (navElements.navDetailButtons) {
       navElements.navDetailButtons.classList.add("hidden");
@@ -4414,30 +4403,29 @@ export const switchView = (viewName) => {
       navElements.mobileNavDetailButtons.classList.add("hidden");
     }
 
-    // FAB等を隠す
-    const quickNav = document.getElementById("quick-nav-container");
-    if (quickNav) quickNav.classList.add("hidden");
-
-    // ▼▼▼ 追加：物件一覧に戻るタイミングですべて非表示にする ▼▼▼
-    if (fabContainer) {
-      fabContainer.classList.add("hidden");
-
-      // 開きっぱなしのメニューやアイコンの状態もリセットしておく（次回表示時のため）
-      const fabIcon = document.getElementById("fab-icon-plus");
-      if (fabIcon) fabIcon.classList.remove("rotate-45");
-
-      const subButtons = fabContainer.querySelectorAll(".fab-sub-button");
-      subButtons.forEach((btn) => {
-        btn.classList.remove(
-          "translate-y-0",
-          "opacity-100",
-          "pointer-events-auto",
-        );
-        btn.classList.add("translate-y-10", "opacity-0", "pointer-events-none");
-      });
+    // マスターFABを隠し、開きっぱなしの場合はリセットする
+    if (masterFab) {
+      masterFab.classList.add("hidden");
+      
+      const masterMenu = document.getElementById("master-fab-menu");
+      const masterIcon = document.getElementById("master-fab-icon");
+      const masterToggle = document.getElementById("master-fab-toggle");
+      
+      if (masterMenu && !masterMenu.classList.contains("opacity-0")) {
+          masterMenu.classList.add("opacity-0", "translate-y-10", "pointer-events-none");
+          masterMenu.classList.remove("opacity-100", "translate-y-0", "pointer-events-auto");
+          if (masterIcon) masterIcon.innerHTML = `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16m-7 6h7" />`;
+          if (masterToggle) masterToggle.classList.remove("rotate-90");
+      }
     }
-    // ▼▼▼ 追加: 物件一覧に戻った時に一括削除の状態をリセット ▼▼▼
-    resetBulkDeleteState();
+
+    // ※古い fabContainer のリセット処理は不要になったため削除しました
+
+    // 一括削除の状態をリセット
+    if (typeof resetBulkDeleteState === "function") {
+        resetBulkDeleteState();
+    }
+    
     state.currentProjectId = null;
   }
 };
@@ -5112,48 +5100,48 @@ export const renderBulkMemberInputs = (count, currentValues = []) => {
     if (firstInput) firstInput.focus();
   }, 50);
 };
-/**
- * クイックナビゲーションの開閉を切り替える
- */
-export const toggleQuickNav = () => {
-  const quickNavMenu = document.getElementById("quick-nav-menu");
-  if (!quickNavMenu) return;
+// /**
+//  * クイックナビゲーションの開閉を切り替える
+//  */
+// export const toggleQuickNav = () => {
+//   const quickNavMenu = document.getElementById("quick-nav-menu");
+//   if (!quickNavMenu) return;
 
-  isQuickNavOpen = !isQuickNavOpen;
+//   isQuickNavOpen = !isQuickNavOpen;
 
-  if (isQuickNavOpen) {
-    // メニューを開く時に中身を生成
-    updateQuickNavLinks();
+//   if (isQuickNavOpen) {
+//     // メニューを開く時に中身を生成
+//     updateQuickNavLinks();
 
-    quickNavMenu.classList.remove("hidden");
+//     quickNavMenu.classList.remove("hidden");
 
-    // アニメーション
-    requestAnimationFrame(() => {
-      quickNavMenu.classList.remove(
-        "scale-95",
-        "opacity-0",
-        "pointer-events-none",
-      );
-      quickNavMenu.classList.add(
-        "scale-100",
-        "opacity-100",
-        "pointer-events-auto",
-      );
-    });
-  } else {
-    // メニューを閉じる
-    quickNavMenu.classList.remove(
-      "scale-100",
-      "opacity-100",
-      "pointer-events-auto",
-    );
-    quickNavMenu.classList.add("scale-95", "opacity-0", "pointer-events-none");
+//     // アニメーション
+//     requestAnimationFrame(() => {
+//       quickNavMenu.classList.remove(
+//         "scale-95",
+//         "opacity-0",
+//         "pointer-events-none",
+//       );
+//       quickNavMenu.classList.add(
+//         "scale-100",
+//         "opacity-100",
+//         "pointer-events-auto",
+//       );
+//     });
+//   } else {
+//     // メニューを閉じる
+//     quickNavMenu.classList.remove(
+//       "scale-100",
+//       "opacity-100",
+//       "pointer-events-auto",
+//     );
+//     quickNavMenu.classList.add("scale-95", "opacity-0", "pointer-events-none");
 
-    setTimeout(() => {
-      if (!isQuickNavOpen) quickNavMenu.classList.add("hidden");
-    }, 200);
-  }
-};
+//     setTimeout(() => {
+//       if (!isQuickNavOpen) quickNavMenu.classList.add("hidden");
+//     }, 200);
+//   }
+// };
 
 /**
  * ナビゲーションリンクを生成する
@@ -5482,23 +5470,23 @@ export const renderAggregatedResults = (propertyName, aggregatedData) => {
   contentEl.innerHTML = html;
 };
 
-/**
- * クイックナビゲーションの外側がクリックされたら閉じる関数
- * (events.js から呼び出す)
- */
-export const closeQuickNavIfOutside = (target) => {
-  const quickNavContainer = document.getElementById("quick-nav-container");
+// /**
+//  * クイックナビゲーションの外側がクリックされたら閉じる関数
+//  * (events.js から呼び出す)
+//  */
+// export const closeQuickNavIfOutside = (target) => {
+//   const quickNavContainer = document.getElementById("quick-nav-container");
 
-  // メニューが開いていて、かつクリックされた場所がコンテナの外側なら閉じる
-  // (toggleQuickNavの実装が「開いていれば閉じる」ようになっている前提)
-  if (
-    isQuickNavOpen &&
-    quickNavContainer &&
-    !quickNavContainer.contains(target)
-  ) {
-    toggleQuickNav();
-  }
-};
+//   // メニューが開いていて、かつクリックされた場所がコンテナの外側なら閉じる
+//   // (toggleQuickNavの実装が「開いていれば閉じる」ようになっている前提)
+//   if (
+//     isQuickNavOpen &&
+//     quickNavContainer &&
+//     !quickNavContainer.contains(target)
+//   ) {
+//     toggleQuickNav();
+//   }
+// };
 
 /**
  * テーマ（ダーク/ライト）を適用する関数

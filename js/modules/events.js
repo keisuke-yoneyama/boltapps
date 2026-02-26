@@ -35,12 +35,12 @@ import {
   renderTempOrderDetails,
   populateJointDropdownForEdit,
   renderBulkMemberInputs,
-  toggleQuickNav,
+  // toggleQuickNav,
   toggleTheme,
   makeDraggable,
   updateColumnLockUI,
   updateTallySheetCalculations,
-  closeQuickNavIfOutside,
+  // closeQuickNavIfOutside,
   populateJointSelectorModal,
 } from "./ui.js"; // ui.jsで作った関数を使う
 
@@ -142,7 +142,7 @@ export function setupEventListeners() {
 
   setupBulkMemberActionEvents(); //部材の一括追加イベント
 
-  setupQuickNavEvents(); //クイックナビゲーション（FABメニュー等）のイベント設定
+  // setupQuickNavEvents(); //クイックナビゲーション（FABメニュー等）のイベント設定
 
   setupDraggableModals(); //ドラッグ可能にするイベント
 
@@ -164,31 +164,109 @@ export function setupEventListeners() {
 
   setupBulkDeleteEvents(); //一括削除イベント
 
+  setupMasterFabEvents(); //大ボスボタンイベント
+}
+
+function setupMasterFabEvents(){
+// =========================================================
+  // マスターFAB (多段展開メニュー) の制御
   // =========================================================
-  // FABからのナビゲーション画面遷移
-  // =========================================================
+  const masterFabToggle = document.getElementById("master-fab-toggle");
+  const masterFabIcon = document.getElementById("master-fab-icon");
+  const masterFabMenu = document.getElementById("master-fab-menu");
+
+  const triggerNav = document.getElementById("trigger-nav");
+  const subMenuNav = document.getElementById("sub-menu-nav");
+  
+  const triggerAdd = document.getElementById("trigger-add");
+  const subMenuAdd = document.getElementById("sub-menu-add");
+
+  const triggerQuickNav = document.getElementById("quick-nav-toggle");
+  const subMenuQuickNav = document.getElementById("quick-nav-menu"); 
+
+  // 開いている孫メニューをすべて閉じる
+  const closeAllSubMenus = () => {
+    [subMenuNav, subMenuAdd, subMenuQuickNav].forEach(menu => {
+      if(menu) {
+        menu.classList.remove("opacity-100", "translate-x-0", "pointer-events-auto");
+        menu.classList.add("opacity-0", "translate-x-4", "pointer-events-none");
+      }
+    });
+  };
+
+  // 大ボスボタンのクリック
+  if (masterFabToggle) {
+    masterFabToggle.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const isOpen = !masterFabMenu.classList.contains("opacity-0");
+      if (isOpen) {
+        // 閉じる
+        masterFabMenu.classList.add("opacity-0", "translate-y-10", "pointer-events-none");
+        masterFabMenu.classList.remove("opacity-100", "translate-y-0", "pointer-events-auto");
+        masterFabIcon.innerHTML = `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16m-7 6h7" />`;
+        masterFabToggle.classList.remove("rotate-90");
+        closeAllSubMenus();
+      } else {
+        // 開く
+        masterFabMenu.classList.remove("opacity-0", "translate-y-10", "pointer-events-none");
+        masterFabMenu.classList.add("opacity-100", "translate-y-0", "pointer-events-auto");
+        masterFabIcon.innerHTML = `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />`;
+        masterFabToggle.classList.add("rotate-90");
+      }
+    });
+  }
+
+  // カテゴリボタンのクリック (アコーディオン制御)
+  const toggleSubMenu = (menu, e) => {
+    e.stopPropagation();
+    if(!menu) return;
+    const isMenuOpen = menu.classList.contains("opacity-100");
+    closeAllSubMenus(); // 他のカテゴリを閉じる
+    if (!isMenuOpen) {
+      menu.classList.remove("opacity-0", "translate-x-4", "pointer-events-none");
+      menu.classList.add("opacity-100", "translate-x-0", "pointer-events-auto");
+    }
+  };
+
+  if (triggerNav) triggerNav.addEventListener("click", (e) => toggleSubMenu(subMenuNav, e));
+  if (triggerAdd) triggerAdd.addEventListener("click", (e) => toggleSubMenu(subMenuAdd, e));
+  if (triggerQuickNav) triggerQuickNav.addEventListener("click", (e) => toggleSubMenu(subMenuQuickNav, e));
+
+  // 画面移動の実行
   const fabNavListBtn = document.getElementById("fab-nav-list-btn");
   const fabNavTallyBtn = document.getElementById("fab-nav-tally-btn");
 
-  // 物件一覧に戻る
   if (fabNavListBtn) {
     fabNavListBtn.addEventListener("click", () => {
-      // メニューを閉じる
-      closeFabIfOutside({ target: document.body }); 
-      // 画面を切り替える (ui.js の switchView を呼び出し)
+      masterFabToggle.click(); // メニューを閉じる
       switchView("project-list");
     });
   }
-
-  // 入力と集計タブを開く
   if (fabNavTallyBtn) {
     fabNavTallyBtn.addEventListener("click", () => {
-      // メニューを閉じる
-      closeFabIfOutside({ target: document.body });
-      // タブを切り替える (ui.js の switchTab を呼び出し)
+      masterFabToggle.click(); // メニューを閉じる
       switchTab("tally");
     });
   }
+
+  // どこか他の場所をクリックしたらメニューを閉じる
+  document.addEventListener("click", (e) => {
+     if (masterFabMenu && !masterFabMenu.classList.contains("opacity-0")) {
+        const isClickInside = e.target.closest("#master-fab-container");
+        if (!isClickInside) {
+           masterFabToggle.click(); 
+        }
+     }
+  });
+
+  // 追加系などのアクションボタンを押した時もメニューを閉じる
+  document.querySelectorAll(".fab-action-btn").forEach(btn => {
+    btn.addEventListener("click", () => {
+      if(masterFabToggle && !masterFabMenu.classList.contains("opacity-0")){
+          masterFabToggle.click();
+      }
+    });
+  });
 
 }
 
@@ -3629,26 +3707,26 @@ function setupBulkMemberActionEvents() {
   });
 }
 
-/**
- * クイックナビゲーション（FABメニュー等）のイベント設定
- */
-function setupQuickNavEvents() {
-  const quickNavToggle = document.getElementById("quick-nav-toggle");
+// /**
+//  * クイックナビゲーション（FABメニュー等）のイベント設定
+//  */
+// function setupQuickNavEvents() {
+//   const quickNavToggle = document.getElementById("quick-nav-toggle");
 
-  // 1. トグルボタンクリック
-  if (quickNavToggle) {
-    quickNavToggle.addEventListener("click", (e) => {
-      e.stopPropagation(); // 親への伝播を止める（documentのclickイベントが発火して即閉じないように）
-      toggleQuickNav();
-    });
-  }
+//   // 1. トグルボタンクリック
+//   if (quickNavToggle) {
+//     quickNavToggle.addEventListener("click", (e) => {
+//       e.stopPropagation(); // 親への伝播を止める（documentのclickイベントが発火して即閉じないように）
+//       toggleQuickNav();
+//     });
+//   }
 
-  // 2. メニューの外側をクリックしたら閉じる
-  document.addEventListener("click", (e) => {
-    // 判定と処理は ui.js に委譲する
-    closeQuickNavIfOutside(e.target);
-  });
-}
+//   // 2. メニューの外側をクリックしたら閉じる
+//   document.addEventListener("click", (e) => {
+//     // 判定と処理は ui.js に委譲する
+//     closeQuickNavIfOutside(e.target);
+//   });
+// }
 
 /**
  * モーダルのドラッグ機能を有効化する設定
