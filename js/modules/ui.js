@@ -4304,8 +4304,8 @@ export const switchTab = (tabName) => {
 
     if (elements.navTabJoints) elements.navTabJoints.classList.add("active");
     if (elements.mobileNavTabJoints) elements.mobileNavTabJoints.classList.add("active");
-    if (btnToTally) btnToTally.classList.remove("hidden");
-    if (btnToJoints) btnToJoints.classList.add("hidden");
+    if (elements.btnToTally) btnToTally.classList.remove("hidden");
+    if (elements.btnToJoints) btnToJoints.classList.add("hidden");
   } else if (tabName === "tally") {
     if (elements.jointsSection) elements.jointsSection.classList.add("hidden");
     if (elements.settingsCard) elements.settingsCard.classList.add("hidden");
