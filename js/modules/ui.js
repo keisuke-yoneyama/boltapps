@@ -2776,7 +2776,7 @@ export const populateBoltSelectorModal = (currentValue) => {
 };
 
 /**
- * 継手リストを描画する（ソート機能付き）
+ * 継手リストを描画する（ソート機能付き・編集アイコン統合版）
  */
 export const renderJointsList = (project) => {
   if (!project) return;
@@ -2785,7 +2785,6 @@ export const renderJointsList = (project) => {
 
   const renderedJointIds = new Set();
 
-  // ヘッダークリックイベント
   if (!container.dataset.listenerAdded) {
     container.addEventListener("click", (e) => {
       const th = e.target.closest("th[data-sort-key]");
@@ -2808,6 +2807,8 @@ export const renderJointsList = (project) => {
     });
     container.dataset.listenerAdded = "true";
   }
+
+  const editIconSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>`;
 
   const populateTable = (tbodyId, joints, color) => {
     const tbody = document.getElementById(tbodyId);
@@ -2864,13 +2865,12 @@ export const renderJointsList = (project) => {
 
         return `
             <tr class="item-row bg-${color}-50 dark:bg-transparent hover:bg-${color}-100 dark:hover:bg-slate-700/50 transition-colors" data-id="${joint.id}">
-                <td class="px-3 py-3 text-center border-b border-r ${borderColor} ${darkBorderColor}">
-                    <input type="checkbox" class="item-checkbox w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer" data-id="${joint.id}" data-type="joint">
-                </td>
-                <td class="px-4 py-3 text-center border-b border-r ${borderColor} ${darkBorderColor}">
-                    <div class="flex justify-center gap-2 whitespace-nowrap">
-                        <button data-id="${joint.id}" class="edit-joint-btn text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 font-semibold">編集</button>
-                        <button data-id="${joint.id}" class="delete-joint-btn text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300 font-semibold">削除</button>
+                <td class="px-3 py-3 border-b border-r ${borderColor} ${darkBorderColor}">
+                    <div class="flex items-center justify-center gap-3">
+                        <input type="checkbox" class="item-checkbox w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer" data-id="${joint.id}" data-type="joint">
+                        <button data-id="${joint.id}" class="edit-joint-btn text-slate-500 hover:text-blue-600 dark:text-slate-400 dark:hover:text-blue-400 transition-colors" title="編集">
+                            ${editIconSvg}
+                        </button>
                     </div>
                 </td>
                 <td class="px-4 py-3 font-medium text-gray-900 dark:text-gray-100 border-b border-r js-searchable-name ${borderColor} ${darkBorderColor}">
@@ -2883,20 +2883,21 @@ export const renderJointsList = (project) => {
       }).join("");
   };
 
-  const selectAllHtml = '<input type="checkbox" class="select-all-checkbox w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer">';
+  const selectAllHtml = '<input type="checkbox" class="select-all-checkbox w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer" title="全選択/解除">';
 
+  // 操作列を削除
   const sections = [
-    { type: "girder", isPin: false, title: "大梁", color: "blue", cols: [{ label: selectAllHtml, key: null }, { label: "操作", key: null }, { label: "継手名", key: "name" }, { label: "フランジ", key: "flange" }, { label: "ウェブ", key: "web" }, { label: "部材カウント", key: "countAsMember" }, { label: "仮ボルト(フランジ)", key: "temp-flange" }, { label: "仮ボルト(ウェブ)", key: "temp-web" }] },
-    { type: "girder", isPin: true, title: "大梁 (ピン取り)", color: "cyan", cols: [{ label: selectAllHtml, key: null }, { label: "操作", key: null }, { label: "継手名", key: "name" }, { label: "ウェブ", key: "web" }, { label: "部材カウント", key: "countAsMember" }, { label: "仮ボルト", key: "temp-web" }] },
-    { type: "beam", isPin: false, title: "小梁", color: "green", cols: [{ label: selectAllHtml, key: null }, { label: "操作", key: null }, { label: "継手名", key: "name" }, { label: "フランジ", key: "flange" }, { label: "ウェブ", key: "web" }, { label: "部材カウント", key: "countAsMember" }, { label: "仮ボルト(フランジ)", key: "temp-flange" }, { label: "仮ボルト(ウェブ)", key: "temp-web" }] },
-    { type: "beam", isPin: true, title: "小梁 (ピン取り)", color: "teal", cols: [{ label: selectAllHtml, key: null }, { label: "操作", key: null }, { label: "継手名", key: "name" }, { label: "ウェブ", key: "web" }, { label: "部材カウント", key: "countAsMember" }, { label: "仮ボルト", key: "temp-web" }] },
-    { type: "stud", isPin: false, title: "間柱", color: "indigo", cols: [{ label: selectAllHtml, key: null }, { label: "操作", key: null }, { label: "継手名", key: "name" }, { label: "フランジボルト", key: "flange" }, { label: "ウェブボルト", key: "web" }, { label: "部材カウント", key: "countAsMember" }, { label: "仮ボルト(フランジ)", key: "temp-flange" }, { label: "仮ボルト(ウェブ)", key: "temp-web" }] },
-    { type: "stud", isPin: true, title: "間柱 (ピン取り)", color: "purple", cols: [{ label: selectAllHtml, key: null }, { label: "操作", key: null }, { label: "継手名", key: "name" }, { label: "ボルトサイズ", key: "bolt" }, { label: "部材カウント", key: "countAsMember" }, { label: "仮ボルト", key: "temp-web" }] },
-    { type: "column", isPin: false, title: "本柱", color: "red", cols: [{ label: selectAllHtml, key: null }, { label: "操作", key: null }, { label: "継手名", key: "name" }, { label: "エレクション", key: "bolt" }, { label: "部材カウント", key: "countAsMember" }] },
-    { type: "wall_girt", isPin: false, title: "胴縁", color: "gray", cols: [{ label: selectAllHtml, key: null }, { label: "操作", key: null }, { label: "継手名", key: "name" }, { label: "ボルトサイズ", key: "bolt" }, { label: "部材カウント", key: "countAsMember" }] },
-    { type: "roof_purlin", isPin: false, title: "母屋", color: "orange", cols: [{ label: selectAllHtml, key: null }, { label: "操作", key: null }, { label: "継手名", key: "name" }, { label: "ボルトサイズ", key: "bolt" }, { label: "部材カウント", key: "countAsMember" }] },
-    { type: "other", isPin: false, title: "その他", color: "amber", cols: [{ label: selectAllHtml, key: null }, { label: "操作", key: null }, { label: "継手名", key: "name" }, { label: "フランジ", key: "flange" }, { label: "ウェブ", key: "web" }, { label: "部材カウント", key: "countAsMember" }, { label: "仮ボルト(フランジ)", key: "temp-flange" }, { label: "仮ボルト(ウェブ)", key: "temp-web" }] },
-    { type: "other", isPin: true, title: "その他 (ピン取り)", color: "amber", cols: [{ label: selectAllHtml, key: null }, { label: "操作", key: null }, { label: "継手名", key: "name" }, { label: "ボルト", key: "bolt" }, { label: "部材カウント", key: "countAsMember" }, { label: "仮ボルト", key: "temp-web" }] },
+    { type: "girder", isPin: false, title: "大梁", color: "blue", cols: [{ label: selectAllHtml, key: null }, { label: "継手名", key: "name" }, { label: "フランジ", key: "flange" }, { label: "ウェブ", key: "web" }, { label: "部材カウント", key: "countAsMember" }, { label: "仮ボルト(フランジ)", key: "temp-flange" }, { label: "仮ボルト(ウェブ)", key: "temp-web" }] },
+    { type: "girder", isPin: true, title: "大梁 (ピン取り)", color: "cyan", cols: [{ label: selectAllHtml, key: null }, { label: "継手名", key: "name" }, { label: "ウェブ", key: "web" }, { label: "部材カウント", key: "countAsMember" }, { label: "仮ボルト", key: "temp-web" }] },
+    { type: "beam", isPin: false, title: "小梁", color: "green", cols: [{ label: selectAllHtml, key: null }, { label: "継手名", key: "name" }, { label: "フランジ", key: "flange" }, { label: "ウェブ", key: "web" }, { label: "部材カウント", key: "countAsMember" }, { label: "仮ボルト(フランジ)", key: "temp-flange" }, { label: "仮ボルト(ウェブ)", key: "temp-web" }] },
+    { type: "beam", isPin: true, title: "小梁 (ピン取り)", color: "teal", cols: [{ label: selectAllHtml, key: null }, { label: "継手名", key: "name" }, { label: "ウェブ", key: "web" }, { label: "部材カウント", key: "countAsMember" }, { label: "仮ボルト", key: "temp-web" }] },
+    { type: "stud", isPin: false, title: "間柱", color: "indigo", cols: [{ label: selectAllHtml, key: null }, { label: "継手名", key: "name" }, { label: "フランジボルト", key: "flange" }, { label: "ウェブボルト", key: "web" }, { label: "部材カウント", key: "countAsMember" }, { label: "仮ボルト(フランジ)", key: "temp-flange" }, { label: "仮ボルト(ウェブ)", key: "temp-web" }] },
+    { type: "stud", isPin: true, title: "間柱 (ピン取り)", color: "purple", cols: [{ label: selectAllHtml, key: null }, { label: "継手名", key: "name" }, { label: "ボルトサイズ", key: "bolt" }, { label: "部材カウント", key: "countAsMember" }, { label: "仮ボルト", key: "temp-web" }] },
+    { type: "column", isPin: false, title: "本柱", color: "red", cols: [{ label: selectAllHtml, key: null }, { label: "継手名", key: "name" }, { label: "エレクション", key: "bolt" }, { label: "部材カウント", key: "countAsMember" }] },
+    { type: "wall_girt", isPin: false, title: "胴縁", color: "gray", cols: [{ label: selectAllHtml, key: null }, { label: "継手名", key: "name" }, { label: "ボルトサイズ", key: "bolt" }, { label: "部材カウント", key: "countAsMember" }] },
+    { type: "roof_purlin", isPin: false, title: "母屋", color: "orange", cols: [{ label: selectAllHtml, key: null }, { label: "継手名", key: "name" }, { label: "ボルトサイズ", key: "bolt" }, { label: "部材カウント", key: "countAsMember" }] },
+    { type: "other", isPin: false, title: "その他", color: "amber", cols: [{ label: selectAllHtml, key: null }, { label: "継手名", key: "name" }, { label: "フランジ", key: "flange" }, { label: "ウェブ", key: "web" }, { label: "部材カウント", key: "countAsMember" }, { label: "仮ボルト(フランジ)", key: "temp-flange" }, { label: "仮ボルト(ウェブ)", key: "temp-web" }] },
+    { type: "other", isPin: true, title: "その他 (ピン取り)", color: "amber", cols: [{ label: selectAllHtml, key: null }, { label: "継手名", key: "name" }, { label: "ボルト", key: "bolt" }, { label: "部材カウント", key: "countAsMember" }, { label: "仮ボルト", key: "temp-web" }] },
   ];
 
   let html = "";
@@ -2910,7 +2911,7 @@ export const renderJointsList = (project) => {
       if (filteredJoints.some((j) => j.isComplexSpl)) {
         if (section.isPin) {
           finalCols = [
-            { label: selectAllHtml, key: null }, { label: "操作", key: null }, { label: "継手名", key: "name" },
+            { label: selectAllHtml, key: null }, { label: "継手名", key: "name" },
             { label: "ウェブ (複合SPL)", key: "web_complex" }, { label: "部材カウント", key: "countAsMember" }, { label: "仮ボルト (複合SPL)", key: "temp_web_complex" }
           ];
         }
@@ -2978,7 +2979,7 @@ export const renderJointsList = (project) => {
   const unknownJoints = project.joints.filter((j) => !renderedJointIds.has(j.id));
   if (unknownJoints.length > 0) {
     const tbodyId = "joints-list-unknown";
-    const headerHtml = [selectAllHtml, "操作", "継手名", "種別(内部値)", "ピン(内部値)", "部材カウント", "情報"]
+    const headerHtml = [selectAllHtml, "継手名", "種別(内部値)", "ピン(内部値)", "部材カウント", "情報"]
       .map((col) => `<th class="px-4 py-3 whitespace-nowrap">${col}</th>`).join("");
 
     html += `
@@ -3010,13 +3011,12 @@ export const renderJointsList = (project) => {
 
             return `
                 <tr class="item-row bg-red-50 dark:bg-transparent hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors" data-id="${joint.id}">
-                    <td class="px-3 py-3 text-center border-b border-r ${borderColor} ${darkBorderColor}">
-                        <input type="checkbox" class="item-checkbox w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer" data-id="${joint.id}" data-type="joint">
-                    </td>
-                    <td class="px-4 py-3 text-center border-b border-r ${borderColor} ${darkBorderColor}">
-                        <div class="flex justify-center gap-2 whitespace-nowrap">
-                            <button data-id="${joint.id}" class="edit-joint-btn text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 font-semibold">編集</button>
-                            <button data-id="${joint.id}" class="delete-joint-btn text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300 font-semibold">削除</button>
+                    <td class="px-3 py-3 border-b border-r ${borderColor} ${darkBorderColor}">
+                        <div class="flex items-center justify-center gap-3">
+                            <input type="checkbox" class="item-checkbox w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer" data-id="${joint.id}" data-type="joint">
+                            <button data-id="${joint.id}" class="edit-joint-btn text-slate-500 hover:text-blue-600 dark:text-slate-400 dark:hover:text-blue-400 transition-colors" title="編集">
+                                ${editIconSvg}
+                            </button>
                         </div>
                     </td>
                     <td class="px-4 py-3 font-medium text-gray-900 dark:text-gray-100 border-b border-r js-searchable-name ${borderColor} ${darkBorderColor}">${joint.name}${colorBadge}</td>
@@ -3032,7 +3032,7 @@ export const renderJointsList = (project) => {
     }
   });
 
-// 描画後、一括削除フローティングバーを隠す
+  // 描画後、一括削除フローティングバーを隠す
   const bulkBar = document.getElementById('bulk-delete-bar');
   if (bulkBar) {
       bulkBar.classList.add("translate-y-24", "opacity-0", "pointer-events-none");
@@ -3087,7 +3087,7 @@ export const openEditMemberModal = (memberId) => {
 };
 
 /**
- * 部材リストを描画する（ソート・階層フィルタリング付き）
+ * 部材リストを描画する（ソート・階層フィルタリング付き・編集アイコン統合版）
  */
 export const renderMemberLists = (project) => {
   if (!project) return;
@@ -3095,7 +3095,6 @@ export const renderMemberLists = (project) => {
   const tabsContainer = document.getElementById("member-list-tabs");
   if (!container || !tabsContainer) return;
 
-  // ヘッダークリックイベント
   if (!container.dataset.listenerAdded) {
     container.addEventListener("click", (e) => {
       const th = e.target.closest("th[data-sort-key]");
@@ -3119,7 +3118,6 @@ export const renderMemberLists = (project) => {
     container.dataset.listenerAdded = "true";
   }
 
-  // 1. 階層タブ生成
   const levels = getProjectLevels(project);
   let tabsHtml = `<button class="level-tab-btn px-3 py-1 rounded-full text-sm font-bold transition-colors border ${state.activeMemberLevel === "all" ? "bg-blue-600 text-white border-blue-600" : "bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-300 dark:border-slate-600 hover:bg-slate-100"}" data-level="all">全て</button>`;
 
@@ -3137,7 +3135,6 @@ export const renderMemberLists = (project) => {
     });
   });
 
-  // 2. 部材データのフィルタリング
   const jointsMap = new Map(project.joints.map((j) => [j.id, j]));
   const allMembers = [
     ...(project.members || []).map((m) => ({ ...m, isMember: true })),
@@ -3151,7 +3148,8 @@ export const renderMemberLists = (project) => {
       return m.targetLevels.includes(state.activeMemberLevel);
    });
 
-  // テーブル行生成ヘルパー
+  const editIconSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>`;
+
   const populateMemberTable = (tbodyId, members, color) => {
     const tbody = document.getElementById(tbodyId);
     if (!tbody) return;
@@ -3163,10 +3161,15 @@ export const renderMemberLists = (project) => {
         const isPin = joint.isPinJoint || false;
         const colorBadge = joint.color ? `<span class="inline-block w-3 h-3 rounded-full ml-2 border border-gray-400" style="background-color: ${joint.color}; vertical-align: middle;"></span>` : "";
 
-        let actionsHtml = member.isMember
-          ? `<button data-id="${member.id}" class="edit-member-btn text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 font-semibold">編集</button>
-             <button data-id="${member.id}" class="delete-member-btn text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300 font-semibold">削除</button>`
-          : `<button data-joint-id="${member.jointId}" class="edit-joint-btn text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 font-semibold">継手編集</button>`;
+        // 編集ボタン（アイコン化）
+        let editBtnHtml = member.isMember
+          ? `<button data-id="${member.id}" class="edit-member-btn text-slate-500 hover:text-blue-600 dark:text-slate-400 dark:hover:text-blue-400 transition-colors" title="部材を編集">${editIconSvg}</button>`
+          : `<button data-joint-id="${member.jointId}" class="edit-joint-btn text-emerald-600 hover:text-emerald-800 dark:text-emerald-400 dark:hover:text-emerald-300 transition-colors" title="元の継手を編集">${editIconSvg}</button>`;
+
+        // チェックボックス
+        const checkboxHtml = member.isMember 
+          ? `<input type="checkbox" class="item-checkbox w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer" data-id="${member.id}" data-type="member">`
+          : `<span class="w-4 h-4 inline-flex items-center justify-center text-gray-400 cursor-help" title="継手マスターで「部材としてカウント」されているデータは一括削除できません">-</span>`;
 
         let boltInfo = "";
         if (joint.isComplexSpl && joint.webInputs) {
@@ -3223,18 +3226,13 @@ export const renderMemberLists = (project) => {
           floorBadge = '<span class="text-xs bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 px-1 rounded ml-2">全</span>';
         }
 
-        // ▼▼▼ 追加: チェックボックス要素を判別するための属性 ▼▼▼
-        const checkboxHtml = member.isMember 
-          ? `<input type="checkbox" class="item-checkbox w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer" data-id="${member.id}" data-type="member">`
-          : `<span class="text-xs text-gray-400" title="継手マスターで「部材としてカウント」されているデータは一括削除できません">-</span>`;
-
         return `
             <tr class="item-row bg-${color}-50 dark:bg-slate-800/50 hover:bg-${color}-100 dark:hover:bg-slate-700/50 transition-colors" data-id="${member.id}">
-                <td class="px-3 py-3 text-center border-b border-r ${borderColor} ${darkBorderColor}">
-                    ${checkboxHtml}
-                </td>
-                <td class="px-4 py-3 text-center border-b border-r ${borderColor} ${darkBorderColor}">
-                    <div class="flex justify-center gap-2 whitespace-nowrap">${actionsHtml}</div>
+                <td class="px-3 py-3 border-b border-r ${borderColor} ${darkBorderColor}">
+                    <div class="flex items-center justify-center gap-3">
+                        <div class="flex items-center justify-center w-4">${checkboxHtml}</div>
+                        ${editBtnHtml}
+                    </div>
                 </td>
                 <td class="px-4 py-3 font-medium text-gray-900 dark:text-gray-100 border-b border-r js-searchable-name ${borderColor} ${darkBorderColor}">
                     ${member.name}${floorBadge}
@@ -3248,20 +3246,21 @@ export const renderMemberLists = (project) => {
       }).join("");
   };
 
-  const selectAllHtml = '<input type="checkbox" class="select-all-checkbox w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer">';
+  const selectAllHtml = '<input type="checkbox" class="select-all-checkbox w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer" title="全選択/解除">';
 
+  // 操作列を削除
   const memberSections = [
-    { type: "girder", isPin: false, title: "部材 - 大梁", color: "blue", cols: [{ label: selectAllHtml, key: null }, { label: "操作", key: null }, { label: "部材名", key: "name" }, { label: "使用継手", key: "jointName" }, { label: "フランジ", key: "flange" }, { label: "ウェブ", key: "web" }, { label: "仮ボルト(フランジ)", key: "temp-flange" }, { label: "仮ボルト(ウェブ)", key: "temp-web" }] },
-    { type: "girder", isPin: true, title: "部材 - 大梁 (ピン取り)", color: "cyan", cols: [{ label: selectAllHtml, key: null }, { label: "操作", key: null }, { label: "部材名", key: "name" }, { label: "使用継手", key: "jointName" }, { label: "ウェブ", key: "web" }, { label: "仮ボルト", key: "temp-web" }] },
-    { type: "beam", isPin: false, title: "部材 - 小梁", color: "green", cols: [{ label: selectAllHtml, key: null }, { label: "操作", key: null }, { label: "部材名", key: "name" }, { label: "使用継手", key: "jointName" }, { label: "フランジ", key: "flange" }, { label: "ウェブ", key: "web" }, { label: "仮ボルト(フランジ)", key: "temp-flange" }, { label: "仮ボルト(ウェブ)", key: "temp-web" }] },
-    { type: "beam", isPin: true, title: "部材 - 小梁 (ピン取り)", color: "teal", cols: [{ label: selectAllHtml, key: null }, { label: "操作", key: null }, { label: "部材名", key: "name" }, { label: "使用継手", key: "jointName" }, { label: "ウェブ", key: "web" }, { label: "仮ボルト", key: "temp-web" }] },
-    { type: "column", isPin: false, title: "部材 - 本柱", color: "red", cols: [{ label: selectAllHtml, key: null }, { label: "操作", key: null }, { label: "部材名", key: "name" }, { label: "使用継手", key: "jointName" }, { label: "エレクション", key: "bolt" }] },
-    { type: "stud", isPin: false, title: "部材 - 間柱", color: "indigo", cols: [{ label: selectAllHtml, key: null }, { label: "操作", key: null }, { label: "部材名", key: "name" }, { label: "使用継手", key: "jointName" }, { label: "フランジボルト", key: "flange" }, { label: "ウェブボルト", key: "web" }, { label: "仮ボルト(フランジ)", key: "temp-flange" }, { label: "仮ボルト(ウェブ)", key: "temp-web" }] },
-    { type: "stud", isPin: true, title: "部材 - 間柱 (ピン取り)", color: "purple", cols: [{ label: selectAllHtml, key: null }, { label: "操作", key: null }, { label: "部材名", key: "name" }, { label: "使用継手", key: "jointName" }, { label: "ボルトサイズ", key: "bolt" }, { label: "仮ボルト", key: "temp-web" }] },
-    { type: "wall_girt", isPin: false, title: "部材 - 胴縁", color: "gray", cols: [{ label: selectAllHtml, key: null }, { label: "操作", key: null }, { label: "部材名", key: "name" }, { label: "使用継手", key: "jointName" }, { label: "ボルトサイズ", key: "bolt" }] },
-    { type: "roof_purlin", isPin: false, title: "部材 - 母屋", color: "orange", cols: [{ label: selectAllHtml, key: null }, { label: "操作", key: null }, { label: "部材名", key: "name" }, { label: "使用継手", key: "jointName" }, { label: "ボルトサイズ", key: "bolt" }] },
-    { type: "other", isPin: false, title: "部材 - その他", color: "amber", cols: [{ label: selectAllHtml, key: null }, { label: "操作", key: null }, { label: "部材名", key: "name" }, { label: "使用継手", key: "jointName" }, { label: "フランジ", key: "flange" }, { label: "ウェブ", key: "web" }, { label: "仮ボルト(フランジ)", key: "temp-flange" }, { label: "仮ボルト(ウェブ)", key: "temp-web" }] },
-    { type: "other", isPin: true, title: "部材 - その他 (ピン取り)", color: "amber", cols: [{ label: selectAllHtml, key: null }, { label: "操作", key: null }, { label: "部材名", key: "name" }, { label: "使用継手", key: "jointName" }, { label: "ボルト", key: "bolt" }, { label: "仮ボルト", key: "temp-web" }] },
+    { type: "girder", isPin: false, title: "部材 - 大梁", color: "blue", cols: [{ label: selectAllHtml, key: null }, { label: "部材名", key: "name" }, { label: "使用継手", key: "jointName" }, { label: "フランジ", key: "flange" }, { label: "ウェブ", key: "web" }, { label: "仮ボルト(フランジ)", key: "temp-flange" }, { label: "仮ボルト(ウェブ)", key: "temp-web" }] },
+    { type: "girder", isPin: true, title: "部材 - 大梁 (ピン取り)", color: "cyan", cols: [{ label: selectAllHtml, key: null }, { label: "部材名", key: "name" }, { label: "使用継手", key: "jointName" }, { label: "ウェブ", key: "web" }, { label: "仮ボルト", key: "temp-web" }] },
+    { type: "beam", isPin: false, title: "部材 - 小梁", color: "green", cols: [{ label: selectAllHtml, key: null }, { label: "部材名", key: "name" }, { label: "使用継手", key: "jointName" }, { label: "フランジ", key: "flange" }, { label: "ウェブ", key: "web" }, { label: "仮ボルト(フランジ)", key: "temp-flange" }, { label: "仮ボルト(ウェブ)", key: "temp-web" }] },
+    { type: "beam", isPin: true, title: "部材 - 小梁 (ピン取り)", color: "teal", cols: [{ label: selectAllHtml, key: null }, { label: "部材名", key: "name" }, { label: "使用継手", key: "jointName" }, { label: "ウェブ", key: "web" }, { label: "仮ボルト", key: "temp-web" }] },
+    { type: "column", isPin: false, title: "部材 - 本柱", color: "red", cols: [{ label: selectAllHtml, key: null }, { label: "部材名", key: "name" }, { label: "使用継手", key: "jointName" }, { label: "エレクション", key: "bolt" }] },
+    { type: "stud", isPin: false, title: "部材 - 間柱", color: "indigo", cols: [{ label: selectAllHtml, key: null }, { label: "部材名", key: "name" }, { label: "使用継手", key: "jointName" }, { label: "フランジボルト", key: "flange" }, { label: "ウェブボルト", key: "web" }, { label: "仮ボルト(フランジ)", key: "temp-flange" }, { label: "仮ボルト(ウェブ)", key: "temp-web" }] },
+    { type: "stud", isPin: true, title: "部材 - 間柱 (ピン取り)", color: "purple", cols: [{ label: selectAllHtml, key: null }, { label: "部材名", key: "name" }, { label: "使用継手", key: "jointName" }, { label: "ボルトサイズ", key: "bolt" }, { label: "仮ボルト", key: "temp-web" }] },
+    { type: "wall_girt", isPin: false, title: "部材 - 胴縁", color: "gray", cols: [{ label: selectAllHtml, key: null }, { label: "部材名", key: "name" }, { label: "使用継手", key: "jointName" }, { label: "ボルトサイズ", key: "bolt" }] },
+    { type: "roof_purlin", isPin: false, title: "部材 - 母屋", color: "orange", cols: [{ label: selectAllHtml, key: null }, { label: "部材名", key: "name" }, { label: "使用継手", key: "jointName" }, { label: "ボルトサイズ", key: "bolt" }] },
+    { type: "other", isPin: false, title: "部材 - その他", color: "amber", cols: [{ label: selectAllHtml, key: null }, { label: "部材名", key: "name" }, { label: "使用継手", key: "jointName" }, { label: "フランジ", key: "flange" }, { label: "ウェブ", key: "web" }, { label: "仮ボルト(フランジ)", key: "temp-flange" }, { label: "仮ボルト(ウェブ)", key: "temp-web" }] },
+    { type: "other", isPin: true, title: "部材 - その他 (ピン取り)", color: "amber", cols: [{ label: selectAllHtml, key: null }, { label: "部材名", key: "name" }, { label: "使用継手", key: "jointName" }, { label: "ボルト", key: "bolt" }, { label: "仮ボルト", key: "temp-web" }] },
   ];
 
   let html = "";
@@ -3318,7 +3317,7 @@ export const renderMemberLists = (project) => {
       const hasComplexSpl = filteredMembers.some((m) => m.joint.isComplexSpl);
       if (hasComplexSpl && section.isPin) {
         finalCols = [
-          { label: selectAllHtml, key: null }, { label: "操作", key: null }, { label: "部材名", key: "name" }, { label: "使用継手", key: "jointName" },
+          { label: selectAllHtml, key: null }, { label: "部材名", key: "name" }, { label: "使用継手", key: "jointName" },
           { label: "ウェブ (複合SPL)", key: "web_complex" }, { label: "仮ボルト (複合SPL)", key: "temp_web_complex" },
         ];
       }
@@ -3353,7 +3352,7 @@ export const renderMemberLists = (project) => {
 
   sectionsToRender.forEach((s) => populateMemberTable(s.tbodyId, s.filteredMembers, s.color, s.section));
 
-// 描画後、一括削除フローティングバーを隠す
+  // 描画後、一括削除フローティングバーを隠す
   const bulkBar = document.getElementById('bulk-delete-bar');
   if (bulkBar) {
       bulkBar.classList.add("translate-y-24", "opacity-0", "pointer-events-none");
