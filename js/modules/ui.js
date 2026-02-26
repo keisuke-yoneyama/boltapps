@@ -4266,6 +4266,8 @@ export const renderResults = (project) => {
  */
 export const switchTab = (tabName) => {
   const elements = {
+    btnToTally: document.getElementById("fab-nav-tally-btn"),
+    btnToJoints: document.getElementById("fab-nav-joints-btn"),
     jointsSection: document.getElementById("joints-section"),
     tallySection: document.getElementById("tally-section"),
     navTabJoints: document.getElementById("nav-tab-joints"),
@@ -4313,8 +4315,8 @@ export const switchTab = (tabName) => {
     if (elements.navTabTally) elements.navTabTally.classList.add("active");
     if (elements.mobileNavTabTally) elements.mobileNavTabTally.classList.add("active");
     // ▼▼▼ 追加: FAB内のボタン切り替え ▼▼▼
-    if (btnToTally) btnToTally.classList.add("hidden");
-    if (btnToJoints) btnToJoints.classList.remove("hidden");
+    if (elements.btnToTally) btnToTally.classList.add("hidden");
+    if (elements.btnToJoints) btnToJoints.classList.remove("hidden");
     // 「入力と集計」に切り替わった時に一括削除の状態をリセット
     if (typeof resetBulkDeleteState === "function") {
         resetBulkDeleteState();
