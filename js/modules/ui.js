@@ -5215,31 +5215,50 @@ export const renderBulkMemberInputs = (count, currentValues = []) => {
 //   );
 // };
 
-// ヘルパー関数: リンクボタンの作成
-// ヘルパー関数: リンクボタンの作成 (マスターFAB対応版)
-const addQuickNavLink = (text, onClick, extraClasses = "", container) => {
+/**
+ * ヘルパー関数: リンクボタンの作成 (マスターFAB対応版)
+ */
+const addQuickNavLink = (text, onClick, container, colorName = "gray") => {
   if (!container) return;
+  
   const btn = document.createElement("button");
   btn.textContent = text;
-  // w-full と truncate を入れておくと文字が溢れても綺麗です
-  btn.className = `text-left w-full px-4 py-3 text-sm font-bold rounded-md transition-colors truncate border-l-2 border-transparent ${extraClasses}`;
+  // 基本的なレイアウト設定
+  btn.className = `text-left w-full px-4 py-3 text-sm font-bold rounded-md transition-all truncate border-l-4 mb-1 hover:bg-slate-100 dark:hover:bg-slate-700 flex items-center justify-between`;
 
-  if (!extraClasses.includes("text-")) {
-    btn.classList.add(
-      "text-slate-700",
-      "dark:text-slate-200",
-      "hover:bg-slate-100",
-      "dark:hover:bg-slate-700",
-      "hover:border-indigo-500"
-    );
+  // Tailwindの動的クラス問題を回避するため、直接色を定義
+  const colorMap = {
+    blue: { text: "#1d4ed8", bg: "#eff6ff", darkText: "#60a5fa" },
+    cyan: { text: "#0e7490", bg: "#ecfeff", darkText: "#22d3ee" },
+    green: { text: "#15803d", bg: "#f0fdf4", darkText: "#4ade80" },
+    teal: { text: "#0f766e", bg: "#f0fdfa", darkText: "#2dd4bf" },
+    indigo: { text: "#4338ca", bg: "#eef2ff", darkText: "#818cf8" },
+    purple: { text: "#7e22ce", bg: "#faf5ff", darkText: "#c084fc" },
+    red: { text: "#b91c1c", bg: "#fef2f2", darkText: "#f87171" },
+    orange: { text: "#c2410c", bg: "#fff7ed", darkText: "#fb923c" },
+    amber: { text: "#b45309", bg: "#fffbeb", darkText: "#fbbf24" },
+    gray: { text: "#374151", bg: "#f9fafb", darkText: "#9ca3af" },
+    slate: { text: "#334155", bg: "#f8fafc", darkText: "#94a3b8" }
+  };
+
+  const theme = colorMap[colorName] || colorMap.slate;
+
+  // インラインスタイルで確実に色を適用
+  btn.style.color = theme.text;
+  btn.style.borderLeftColor = theme.text;
+  
+  // ダークモード時の色調整（CSS変数などを利用していない場合、JSで判定するかCSSで制御）
+  if (document.documentElement.classList.contains('dark')) {
+    btn.style.color = theme.darkText;
   }
 
   btn.addEventListener("click", () => {
     onClick();
-    // マスターFABのトグルボタンを探して、クリックイベントを発火させて閉じる
+    // マスターFABを閉じる
     const masterFabToggle = document.getElementById("master-fab-toggle");
     if (masterFabToggle) masterFabToggle.click();
   });
+  
   container.appendChild(btn);
 };
 
@@ -5637,55 +5656,65 @@ export const resetBulkDeleteState = () => {
 
 
 /**
- * セクション移動（目次）のリンクを更新する
+ * セクション移動（目次）のリンクを動的に生成して更新する
  */
 export function updateQuickNavLinks() {
   const linksContainer = document.getElementById("quick-nav-links");
   if (!linksContainer) return;
 
-  // 中身を一度空にする
   linksContainer.innerHTML = "";
 
   // 1. 固定リンク: 一番上へ
   addQuickNavLink(
     "↑ ページ最上部へ",
     () => window.scrollTo({ top: 0, behavior: "smooth" }),
-    "text-blue-600 dark:text-blue-400 border-blue-500 mb-2 bg-blue-50/50 dark:bg-blue-900/20",
-    linksContainer
+    linksContainer,
+    "blue"
   );
 
-  // 2. 動的リンク: 各セクション (data-section-title を持っている要素)
-  const sections = Array.from(document.querySelectorAll("div[data-section-title]")).filter(el => {
-    return !el.closest(".hidden");
-  });
+  // 2. タブに応じて対象セクションを取得
+  let targets = [];
+  if (state.activeTab === "joints") {
+    // 継手・部材リスト内のアンカーを探す
+    targets = Array.from(document.querySelectorAll(
+      '#joint-lists-container [id^="anchor-"], #member-lists-container [id^="anchor-"]'
+    )).filter(el => !el.closest(".hidden"));
+  } else if (state.activeTab === "tally") {
+    // 箇所数入力カードと、結果の内訳セクションを探す
+    const tallyCard = document.getElementById("tally-card");
+    const resultSections = Array.from(document.querySelectorAll(
+      "#results-card-content [data-section-title]"
+    ));
+    if (tallyCard && !tallyCard.classList.contains("hidden")) {
+      targets = [tallyCard, ...resultSections];
+    }
+  }
 
-  if (sections.length === 0) {
-    const emptyMsg = document.createElement("div");
-    emptyMsg.className = "text-xs text-slate-500 p-4 text-center";
-    emptyMsg.textContent = "表示中のセクションはありません";
-    linksContainer.appendChild(emptyMsg);
-  } else {
-    sections.forEach(sec => {
-      const title = sec.dataset.sectionTitle;
-      const color = sec.dataset.sectionColor || "slate"; // セクションに設定された色を取得
-      
+  // 3. 各セクションへのリンク生成
+  if (targets.length > 0) {
+    targets.forEach((section) => {
+      const title = section.dataset.sectionTitle || (section.id === "tally-card" ? "箇所数入力" : "セクション");
+      const color = section.dataset.sectionColor || "gray";
+
       addQuickNavLink(
         title,
-        () => sec.scrollIntoView({ behavior: "smooth", block: "start" }),
-        `hover:text-${color}-600 dark:hover:text-${color}-400 hover:border-${color}-500`, 
-        linksContainer
+        () => section.scrollIntoView({ behavior: "smooth", block: "start" }),
+        linksContainer,
+        color
       );
     });
+  } else {
+    const p = document.createElement("p");
+    p.textContent = "移動先がありません";
+    p.className = "text-xs text-gray-500 p-4 text-center";
+    linksContainer.appendChild(p);
   }
-    // 3. ページ最下部へ
+
+  // 4. ▼▼▼ 追加：固定リンク: 一番下へ ▼▼▼
   addQuickNavLink(
-    "▼ ページ最下部へ",
-    () =>
-      window.scrollTo({
-        top: document.body.scrollHeight,
-        behavior: "smooth",
-      }),
-    "bg-gray-100 dark:bg-slate-700 font-bold border-t border-gray-200 dark:border-slate-600 mt-1",
+    "↓ ページ最下部へ",
+    () => window.scrollTo({ top: document.body.scrollHeight, behavior: "smooth" }),
     linksContainer,
+    "blue"
   );
 }
