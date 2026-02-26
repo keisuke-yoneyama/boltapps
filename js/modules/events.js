@@ -297,10 +297,10 @@ function setupFloatingFABBottunEvents() {
     });
   }
 
-  // 2. 画面の他の場所をクリックしたら閉じる
-  document.addEventListener("click", (e) => {
-    closeFabIfOutside(e.target);
-  });
+  // // 2. 画面の他の場所をクリックしたら閉じる
+  // document.addEventListener("click", (e) => {
+  //   closeFabIfOutside(e.target);
+  // });
 
   // 3. 継手登録ボタン (fab-add-joint)
   const fabAddJoint = document.getElementById("fab-add-joint");
