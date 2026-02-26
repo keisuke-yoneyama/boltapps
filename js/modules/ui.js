@@ -5147,73 +5147,73 @@ export const renderBulkMemberInputs = (count, currentValues = []) => {
 //   }
 // };
 
-/**
- * ナビゲーションリンクを生成する
- */
-export const updateQuickNavLinks = () => {
-  const quickNavLinks = document.getElementById("quick-nav-links");
-  if (!quickNavLinks) return;
+// /**
+//  * ナビゲーションリンクを生成する
+//  */
+// export const updateQuickNavLinks = () => {
+//   const quickNavLinks = document.getElementById("quick-nav-links");
+//   if (!quickNavLinks) return;
 
-  quickNavLinks.innerHTML = "";
+//   quickNavLinks.innerHTML = "";
 
-  // 1. ページトップへ
-  addQuickNavLink(
-    "▲ ページトップへ",
-    () => window.scrollTo({ top: 0, behavior: "smooth" }),
-    "bg-gray-100 dark:bg-slate-700 font-bold border-b border-gray-200 dark:border-slate-600",
-    quickNavLinks,
-  );
+//   // 1. ページトップへ
+//   addQuickNavLink(
+//     "▲ ページトップへ",
+//     () => window.scrollTo({ top: 0, behavior: "smooth" }),
+//     "bg-gray-100 dark:bg-slate-700 font-bold border-b border-gray-200 dark:border-slate-600",
+//     quickNavLinks,
+//   );
 
-  // 2. タブに応じて対象セクションを取得
-  let targets = [];
-  if (state.activeTab === "joints") {
-    targets = document.querySelectorAll(
-      '#joint-lists-container [id^="anchor-"], #member-lists-container [id^="anchor-"]',
-    );
-  } else if (state.activeTab === "tally") {
-    const tallyCard = document.getElementById("tally-card");
-    const resultSections = document.querySelectorAll(
-      "#results-card-content [data-section-title]",
-    );
-    if (tallyCard && !tallyCard.classList.contains("hidden")) {
-      targets = [tallyCard, ...resultSections];
-    }
-  }
+//   // 2. タブに応じて対象セクションを取得
+//   let targets = [];
+//   if (state.activeTab === "joints") {
+//     targets = document.querySelectorAll(
+//       '#joint-lists-container [id^="anchor-"], #member-lists-container [id^="anchor-"]',
+//     );
+//   } else if (state.activeTab === "tally") {
+//     const tallyCard = document.getElementById("tally-card");
+//     const resultSections = document.querySelectorAll(
+//       "#results-card-content [data-section-title]",
+//     );
+//     if (tallyCard && !tallyCard.classList.contains("hidden")) {
+//       targets = [tallyCard, ...resultSections];
+//     }
+//   }
 
-  if (targets.length > 0) {
-    targets.forEach((section) => {
-      const title = section.dataset.sectionTitle || "セクション";
-      const color = section.dataset.sectionColor || "gray";
-      const colorClass = `text-${color}-700 dark:text-${color}-300 hover:bg-${color}-50 dark:hover:bg-${color}-900/30`;
+//   if (targets.length > 0) {
+//     targets.forEach((section) => {
+//       const title = section.dataset.sectionTitle || "セクション";
+//       const color = section.dataset.sectionColor || "gray";
+//       const colorClass = `text-${color}-700 dark:text-${color}-300 hover:bg-${color}-50 dark:hover:bg-${color}-900/30`;
 
-      addQuickNavLink(
-        title,
-        () => {
-          section.scrollIntoView({ behavior: "smooth", block: "start" });
-        },
-        colorClass,
-        quickNavLinks,
-      );
-    });
-  } else {
-    const p = document.createElement("p");
-    p.textContent = "移動先がありません";
-    p.className = "text-xs text-gray-500 p-2";
-    quickNavLinks.appendChild(p);
-  }
+//       addQuickNavLink(
+//         title,
+//         () => {
+//           section.scrollIntoView({ behavior: "smooth", block: "start" });
+//         },
+//         colorClass,
+//         quickNavLinks,
+//       );
+//     });
+//   } else {
+//     const p = document.createElement("p");
+//     p.textContent = "移動先がありません";
+//     p.className = "text-xs text-gray-500 p-2";
+//     quickNavLinks.appendChild(p);
+//   }
 
-  // 3. ページ最下部へ
-  addQuickNavLink(
-    "▼ ページ最下部へ",
-    () =>
-      window.scrollTo({
-        top: document.body.scrollHeight,
-        behavior: "smooth",
-      }),
-    "bg-gray-100 dark:bg-slate-700 font-bold border-t border-gray-200 dark:border-slate-600 mt-1",
-    quickNavLinks,
-  );
-};
+//   // 3. ページ最下部へ
+//   addQuickNavLink(
+//     "▼ ページ最下部へ",
+//     () =>
+//       window.scrollTo({
+//         top: document.body.scrollHeight,
+//         behavior: "smooth",
+//       }),
+//     "bg-gray-100 dark:bg-slate-700 font-bold border-t border-gray-200 dark:border-slate-600 mt-1",
+//     quickNavLinks,
+//   );
+// };
 
 // ヘルパー関数: リンクボタンの作成
 const addQuickNavLink = (text, onClick, extraClasses = "", container) => {
