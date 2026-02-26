@@ -4017,7 +4017,7 @@ function setupTallyClipboardEvents() {
   });
 }
 /**
- * 検索機能のセットアップ (VSCode風)
+ * 検索機能のセットアップ (VSCode風・スマホ対応・状態維持・確実な画面判定版)
  */
 export function setupSearchFunctionality() {
   const widget = document.getElementById("search-widget");
@@ -4030,43 +4030,56 @@ export function setupSearchFunctionality() {
   const closeBtn = document.getElementById("search-close-btn");
   const fabTrigger = document.getElementById("fab-search-trigger");
   
-  // 戻るボタンの取得
   const backBtn = document.getElementById("nav-back-to-list-btn");
   const mobileBackBtn = document.getElementById("mobile-nav-back-to-list-btn");
 
-  if (!widget || !input) return;
+  // HTML要素が存在しない場合は警告を出して終了
+  if (!widget || !input) {
+      console.error("⚠️ 検索ウィジェットのHTML要素が見つかりません。index.htmlに追加されているか確認してください。");
+      return;
+  }
 
-  // 状態管理
-  let matches = []; // ヒットしたDOM要素の配列
+  let matches = [];
   let currentIndex = -1;
   let isOpen = false;
 
-  // ▼▼▼ 修正: 1. & 2. 検索が有効な画面かどうか判定する関数 ▼▼▼
+  // --- 1. 検索が有効な画面かどうか判定する関数 (強化版) ---
   const isSearchAllowed = () => {
     const detailView = document.getElementById("project-detail-view");
     const jointsSection = document.getElementById("joints-section");
-    // プロジェクト詳細画面であり、かつ継手/部材セクションが表示されている場合のみ許可
-    return detailView && detailView.classList.contains("active") && 
-           jointsSection && !jointsSection.classList.contains("hidden");
+    
+    if (!detailView || !jointsSection) return false;
+
+    // クラスの有無だけでなく、実際に画面に要素が描画されているか (offsetWidth > 0) で確実な判定を行う
+    const isDetailActive = detailView.classList.contains("active") || detailView.offsetWidth > 0;
+    const isJointsVisible = !jointsSection.classList.contains("hidden") && jointsSection.offsetWidth > 0;
+
+    // デバッグログ: F12コンソールで判定結果を確認できます
+    console.log("🔍 [検索許可判定]", { 
+        isDetailActive: isDetailActive, 
+        isJointsVisible: isJointsVisible 
+    });
+
+    return isDetailActive && isJointsVisible;
   };
-  // ▲▲▲ 修正ここまで ▲▲▲
 
-  // --- 1. ウィジェットの開閉 ---
+  // --- 2. ウィジェットの開閉 ---
   const openSearch = () => {
-    if (!isSearchAllowed()) return; // ▼▼▼ 修正: 許可されていない画面なら開かない ▼▼▼
-
+    if (!isSearchAllowed()) {
+        console.log("🚫 現在の画面では検索窓の起動がブロックされました");
+        return;
+    }
     isOpen = true;
     widget.classList.add("open");
     input.focus();
     input.select();
-    performSearch(input.value); // 開いたときに再検索
+    performSearch(input.value);
   };
 
   const closeSearch = () => {
     isOpen = false;
     widget.classList.remove("open");
     clearHighlights();
-    // フォーカスを外す
     input.blur();
   };
 
@@ -4078,7 +4091,7 @@ export function setupSearchFunctionality() {
   // FABクリック
   if (fabTrigger) {
     fabTrigger.addEventListener("click", () => {
-       // ▼▼▼ 修正: 許可されていない画面でFABが押された場合は無視 ▼▼▼
+       console.log("🔘 検索FABがクリックされました");
        if (!isSearchAllowed()) return;
        toggleSearch();
     });
@@ -4087,7 +4100,6 @@ export function setupSearchFunctionality() {
   // キーボードショートカット (Ctrl+F, Esc)
   document.addEventListener("keydown", (e) => {
     if ((e.ctrlKey || e.metaKey) && e.key === "f") {
-      // ▼▼▼ 修正: 許可されている画面のみブラウザ標準検索を無効化してウィジェットを開く ▼▼▼
       if (isSearchAllowed()) {
         e.preventDefault();
         openSearch();
@@ -4099,17 +4111,40 @@ export function setupSearchFunctionality() {
     }
   });
 
-  // --- 2. 検索ロジック ---
-  // ハイライトを解除
+  // --- 3. 画面遷移やタブ切り替え時の処理 ---
+  const forceCloseBtns = [
+    document.getElementById("nav-back-to-list-btn"),
+    document.getElementById("mobile-nav-back-to-list-btn"),
+    document.getElementById("nav-tab-tally"),
+    document.getElementById("mobile-nav-tab-tally")
+  ];
+  forceCloseBtns.forEach(btn => {
+    if (btn) btn.addEventListener("click", closeSearch);
+  });
+
+  const toggleViews = [
+    document.getElementById("switch-view-joints"),
+    document.getElementById("switch-view-members")
+  ];
+  toggleViews.forEach(btn => {
+    if (btn) {
+      btn.addEventListener("click", () => {
+        if (isOpen) {
+          setTimeout(() => {
+            performSearch(input.value);
+          }, 50); 
+        }
+      });
+    }
+  });
+
+  // --- 4. 検索ロジック ---
   const clearHighlights = () => {
     document.querySelectorAll(".search-highlight").forEach((el) => {
-      // 元のテキストに戻す (単純な置き換えだとイベントリスナーが壊れる可能性があるため、クラス削除で対応したいが、
-      // テキストノード置換を行っているため、親要素のinnerHTMLを復元するのはリスクがある。
-      // ここでは span タグを解除する処理を行う)
       const parent = el.parentNode;
       if (parent) {
         parent.replaceChild(document.createTextNode(el.textContent), el);
-        parent.normalize(); // 隣接するテキストノードを結合
+        parent.normalize();
       }
     });
     matches = [];
@@ -4117,98 +4152,83 @@ export function setupSearchFunctionality() {
     updateCountUI();
   };
 
-  // 検索実行
   const performSearch = (query) => {
     clearHighlights();
-
+    
     if (!query || query.trim() === "") {
-      updateCountUI();
-      return;
+        updateCountUI();
+        return;
     }
 
     const lowerQuery = query.toLowerCase();
-
-    // 現在表示されているエリアを判定 (継手 or 部材)
+    
     const jointsArea = document.getElementById("view-joints-area");
     const membersArea = document.getElementById("view-members-area");
-
+    
     let targetContainer = null;
-    if (jointsArea && !jointsArea.classList.contains("hidden")) {
-      targetContainer = document.getElementById("joint-lists-container");
-    } else if (membersArea && !membersArea.classList.contains("hidden")) {
-      targetContainer = document.getElementById("member-lists-container");
+    if (jointsArea && jointsArea.offsetWidth > 0) {
+        targetContainer = document.getElementById("joint-lists-container");
+    } else if (membersArea && membersArea.offsetWidth > 0) {
+        targetContainer = document.getElementById("member-lists-container");
     }
 
     if (!targetContainer) return;
 
-    // 名前クラスを持つ要素だけを取得
-    // ▼▼▼ 修正: querySelectorAll の使い方を修正 (ターゲットが明確になるように) ▼▼▼
-    const nameElements = targetContainer.querySelectorAll(".js-searchable-name");
+    const nameElements = targetContainer.querySelectorAll('.js-searchable-name');
+    
+    nameElements.forEach(element => {
+        const walker = document.createTreeWalker(
+            element,
+            NodeFilter.SHOW_TEXT,
+            {
+                acceptNode: (node) => {
+                    if (!node.nodeValue.trim()) return NodeFilter.FILTER_REJECT;
+                    return NodeFilter.FILTER_ACCEPT;
+                }
+            }
+        );
 
-    nameElements.forEach((element) => {
-      // 要素内のテキストノードを探索 (TreeWalkerを使用)
-      // ※要素内にさらにタグがある場合にも対応するためTreeWalkerを使います
-      const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT, {
-        acceptNode: (node) => {
-          if (!node.nodeValue.trim()) return NodeFilter.FILTER_REJECT;
-          return NodeFilter.FILTER_ACCEPT;
-        },
-      });
+        const textNodes = [];
+        while (walker.nextNode()) textNodes.push(walker.currentNode);
 
-      const textNodes = [];
-      while (walker.nextNode()) textNodes.push(walker.currentNode);
-
-      // マッチする箇所をハイライト
-      textNodes.forEach((node) => {
-        const text = node.nodeValue;
-        const index = text.toLowerCase().indexOf(lowerQuery);
-
-        if (index !== -1) {
-          // マッチした場合、spanタグで囲む
-          const span = document.createElement("span");
-          span.className = "search-highlight";
-          span.textContent = text.substr(index, query.length);
-
-          const before = document.createTextNode(text.substr(0, index));
-          const after = document.createTextNode(
-            text.substr(index + query.length),
-          );
-
-          const parent = node.parentNode;
-          parent.insertBefore(before, node);
-          parent.insertBefore(span, before.nextSibling);
-          parent.insertBefore(after, span.nextSibling);
-          parent.removeChild(node);
-
-          matches.push(span);
-        }
-      });
+        textNodes.forEach(node => {
+            const text = node.nodeValue;
+            const index = text.toLowerCase().indexOf(lowerQuery);
+            
+            if (index !== -1) {
+                const span = document.createElement('span');
+                span.className = 'search-highlight';
+                span.textContent = text.substr(index, query.length);
+                
+                const before = document.createTextNode(text.substr(0, index));
+                const after = document.createTextNode(text.substr(index + query.length));
+                
+                const parent = node.parentNode;
+                parent.insertBefore(before, node);
+                parent.insertBefore(span, before.nextSibling);
+                parent.insertBefore(after, span.nextSibling);
+                parent.removeChild(node);
+                
+                matches.push(span);
+            }
+        });
     });
-    // ▲▲▲ 修正ここまで ▲▲▲
 
     if (matches.length > 0) {
-      currentIndex = 0;
-      highlightCurrent();
+        currentIndex = 0;
+        highlightCurrent();
     }
-
+    
     updateCountUI();
   };
 
-  // --- 3. ナビゲーション (次へ/前へ) ---
+  // --- 5. ナビゲーション (次へ/前へ) ---
   const highlightCurrent = () => {
-    // 全てのactiveクラスを除去
-    matches.forEach((m) => m.classList.remove("active"));
-
+    matches.forEach(m => m.classList.remove('active'));
     if (currentIndex >= 0 && currentIndex < matches.length) {
-      const current = matches[currentIndex];
-      current.classList.add("active");
-
-      // スクロール (スムーズに)
-      current.scrollIntoView({
-        behavior: "smooth",
-        block: "center",
-        inline: "center",
-      });
+        const current = matches[currentIndex];
+        current.classList.add('active');
+        current.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' });
     }
     updateCountUI();
   };
@@ -4227,31 +4247,25 @@ export function setupSearchFunctionality() {
 
   const updateCountUI = () => {
     if (matches.length > 0) {
-      countDisplay.classList.remove("hidden");
-      currentSpan.textContent = currentIndex + 1;
-      totalSpan.textContent = matches.length;
-      prevBtn.disabled = false;
-      nextBtn.disabled = false;
+        countDisplay.classList.remove('hidden');
+        currentSpan.textContent = currentIndex + 1;
+        totalSpan.textContent = matches.length;
+        prevBtn.disabled = false;
+        nextBtn.disabled = false;
     } else {
-      countDisplay.classList.add("hidden");
-      prevBtn.disabled = true;
-      nextBtn.disabled = true;
+        countDisplay.classList.add('hidden');
+        prevBtn.disabled = true;
+        nextBtn.disabled = true;
     }
   };
 
-  // --- イベントリスナー登録 ---
+  input.addEventListener("input", (e) => performSearch(e.target.value));
 
-  // 入力イベント (Debounceなしで即時反応させるのがVSCode流)
-  input.addEventListener("input", (e) => {
-    performSearch(e.target.value);
-  });
-
-  // Enterキーで次へ/前へ
   input.addEventListener("keydown", (e) => {
     if (e.key === "Enter") {
-      e.preventDefault();
-      if (e.shiftKey) prevMatch();
-      else nextMatch();
+        e.preventDefault();
+        if (e.shiftKey) prevMatch();
+        else nextMatch();
     }
   });
 
@@ -4259,45 +4273,11 @@ export function setupSearchFunctionality() {
   nextBtn.addEventListener("click", nextMatch);
   closeBtn.addEventListener("click", closeSearch);
 
-  // 一覧に戻るボタンが押されたら検索バーを閉じる
-  if (backBtn) {
-    backBtn.addEventListener("click", closeSearch);
-  }
-  if (mobileBackBtn) {
-    mobileBackBtn.addEventListener("click", closeSearch);
-  }
-
-  // ▼▼▼ 追加: 入力と集計タブが押されたら検索バーを閉じる ▼▼▼
-  const tallyTab = document.getElementById("nav-tab-tally");
-  const mobileTallyTab = document.getElementById("mobile-nav-tab-tally");
-  if (tallyTab) tallyTab.addEventListener("click", closeSearch);
-  if (mobileTallyTab) mobileTallyTab.addEventListener("click", closeSearch);
-  // ▲▲▲ 追加ここまで ▲▲▲
-
-  // ▼▼▼ 追加: 4. 継手⇔部材のトグル切り替え時の再検索 ▼▼▼
-  const switchJointsBtn = document.getElementById("switch-view-joints");
-  const switchMembersBtn = document.getElementById("switch-view-members");
-  
-  const handleToggleReSearch = () => {
-      if (isOpen) {
-          // DOMの切り替え（hiddenの着脱）が完了するのを少し待ってから検索を実行
-          setTimeout(() => {
-              performSearch(input.value);
-          }, 50);
-      }
-  };
-
-  if (switchJointsBtn) switchJointsBtn.addEventListener("click", handleToggleReSearch);
-  if (switchMembersBtn) switchMembersBtn.addEventListener("click", handleToggleReSearch);
-  // ▲▲▲ 追加ここまで ▲▲▲
-
-
-  // --- 4. ドラッグ機能 (スマホ対応版に修正) ---
+  // --- 6. ドラッグ機能 (スマホ対応) ---
   const handle = widget.querySelector(".drag-handle");
   let isDragging = false;
   let startX, startY, initialLeft, initialTop;
 
-  // ▼▼▼ 修正: 3. タッチイベントとマウスイベントの座標取得を共通化 ▼▼▼
   const getCoords = (e) => {
     if (e.touches && e.touches.length > 0) {
       return { x: e.touches[0].clientX, y: e.touches[0].clientY };
@@ -4311,32 +4291,21 @@ export function setupSearchFunctionality() {
     startX = coords.x;
     startY = coords.y;
 
-    // 現在の位置を取得 (computed style)
     const rect = widget.getBoundingClientRect();
     initialLeft = rect.left;
     initialTop = rect.top;
 
-    // fixed配置なので、位置をstyleに直接書き込む準備
-    widget.style.right = "auto"; // right指定を解除
+    widget.style.right = "auto"; 
     widget.style.left = `${initialLeft}px`;
     widget.style.top = `${initialTop}px`;
 
     document.body.style.cursor = "move";
-    
-    // スマホでの予期せぬスクロールを防ぐ
-    if (e.type === 'touchstart') {
-       // e.preventDefault(); を入れると、ハンドル内の他の操作がブロックされることがあるが、
-       // ドラッグハンドル専用なら入れておく方が安定する
-       e.preventDefault(); 
-    }
+    if (e.type === 'touchstart') e.preventDefault(); 
   };
 
   const onDragMove = (e) => {
     if (!isDragging) return;
-    
-    // 画面スクロールやテキスト選択を防ぐ
     e.preventDefault(); 
-    
     const coords = getCoords(e);
     const dx = coords.x - startX;
     const dy = coords.y - startY;
@@ -4349,14 +4318,11 @@ export function setupSearchFunctionality() {
     document.body.style.cursor = "default";
   };
 
-  // マウスイベント (PC)
   handle.addEventListener("mousedown", onDragStart);
   document.addEventListener("mousemove", onDragMove);
   document.addEventListener("mouseup", onDragEnd);
 
-  // タッチイベント (スマホ) - passive: false を指定して preventDefault() を有効にする
   handle.addEventListener("touchstart", onDragStart, { passive: false });
   document.addEventListener("touchmove", onDragMove, { passive: false });
   document.addEventListener("touchend", onDragEnd);
-  // ▲▲▲ 修正ここまで ▲▲▲
 }
