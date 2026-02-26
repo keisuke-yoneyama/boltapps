@@ -5686,6 +5686,6 @@ export function updateQuickNavLinks() {
         behavior: "smooth",
       }),
     "bg-gray-100 dark:bg-slate-700 font-bold border-t border-gray-200 dark:border-slate-600 mt-1",
-    quickNavLinks,
+    linksContainer,
   );
 }
