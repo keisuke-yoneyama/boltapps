@@ -161,6 +161,8 @@ export function setupEventListeners() {
   setupGlobalActionEvents(); //汎用アクション確認モーダル（実行・キャンセル）のイベント設定
 
   setupSearchFunctionality(); //検索機能イベント
+
+  setupBulkDeleteEvents(); //一括削除イベント
 }
 
 //登録用フローティングボタンイベント
@@ -1743,7 +1745,6 @@ function setupDeleteExecutionEvents() {
 
   if (confirmDeleteBtn) {
     confirmDeleteBtn.addEventListener("click", () => {
-      // DOM要素の取得チェック
       if (!deleteIdInput || !deleteTypeInput || !confirmDeleteModal) return;
 
       const id = deleteIdInput.value;
@@ -1753,70 +1754,87 @@ function setupDeleteExecutionEvents() {
       // ▼ パターン1：プロジェクト自体の削除
       if (type === "project") {
         deleteProject(id)
-          .then(() => {
-            // プロジェクト削除時はリスナー側で画面更新（リストから除外）が必要な場合がありますが
-            // 通常はリアルタイムリスナーか、または手動でリスト更新を呼び出すと良いです。
-            // ここではエラー時のアラートのみ実装されています。
-          })
           .catch((err) => {
             console.error(err);
             showCustomAlert("工事の削除に失敗しました。");
           });
-
         closeModal(confirmDeleteModal);
         return;
       }
 
-      // ▼ パターン2：継手・部材の削除 (楽観的UI)
       const projectIndex = state.projects.findIndex((p) => p.id === projectId);
       if (projectIndex === -1) {
         closeModal(confirmDeleteModal);
         return;
       }
 
+      // ▼▼▼ パターン3：一括削除 (新規追加) ▼▼▼
+      if (type === "bulk") {
+          let joints = [...state.projects[projectIndex].joints];
+          let members = [...(state.projects[projectIndex].members || [])];
+          let deleteCount = 0;
+
+          state.bulkDeleteTargets.forEach(target => {
+              if (target.type === 'joint') {
+                  joints = joints.filter(j => j.id !== target.id);
+                  deleteCount++;
+              } else if (target.type === 'member') {
+                  members = members.filter(m => m.id !== target.id);
+                  deleteCount++;
+              }
+          });
+
+          state.projects[projectIndex].joints = joints;
+          state.projects[projectIndex].members = members;
+          
+          showToast(`${deleteCount} 件のデータを一括削除しました。`);
+          renderDetailView();
+          
+          // 削除完了後にボタンを隠す
+          const bulkDeleteBtn = document.getElementById("bulk-delete-btn");
+          if (bulkDeleteBtn) {
+              bulkDeleteBtn.classList.add("hidden");
+              bulkDeleteBtn.classList.remove("flex");
+          }
+
+          closeModal(confirmDeleteModal);
+          
+          updateProjectData(projectId, { joints, members }).catch(err => {
+              showCustomAlert("削除に失敗しました。ページをリロードして確認してください。");
+              console.error("一括削除に失敗:", err);
+          });
+          
+          state.bulkDeleteTargets = null;
+          return;
+      }
+      // ▲▲▲ パターン3 ここまで ▲▲▲
+
+      // ▼ パターン2：継手・部材の単独削除 (元の処理)
       let updateData = {};
       let deletedItemName = "";
 
       if (type === "joint") {
-        const joint = state.projects[projectIndex].joints.find(
-          (j) => j.id === id,
-        );
+        const joint = state.projects[projectIndex].joints.find((j) => j.id === id);
         if (joint) deletedItemName = joint.name;
-
-        // 手順A: ローカルデータの書き換え
-        const updatedJoints = state.projects[projectIndex].joints.filter(
-          (j) => j.id !== id,
-        );
+        const updatedJoints = state.projects[projectIndex].joints.filter((j) => j.id !== id);
         state.projects[projectIndex].joints = updatedJoints;
         updateData = { joints: updatedJoints };
         showToast(`継手「${deletedItemName}」を削除しました。`);
       } else if (type === "member") {
-        const member = state.projects[projectIndex].members.find(
-          (m) => m.id === id,
-        );
+        const member = state.projects[projectIndex].members.find((m) => m.id === id);
         if (member) deletedItemName = member.name;
-
-        // 手順A: ローカルデータの書き換え
-        const updatedMembers = (
-          state.projects[projectIndex].members || []
-        ).filter((m) => m.id !== id);
+        const updatedMembers = (state.projects[projectIndex].members || []).filter((m) => m.id !== id);
         state.projects[projectIndex].members = updatedMembers;
         updateData = { members: updatedMembers };
         showToast(`部材「${deletedItemName}」を削除しました。`);
       }
 
-      // 手順B: 画面再描画 (ui.jsからインポート)
       renderDetailView();
-
-      // 手順C: モーダルを閉じる
       closeModal(confirmDeleteModal);
 
-      // 手順D: DB保存処理
       if (Object.keys(updateData).length > 0) {
         updateProjectData(projectId, updateData).catch((err) => {
-          showCustomAlert(
-            "削除に失敗しました。ページをリロードして確認してください。",
-          );
+          showCustomAlert("削除に失敗しました。ページをリロードして確認してください。");
           console.error("削除に失敗:", err);
         });
       }
@@ -4398,4 +4416,107 @@ export function setupSearchFunctionality() {
   handle.addEventListener("touchstart", onDragStart, { passive: false });
   document.addEventListener("touchmove", onDragMove, { passive: false });
   document.addEventListener("touchend", onDragEnd);
+}
+
+/**
+ * 一括削除（複数選択）機能のイベント設定
+ */
+function setupBulkDeleteEvents() {
+    const bulkDeleteBtn = document.getElementById("bulk-delete-btn");
+    const bulkDeleteCount = document.getElementById("bulk-delete-count");
+    
+    // UIを更新する関数（件数表示と背景色の変更）
+    const updateBulkDeleteUI = () => {
+        const checkedBoxes = document.querySelectorAll(".item-checkbox:checked");
+        const count = checkedBoxes.length;
+        
+        // ボタンの表示切替
+        if (bulkDeleteBtn && bulkDeleteCount) {
+            if (count > 0) {
+                bulkDeleteBtn.classList.remove("hidden");
+                bulkDeleteBtn.classList.add("flex");
+                bulkDeleteCount.textContent = count;
+            } else {
+                bulkDeleteBtn.classList.add("hidden");
+                bulkDeleteBtn.classList.remove("flex");
+            }
+        }
+        
+        // 行のハイライトを更新
+        document.querySelectorAll(".item-row").forEach(row => {
+            const checkbox = row.querySelector(".item-checkbox");
+            if (checkbox && checkbox.checked) {
+                row.classList.add("!bg-yellow-100", "dark:!bg-yellow-900/40");
+            } else {
+                row.classList.remove("!bg-yellow-100", "dark:!bg-yellow-900/40");
+            }
+        });
+    };
+
+    // リストコンテナ内のクリックイベント（イベント委譲）
+    const handleCheckboxChange = (e) => {
+        // 全選択チェックボックスの場合
+        if (e.target.classList.contains("select-all-checkbox")) {
+            const table = e.target.closest("table");
+            if (table) {
+                const isChecked = e.target.checked;
+                table.querySelectorAll(".item-checkbox").forEach(cb => {
+                    cb.checked = isChecked;
+                });
+            }
+            updateBulkDeleteUI();
+        }
+        // 個別チェックボックスの場合
+        else if (e.target.classList.contains("item-checkbox")) {
+            const table = e.target.closest("table");
+            if (table) {
+                const allCheckboxes = table.querySelectorAll(".item-checkbox");
+                const allChecked = Array.from(allCheckboxes).every(cb => cb.checked);
+                const selectAllCb = table.querySelector(".select-all-checkbox");
+                if (selectAllCb) selectAllCb.checked = allChecked;
+            }
+            updateBulkDeleteUI();
+        }
+    };
+
+    // 継手と部材のリストコンテナにイベントを登録
+    const jointsContainer = document.getElementById("joint-lists-container");
+    const membersContainer = document.getElementById("member-lists-container");
+    
+    if (jointsContainer) jointsContainer.addEventListener("change", handleCheckboxChange);
+    if (membersContainer) membersContainer.addEventListener("change", handleCheckboxChange);
+
+    // 一括削除ボタンがクリックされた時（確認モーダルを表示）
+    if (bulkDeleteBtn) {
+        bulkDeleteBtn.addEventListener("click", () => {
+            const checkedBoxes = document.querySelectorAll(".item-checkbox:checked");
+            if (checkedBoxes.length === 0) return;
+
+            // 削除対象のIDと種類をリストアップ
+            const targets = Array.from(checkedBoxes).map(cb => ({
+                id: cb.dataset.id,
+                type: cb.dataset.type
+            }));
+
+            const confirmDeleteModal = document.getElementById("confirm-delete-modal");
+            const deleteTypeInput = document.getElementById("delete-type");
+            const confirmDeleteMessage = document.getElementById("confirm-delete-message");
+
+            if (confirmDeleteModal && deleteTypeInput && confirmDeleteMessage) {
+                deleteTypeInput.value = "bulk"; // 種類を bulk(一括) に設定
+                state.bulkDeleteTargets = targets; // 実行用に一時保存
+                
+                const jointCount = targets.filter(t => t.type === 'joint').length;
+                const memberCount = targets.filter(t => t.type === 'member').length;
+                
+                let msg = `選択された ${targets.length} 件のデータを削除しますか？\n`;
+                if (jointCount > 0) msg += `・継手: ${jointCount} 件\n`;
+                if (memberCount > 0) msg += `・部材: ${memberCount} 件\n`;
+                msg += `\n※データは復元できません。`;
+                
+                confirmDeleteMessage.textContent = msg;
+                openModal(confirmDeleteModal); // ui.js の関数を呼び出し
+            }
+        });
+    }
 }

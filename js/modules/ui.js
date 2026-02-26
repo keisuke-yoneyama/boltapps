@@ -2780,57 +2780,35 @@ export const populateBoltSelectorModal = (currentValue) => {
  */
 export const renderJointsList = (project) => {
   if (!project) return;
-
-  console.group("[DEBUG] renderJointsList Data Check");
-  console.log("Project Name:", project.name);
-  console.log("Joints Count:", project.joints ? project.joints.length : 0);
-  console.log("Members Count:", project.members ? project.members.length : 0);
-
-  if (!project.joints || project.joints.length === 0) {
-    console.warn("⚠️ Warning: This project has NO joints data to display.");
-  }
-  console.groupEnd();
-  // ▲▲▲ 追加ここまで ▲▲▲
-  // IDで要素を取得
   const container = document.getElementById("joint-lists-container");
   if (!container) return;
 
   const renderedJointIds = new Set();
 
-  // ヘッダークリックイベント (イベント委譲で1回だけ設定)
+  // ヘッダークリックイベント
   if (!container.dataset.listenerAdded) {
     container.addEventListener("click", (e) => {
       const th = e.target.closest("th[data-sort-key]");
       if (th) {
         const sectionDiv = th.closest("div[data-section-id]");
         if (!sectionDiv) return;
-
         const sectionId = sectionDiv.dataset.sectionId;
         const key = th.dataset.sortKey;
 
-        if (!state.sort[sectionId])
-          state.sort[sectionId] = { key: null, order: "asc" };
+        if (!state.sort[sectionId]) state.sort[sectionId] = { key: null, order: "asc" };
         const currentSort = state.sort[sectionId];
-
         if (currentSort.key === key) {
           currentSort.order = currentSort.order === "asc" ? "desc" : "asc";
         } else {
           currentSort.key = key;
           currentSort.order = "asc";
         }
-
-        // 再描画 (自分自身を呼び出す)
-        renderJointsList(
-          state.projects.find((p) => p.id === state.currentProjectId),
-        );
+        renderJointsList(state.projects.find((p) => p.id === state.currentProjectId));
       }
     });
     container.dataset.listenerAdded = "true";
   }
 
-  // ★ populateBoltSizeSelect は使用されていないため削除しました
-
-  // テーブルの中身（行）を作るヘルパー関数
   const populateTable = (tbodyId, joints, color) => {
     const tbody = document.getElementById(tbodyId);
     if (!tbody) return;
@@ -2846,279 +2824,103 @@ export const renderJointsList = (project) => {
           : "";
 
         let boltInfo = "";
+        const borderColor = "border-slate-400", darkBorderColor = "dark:border-slate-600";
         if (joint.isComplexSpl && joint.webInputs) {
-          const webInfo = joint.webInputs
-            .map((w) => `${w.size || "-"} / ${w.count}本`)
-            .join(",<br>");
-          boltInfo = `<td class="px-4 py-3 border-b border-r border-slate-400 dark:border-slate-600">${webInfo}</td>`;
+          const webInfo = joint.webInputs.map((w) => `${w.size || "-"} / ${w.count}本`).join(",<br>");
+          boltInfo = `<td class="px-4 py-3 border-b border-r ${borderColor} ${darkBorderColor}">${webInfo}</td>`;
         } else {
           const singleBoltTypes = ["column", "wall_girt", "roof_purlin"];
           if (singleBoltTypes.includes(joint.type)) {
-            boltInfo = `<td class="px-4 py-3 border-b border-r border-slate-400 dark:border-slate-600">${
-              joint.flangeSize || "-"
-            } / ${joint.flangeCount}本</td>`;
+            boltInfo = `<td class="px-4 py-3 border-b border-r ${borderColor} ${darkBorderColor}">${joint.flangeSize || "-"} / ${joint.flangeCount}本</td>`;
           } else if (isPin) {
-            boltInfo = `<td class="px-4 py-3 border-b border-r border-slate-400 dark:border-slate-600">${
-              joint.webSize || "-"
-            } / ${joint.webCount}本</td>`;
+            boltInfo = `<td class="px-4 py-3 border-b border-r ${borderColor} ${darkBorderColor}">${joint.webSize || "-"} / ${joint.webCount}本</td>`;
           } else {
-            boltInfo = `<td class="px-4 py-3 border-b border-r border-slate-400 dark:border-slate-600">${
-              joint.flangeSize || "-"
-            } / ${joint.flangeCount}本</td>
-                                                            <td class="px-4 py-3 border-b border-r border-slate-400 dark:border-slate-600">${
-                                                              joint.webSize ||
-                                                              "-"
-                                                            } / ${joint.webCount}本</td>`;
+            boltInfo = `<td class="px-4 py-3 border-b border-r ${borderColor} ${darkBorderColor}">${joint.flangeSize || "-"} / ${joint.flangeCount}本</td>
+                        <td class="px-4 py-3 border-b border-r ${borderColor} ${darkBorderColor}">${joint.webSize || "-"} / ${joint.webCount}本</td>`;
           }
         }
 
-        const borderColor = "border-slate-400",
-          darkBorderColor = "dark:border-slate-600";
-
-        // 仮ボルト情報の生成
         const tempBoltCells = (() => {
-          if (["wall_girt", "roof_purlin", "column"].includes(joint.type))
-            return "";
-
-          // calculator.js から import した関数を使用
+          if (["wall_girt", "roof_purlin", "column"].includes(joint.type)) return "";
           const tempBoltInfo = getTempBoltInfo(joint, project.tempBoltMap);
-
           if (joint.isComplexSpl) {
-            const webTempInfo = tempBoltInfo.webs
-              .map((info) => {
-                const className = info.text.includes("未設定")
-                  ? "text-red-600 font-bold"
-                  : "";
+            const webTempInfo = tempBoltInfo.webs.map((info) => {
+                const className = info.text.includes("未設定") ? "text-red-600 font-bold" : "";
                 return `<span class="${className}" title="${info.formula}">${info.text}</span>`;
-              })
-              .join(",<br>");
+              }).join(",<br>");
             return `<td class="px-4 py-3 text-center border-b border-r ${borderColor} ${darkBorderColor}">${webTempInfo}</td>`;
           }
-          const twoColumns =
-            ["girder", "beam", "other", "stud"].includes(joint.type) &&
-            !joint.isPinJoint;
+          const twoColumns = ["girder", "beam", "other", "stud"].includes(joint.type) && !joint.isPinJoint;
           if (twoColumns) {
-            const flangeClass = tempBoltInfo.flange.text.includes("未設定")
-              ? "text-red-600 font-bold"
-              : "";
-            const webClass = tempBoltInfo.web.text.includes("未設定")
-              ? "text-red-600 font-bold"
-              : "";
+            const flangeClass = tempBoltInfo.flange.text.includes("未設定") ? "text-red-600 font-bold" : "";
+            const webClass = tempBoltInfo.web.text.includes("未設定") ? "text-red-600 font-bold" : "";
             return `<td class="px-4 py-3 text-center border-b border-r ${borderColor} ${darkBorderColor} ${flangeClass}" title="${tempBoltInfo.flange.formula}">${tempBoltInfo.flange.text}</td>
-                                                                    <td class="px-4 py-3 text-center border-b border-r ${borderColor} ${darkBorderColor} ${webClass}" title="${tempBoltInfo.web.formula}">${tempBoltInfo.web.text}</td>`;
+                    <td class="px-4 py-3 text-center border-b border-r ${borderColor} ${darkBorderColor} ${webClass}" title="${tempBoltInfo.web.formula}">${tempBoltInfo.web.text}</td>`;
           } else {
-            const singleClass = tempBoltInfo.single.text.includes("未設定")
-              ? "text-red-600 font-bold"
-              : "";
+            const singleClass = tempBoltInfo.single.text.includes("未設定") ? "text-red-600 font-bold" : "";
             return `<td class="px-4 py-3 text-center border-b border-r ${borderColor} ${darkBorderColor} ${singleClass}" title="${tempBoltInfo.single.formula}">${tempBoltInfo.single.text}</td>`;
           }
         })();
 
         return `
-                                <tr class="bg-${color}-50 dark:bg-transparent hover:bg-${color}-100 dark:hover:bg-slate-700/50">
-                                    <td class="px-4 py-3 text-center border-b border-r ${borderColor} ${darkBorderColor}">
-                                        <div class="flex justify-center gap-2 whitespace-nowrap">
-                                            <button data-id="${joint.id}" class="edit-joint-btn text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 font-semibold">編集</button>
-                                            <button data-id="${joint.id}" class="delete-joint-btn text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300 font-semibold">削除</button>
-                                        </div>
-                                    </td>
-                                    <td class="px-4 py-3 font-medium text-gray-900 dark:text-gray-100 border-b border-r js-searchable-name ${borderColor} ${darkBorderColor}">
-                                        ${joint.name}${colorBadge}
-                                    </td>
-                                    ${boltInfo}
-                                    <td class="px-4 py-3 text-center border-b border-r ${borderColor} ${darkBorderColor}">${countAsMemberHtml}</td>
-                                    ${tempBoltCells}
-                                </tr>`;
-      })
-      .join("");
+            <tr class="item-row bg-${color}-50 dark:bg-transparent hover:bg-${color}-100 dark:hover:bg-slate-700/50 transition-colors" data-id="${joint.id}">
+                <td class="px-3 py-3 text-center border-b border-r ${borderColor} ${darkBorderColor}">
+                    <input type="checkbox" class="item-checkbox w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer" data-id="${joint.id}" data-type="joint">
+                </td>
+                <td class="px-4 py-3 text-center border-b border-r ${borderColor} ${darkBorderColor}">
+                    <div class="flex justify-center gap-2 whitespace-nowrap">
+                        <button data-id="${joint.id}" class="edit-joint-btn text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 font-semibold">編集</button>
+                        <button data-id="${joint.id}" class="delete-joint-btn text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300 font-semibold">削除</button>
+                    </div>
+                </td>
+                <td class="px-4 py-3 font-medium text-gray-900 dark:text-gray-100 border-b border-r js-searchable-name ${borderColor} ${darkBorderColor}">
+                    ${joint.name}${colorBadge}
+                </td>
+                ${boltInfo}
+                <td class="px-4 py-3 text-center border-b border-r ${borderColor} ${darkBorderColor}">${countAsMemberHtml}</td>
+                ${tempBoltCells}
+            </tr>`;
+      }).join("");
   };
 
+  const selectAllHtml = '<input type="checkbox" class="select-all-checkbox w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer">';
+
   const sections = [
-    {
-      type: "girder",
-      isPin: false,
-      title: "大梁",
-      color: "blue",
-      cols: [
-        { label: "操作", key: null },
-        { label: "継手名", key: "name" },
-        { label: "フランジ", key: "flange" },
-        { label: "ウェブ", key: "web" },
-        { label: "部材カウント", key: "countAsMember" },
-        { label: "仮ボルト(フランジ)", key: "temp-flange" },
-        { label: "仮ボルト(ウェブ)", key: "temp-web" },
-      ],
-    },
-    {
-      type: "girder",
-      isPin: true,
-      title: "大梁 (ピン取り)",
-      color: "cyan",
-      cols: [
-        { label: "操作", key: null },
-        { label: "継手名", key: "name" },
-        { label: "ウェブ", key: "web" },
-        { label: "部材カウント", key: "countAsMember" },
-        { label: "仮ボルト", key: "temp-web" },
-      ],
-    },
-    {
-      type: "beam",
-      isPin: false,
-      title: "小梁",
-      color: "green",
-      cols: [
-        { label: "操作", key: null },
-        { label: "継手名", key: "name" },
-        { label: "フランジ", key: "flange" },
-        { label: "ウェブ", key: "web" },
-        { label: "部材カウント", key: "countAsMember" },
-        { label: "仮ボルト(フランジ)", key: "temp-flange" },
-        { label: "仮ボルト(ウェブ)", key: "temp-web" },
-      ],
-    },
-    {
-      type: "beam",
-      isPin: true,
-      title: "小梁 (ピン取り)",
-      color: "teal",
-      cols: [
-        { label: "操作", key: null },
-        { label: "継手名", key: "name" },
-        { label: "ウェブ", key: "web" },
-        { label: "部材カウント", key: "countAsMember" },
-        { label: "仮ボルト", key: "temp-web" },
-      ],
-    },
-    {
-      type: "stud",
-      isPin: false,
-      title: "間柱",
-      color: "indigo",
-      cols: [
-        { label: "操作", key: null },
-        { label: "継手名", key: "name" },
-        { label: "フランジボルト", key: "flange" },
-        { label: "ウェブボルト", key: "web" },
-        { label: "部材カウント", key: "countAsMember" },
-        { label: "仮ボルト(フランジ)", key: "temp-flange" },
-        { label: "仮ボルト(ウェブ)", key: "temp-web" },
-      ],
-    },
-    {
-      type: "stud",
-      isPin: true,
-      title: "間柱 (ピン取り)",
-      color: "purple",
-      cols: [
-        { label: "操作", key: null },
-        { label: "継手名", key: "name" },
-        { label: "ボルトサイズ", key: "bolt" },
-        { label: "部材カウント", key: "countAsMember" },
-        { label: "仮ボルト", key: "temp-web" },
-      ],
-    },
-    {
-      type: "column",
-      isPin: false,
-      title: "本柱",
-      color: "red",
-      cols: [
-        { label: "操作", key: null },
-        { label: "継手名", key: "name" },
-        { label: "エレクション", key: "bolt" },
-        { label: "部材カウント", key: "countAsMember" },
-      ],
-    },
-    {
-      type: "wall_girt",
-      isPin: false,
-      title: "胴縁",
-      color: "gray",
-      cols: [
-        { label: "操作", key: null },
-        { label: "継手名", key: "name" },
-        { label: "ボルトサイズ", key: "bolt" },
-        { label: "部材カウント", key: "countAsMember" },
-      ],
-    },
-    {
-      type: "roof_purlin",
-      isPin: false,
-      title: "母屋",
-      color: "orange",
-      cols: [
-        { label: "操作", key: null },
-        { label: "継手名", key: "name" },
-        { label: "ボルトサイズ", key: "bolt" },
-        { label: "部材カウント", key: "countAsMember" },
-      ],
-    },
-    {
-      type: "other",
-      isPin: false,
-      title: "その他",
-      color: "amber",
-      cols: [
-        { label: "操作", key: null },
-        { label: "継手名", key: "name" },
-        { label: "フランジ", key: "flange" },
-        { label: "ウェブ", key: "web" },
-        { label: "部材カウント", key: "countAsMember" },
-        { label: "仮ボルト(フランジ)", key: "temp-flange" },
-        { label: "仮ボルト(ウェブ)", key: "temp-web" },
-      ],
-    },
-    {
-      type: "other",
-      isPin: true,
-      title: "その他 (ピン取り)",
-      color: "amber",
-      cols: [
-        { label: "操作", key: null },
-        { label: "継手名", key: "name" },
-        { label: "ボルト", key: "bolt" },
-        { label: "部材カウント", key: "countAsMember" },
-        { label: "仮ボルト", key: "temp-web" },
-      ],
-    },
+    { type: "girder", isPin: false, title: "大梁", color: "blue", cols: [{ label: selectAllHtml, key: null }, { label: "操作", key: null }, { label: "継手名", key: "name" }, { label: "フランジ", key: "flange" }, { label: "ウェブ", key: "web" }, { label: "部材カウント", key: "countAsMember" }, { label: "仮ボルト(フランジ)", key: "temp-flange" }, { label: "仮ボルト(ウェブ)", key: "temp-web" }] },
+    { type: "girder", isPin: true, title: "大梁 (ピン取り)", color: "cyan", cols: [{ label: selectAllHtml, key: null }, { label: "操作", key: null }, { label: "継手名", key: "name" }, { label: "ウェブ", key: "web" }, { label: "部材カウント", key: "countAsMember" }, { label: "仮ボルト", key: "temp-web" }] },
+    { type: "beam", isPin: false, title: "小梁", color: "green", cols: [{ label: selectAllHtml, key: null }, { label: "操作", key: null }, { label: "継手名", key: "name" }, { label: "フランジ", key: "flange" }, { label: "ウェブ", key: "web" }, { label: "部材カウント", key: "countAsMember" }, { label: "仮ボルト(フランジ)", key: "temp-flange" }, { label: "仮ボルト(ウェブ)", key: "temp-web" }] },
+    { type: "beam", isPin: true, title: "小梁 (ピン取り)", color: "teal", cols: [{ label: selectAllHtml, key: null }, { label: "操作", key: null }, { label: "継手名", key: "name" }, { label: "ウェブ", key: "web" }, { label: "部材カウント", key: "countAsMember" }, { label: "仮ボルト", key: "temp-web" }] },
+    { type: "stud", isPin: false, title: "間柱", color: "indigo", cols: [{ label: selectAllHtml, key: null }, { label: "操作", key: null }, { label: "継手名", key: "name" }, { label: "フランジボルト", key: "flange" }, { label: "ウェブボルト", key: "web" }, { label: "部材カウント", key: "countAsMember" }, { label: "仮ボルト(フランジ)", key: "temp-flange" }, { label: "仮ボルト(ウェブ)", key: "temp-web" }] },
+    { type: "stud", isPin: true, title: "間柱 (ピン取り)", color: "purple", cols: [{ label: selectAllHtml, key: null }, { label: "操作", key: null }, { label: "継手名", key: "name" }, { label: "ボルトサイズ", key: "bolt" }, { label: "部材カウント", key: "countAsMember" }, { label: "仮ボルト", key: "temp-web" }] },
+    { type: "column", isPin: false, title: "本柱", color: "red", cols: [{ label: selectAllHtml, key: null }, { label: "操作", key: null }, { label: "継手名", key: "name" }, { label: "エレクション", key: "bolt" }, { label: "部材カウント", key: "countAsMember" }] },
+    { type: "wall_girt", isPin: false, title: "胴縁", color: "gray", cols: [{ label: selectAllHtml, key: null }, { label: "操作", key: null }, { label: "継手名", key: "name" }, { label: "ボルトサイズ", key: "bolt" }, { label: "部材カウント", key: "countAsMember" }] },
+    { type: "roof_purlin", isPin: false, title: "母屋", color: "orange", cols: [{ label: selectAllHtml, key: null }, { label: "操作", key: null }, { label: "継手名", key: "name" }, { label: "ボルトサイズ", key: "bolt" }, { label: "部材カウント", key: "countAsMember" }] },
+    { type: "other", isPin: false, title: "その他", color: "amber", cols: [{ label: selectAllHtml, key: null }, { label: "操作", key: null }, { label: "継手名", key: "name" }, { label: "フランジ", key: "flange" }, { label: "ウェブ", key: "web" }, { label: "部材カウント", key: "countAsMember" }, { label: "仮ボルト(フランジ)", key: "temp-flange" }, { label: "仮ボルト(ウェブ)", key: "temp-web" }] },
+    { type: "other", isPin: true, title: "その他 (ピン取り)", color: "amber", cols: [{ label: selectAllHtml, key: null }, { label: "操作", key: null }, { label: "継手名", key: "name" }, { label: "ボルト", key: "bolt" }, { label: "部材カウント", key: "countAsMember" }, { label: "仮ボルト", key: "temp-web" }] },
   ];
 
   let html = "";
   const sectionsToRender = [];
   sections.forEach((section) => {
-    const filteredJoints = project.joints.filter(
-      (j) =>
-        j.type === section.type && (j.isPinJoint || false) === section.isPin,
-    );
+    const filteredJoints = project.joints.filter((j) => j.type === section.type && (j.isPinJoint || false) === section.isPin);
     if (filteredJoints.length > 0) {
       filteredJoints.forEach((j) => renderedJointIds.add(j.id));
-
-      const tbodyId = `joints-list-${section.type}${
-        section.isPin ? "-pin" : ""
-      }`;
+      const tbodyId = `joints-list-${section.type}${section.isPin ? "-pin" : ""}`;
       let finalCols = section.cols;
       if (filteredJoints.some((j) => j.isComplexSpl)) {
         if (section.isPin) {
           finalCols = [
-            { label: "操作", key: null },
-            { label: "継手名", key: "name" },
-            { label: "ウェブ (複合SPL)", key: "web_complex" },
-            { label: "部材カウント", key: "countAsMember" },
-            { label: "仮ボルト (複合SPL)", key: "temp_web_complex" },
+            { label: selectAllHtml, key: null }, { label: "操作", key: null }, { label: "継手名", key: "name" },
+            { label: "ウェブ (複合SPL)", key: "web_complex" }, { label: "部材カウント", key: "countAsMember" }, { label: "仮ボルト (複合SPL)", key: "temp_web_complex" }
           ];
         }
       }
 
-      const sectionId = `joint-${section.type}-${
-        section.isPin ? "pin" : "rigid"
-      }`;
+      const sectionId = `joint-${section.type}-${section.isPin ? "pin" : "rigid"}`;
       const sortState = state.sort[sectionId];
-
       if (sortState && sortState.key) {
         filteredJoints.sort((a, b) => {
           const key = sortState.key;
-
           if (key === "name") {
             if (a.name < b.name) return sortState.order === "asc" ? -1 : 1;
             if (a.name > b.name) return sortState.order === "asc" ? 1 : -1;
@@ -3128,129 +2930,72 @@ export const renderJointsList = (project) => {
             const sizeB = key === "flange" ? b.flangeSize : b.webSize;
             const cmp = boltSort(sizeA || "", sizeB || "");
             if (cmp !== 0) return sortState.order === "asc" ? cmp : -cmp;
-
             const countA = key === "flange" ? a.flangeCount : a.webCount;
             const countB = key === "flange" ? b.flangeCount : b.webCount;
-            return sortState.order === "asc"
-              ? countA - countB
-              : countB - countA;
+            return sortState.order === "asc" ? countA - countB : countB - countA;
           } else if (key === "bolt") {
             const sizeA = a.flangeSize || a.webSize || "";
             const sizeB = b.flangeSize || b.webSize || "";
-            const cmp = boltSort(sizeA, sizeB);
-            return sortState.order === "asc" ? cmp : -cmp;
+            return sortState.order === "asc" ? boltSort(sizeA, sizeB) : -boltSort(sizeA, sizeB);
           } else if (key === "countAsMember") {
-            const valA = a.countAsMember ? 1 : 0;
-            const valB = b.countAsMember ? 1 : 0;
-            return sortState.order === "asc" ? valA - valB : valB - valA;
+            return sortState.order === "asc" ? (a.countAsMember?1:0) - (b.countAsMember?1:0) : (b.countAsMember?1:0) - (a.countAsMember?1:0);
           } else if (key === "web_complex") {
-            const getFirstSize = (j) => {
-              if (j.isComplexSpl && j.webInputs && j.webInputs.length > 0) {
-                return { size: j.webInputs[0].size, isComplex: true };
-              }
-              return { size: j.webSize || "", isComplex: false };
-            };
-
-            const infoA = getFirstSize(a);
-            const infoB = getFirstSize(b);
-
-            if (infoA.isComplex !== infoB.isComplex) {
-              const valA = infoA.isComplex ? 1 : 0;
-              const valB = infoB.isComplex ? 1 : 0;
-              return sortState.order === "asc" ? valA - valB : valB - valA;
-            }
-
+            const getFirstSize = (j) => j.isComplexSpl && j.webInputs && j.webInputs.length > 0 ? { size: j.webInputs[0].size, isComplex: true } : { size: j.webSize || "", isComplex: false };
+            const infoA = getFirstSize(a), infoB = getFirstSize(b);
+            if (infoA.isComplex !== infoB.isComplex) return sortState.order === "asc" ? (infoA.isComplex?1:0) - (infoB.isComplex?1:0) : (infoB.isComplex?1:0) - (infoA.isComplex?1:0);
             const cmp = boltSort(infoA.size, infoB.size);
             if (cmp !== 0) return sortState.order === "asc" ? cmp : -cmp;
-
-            const strA = a.webInputs
-              ? a.webInputs.map((w) => `${w.size}-${w.count}`).join(",")
-              : "";
-            const strB = b.webInputs
-              ? b.webInputs.map((w) => `${w.size}-${w.count}`).join(",")
-              : "";
-            if (strA < strB) return sortState.order === "asc" ? -1 : 1;
-            if (strA > strB) return sortState.order === "asc" ? 1 : -1;
             return 0;
           }
         });
       }
 
-      const headerHtml = finalCols
-        .map((col) => {
-          let sortIcon = "";
-          let cursorClass = "";
-          let dataAttr = "";
+      const headerHtml = finalCols.map((col) => {
+          let sortIcon = "", cursorClass = "", dataAttr = "";
           if (col.key) {
-            cursorClass =
-              "cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors";
+            cursorClass = "cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors";
             dataAttr = `data-sort-key="${col.key}"`;
-            if (sortState && sortState.key === col.key) {
-              sortIcon = sortState.order === "asc" ? " ▲" : " ▼";
-            }
+            if (sortState && sortState.key === col.key) sortIcon = sortState.order === "asc" ? " ▲" : " ▼";
           }
           return `<th class="px-4 py-3 whitespace-nowrap ${cursorClass}" ${dataAttr}>${col.label}${sortIcon}</th>`;
-        })
-        .join("");
+        }).join("");
 
-      const anchorId = `anchor-joint-${section.type}-${
-        section.isPin ? "pin" : "rigid"
-      }`;
-
+      const anchorId = `anchor-joint-${section.type}-${section.isPin ? "pin" : "rigid"}`;
       html += `
-                        <div id="${anchorId}" class="rounded-lg border border-slate-400 dark:border-slate-600 scroll-mt-24" data-section-title="継手：${section.title}" data-section-color="${section.color}" data-section-id="${sectionId}">
-                            <h3 class="text-lg font-semibold bg-${section.color}-200 text-${section.color}-800 dark:bg-slate-700 dark:text-${section.color}-300 px-4 py-2 rounded-t-lg">${section.title}</h3>
-                            <div class="overflow-x-auto custom-scrollbar bg-slate-50 dark:bg-slate-800 rounded-b-lg">
-                                <table class="w-full min-w-[400px] text-sm text-left">
-                                    <thead class="bg-${section.color}-100 text-${section.color}-700 dark:bg-slate-700/50 dark:text-${section.color}-300 text-xs"><tr>${headerHtml}</tr></thead>
-                                    <tbody id="${tbodyId}"></tbody>
-                                </table>
-                            </div>
-                        </div>`;
-      sectionsToRender.push({
-        tbodyId,
-        filteredJoints,
-        color: section.color,
-      });
+        <div id="${anchorId}" class="rounded-lg border border-slate-400 dark:border-slate-600 scroll-mt-24" data-section-title="継手：${section.title}" data-section-color="${section.color}" data-section-id="${sectionId}">
+            <h3 class="text-lg font-semibold bg-${section.color}-200 text-${section.color}-800 dark:bg-slate-700 dark:text-${section.color}-300 px-4 py-2 rounded-t-lg">${section.title}</h3>
+            <div class="overflow-x-auto custom-scrollbar bg-slate-50 dark:bg-slate-800 rounded-b-lg">
+                <table class="w-full min-w-[400px] text-sm text-left">
+                    <thead class="bg-${section.color}-100 text-${section.color}-700 dark:bg-slate-700/50 dark:text-${section.color}-300 text-xs"><tr>${headerHtml}</tr></thead>
+                    <tbody id="${tbodyId}"></tbody>
+                </table>
+            </div>
+        </div>`;
+      sectionsToRender.push({ tbodyId, filteredJoints, color: section.color });
     }
   });
 
-  const unknownJoints = project.joints.filter(
-    (j) => !renderedJointIds.has(j.id),
-  );
+  const unknownJoints = project.joints.filter((j) => !renderedJointIds.has(j.id));
   if (unknownJoints.length > 0) {
     const tbodyId = "joints-list-unknown";
-    const headerHtml = [
-      "操作",
-      "継手名",
-      "種別(内部値)",
-      "ピン(内部値)",
-      "部材カウント",
-      "情報",
-    ]
-      .map((col) => `<th class="px-4 py-3 whitespace-nowrap">${col}</th>`)
-      .join("");
+    const headerHtml = [selectAllHtml, "操作", "継手名", "種別(内部値)", "ピン(内部値)", "部材カウント", "情報"]
+      .map((col) => `<th class="px-4 py-3 whitespace-nowrap">${col}</th>`).join("");
 
     html += `
-                    <div id="anchor-joint-unknown" class="rounded-lg border border-red-400 dark:border-red-600 scroll-mt-24" data-section-title="未分類・不整合データ" data-section-color="red">
-                        <h3 class="text-lg font-semibold bg-red-200 text-red-800 dark:bg-red-900 dark:text-red-100 px-4 py-2 rounded-t-lg flex items-center gap-2">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd" /></svg>
-                            未分類・不整合データ (編集して保存し直すか削除してください)
-                        </h3>
-                        <div class="overflow-x-auto custom-scrollbar bg-red-50 dark:bg-slate-900/50 rounded-b-lg">
-                            <table class="w-full min-w-[400px] text-sm text-left">
-                                <thead class="bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-200 text-xs"><tr>${headerHtml}</tr></thead>
-                                <tbody id="${tbodyId}"></tbody>
-                            </table>
-                        </div>
-                    </div>`;
+        <div id="anchor-joint-unknown" class="rounded-lg border border-red-400 dark:border-red-600 scroll-mt-24" data-section-title="未分類・不整合データ" data-section-color="red">
+            <h3 class="text-lg font-semibold bg-red-200 text-red-800 dark:bg-red-900 dark:text-red-100 px-4 py-2 rounded-t-lg flex items-center gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd" /></svg>
+                未分類・不整合データ
+            </h3>
+            <div class="overflow-x-auto custom-scrollbar bg-red-50 dark:bg-slate-900/50 rounded-b-lg">
+                <table class="w-full min-w-[400px] text-sm text-left">
+                    <thead class="bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-200 text-xs"><tr>${headerHtml}</tr></thead>
+                    <tbody id="${tbodyId}"></tbody>
+                </table>
+            </div>
+        </div>`;
 
-    sectionsToRender.push({
-      tbodyId,
-      filteredJoints: unknownJoints,
-      color: "red",
-      isUnknown: true,
-    });
+    sectionsToRender.push({ tbodyId, filteredJoints: unknownJoints, color: "red", isUnknown: true });
   }
   container.innerHTML = html;
 
@@ -3258,42 +3003,41 @@ export const renderJointsList = (project) => {
     if (s.isUnknown) {
       const tbody = document.getElementById(s.tbodyId);
       if (tbody) {
-        tbody.innerHTML = s.filteredJoints
-          .map((joint) => {
-            const countAsMemberHtml = joint.countAsMember
-              ? '<span class="text-green-600 font-bold">✔</span>'
-              : "-";
-            const typeName = joint.type;
-            const isPinText = joint.isPinJoint ? "ON" : "OFF";
-            const borderColor = "border-slate-400",
-              darkBorderColor = "dark:border-slate-600";
-            const colorBadge = joint.color
-              ? `<span class="inline-block w-3 h-3 rounded-full ml-2 border border-gray-400" style="background-color: ${joint.color}; vertical-align: middle;"></span>`
-              : "";
+        tbody.innerHTML = s.filteredJoints.map((joint) => {
+            const countAsMemberHtml = joint.countAsMember ? '<span class="text-green-600 font-bold">✔</span>' : "-";
+            const borderColor = "border-slate-400", darkBorderColor = "dark:border-slate-600";
+            const colorBadge = joint.color ? `<span class="inline-block w-3 h-3 rounded-full ml-2 border border-gray-400" style="background-color: ${joint.color}; vertical-align: middle;"></span>` : "";
 
             return `
-                                <tr class="bg-red-50 dark:bg-transparent hover:bg-red-100 dark:hover:bg-red-900/30">
-                                    <td class="px-4 py-3 text-center border-b border-r ${borderColor} ${darkBorderColor}">
-                                        <div class="flex justify-center gap-2 whitespace-nowrap">
-                                            <button data-id="${joint.id}" class="edit-joint-btn text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 font-semibold">編集</button>
-                                            <button data-id="${joint.id}" class="delete-joint-btn text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300 font-semibold">削除</button>
-                                        </div>
-                                    </td>
-                                    <td class="px-4 py-3 font-medium text-gray-900 dark:text-gray-100 border-b border-r js-searchable-name ${borderColor} ${darkBorderColor}">
-                                        ${joint.name}${colorBadge}
-                                    </td>
-                                    <td class="px-4 py-3 border-b border-r ${borderColor} ${darkBorderColor}">${typeName}</td>
-                                    <td class="px-4 py-3 border-b border-r ${borderColor} ${darkBorderColor}">${isPinText}</td>
-                                    <td class="px-4 py-3 text-center border-b border-r ${borderColor} ${darkBorderColor}">${countAsMemberHtml}</td>
-                                    <td class="px-4 py-3 text-xs border-b border-r ${borderColor} ${darkBorderColor} text-red-600 dark:text-red-400">種類と設定の不一致</td>
-                                </tr>`;
-          })
-          .join("");
+                <tr class="item-row bg-red-50 dark:bg-transparent hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors" data-id="${joint.id}">
+                    <td class="px-3 py-3 text-center border-b border-r ${borderColor} ${darkBorderColor}">
+                        <input type="checkbox" class="item-checkbox w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer" data-id="${joint.id}" data-type="joint">
+                    </td>
+                    <td class="px-4 py-3 text-center border-b border-r ${borderColor} ${darkBorderColor}">
+                        <div class="flex justify-center gap-2 whitespace-nowrap">
+                            <button data-id="${joint.id}" class="edit-joint-btn text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 font-semibold">編集</button>
+                            <button data-id="${joint.id}" class="delete-joint-btn text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300 font-semibold">削除</button>
+                        </div>
+                    </td>
+                    <td class="px-4 py-3 font-medium text-gray-900 dark:text-gray-100 border-b border-r js-searchable-name ${borderColor} ${darkBorderColor}">${joint.name}${colorBadge}</td>
+                    <td class="px-4 py-3 border-b border-r ${borderColor} ${darkBorderColor}">${joint.type}</td>
+                    <td class="px-4 py-3 border-b border-r ${borderColor} ${darkBorderColor}">${joint.isPinJoint ? "ON" : "OFF"}</td>
+                    <td class="px-4 py-3 text-center border-b border-r ${borderColor} ${darkBorderColor}">${countAsMemberHtml}</td>
+                    <td class="px-4 py-3 text-xs border-b border-r ${borderColor} ${darkBorderColor} text-red-600 dark:text-red-400">種類と設定の不一致</td>
+                </tr>`;
+          }).join("");
       }
     } else {
       populateTable(s.tbodyId, s.filteredJoints, s.color);
     }
   });
+
+  // 描画後、一括削除ボタンを隠す
+  const bulkBtn = document.getElementById('bulk-delete-btn');
+  if (bulkBtn) {
+      bulkBtn.classList.add('hidden');
+      bulkBtn.classList.remove('flex');
+  }
 };
 /**
  * 部材編集モーダルを開く（階層チェックボックス生成付き）
@@ -3348,38 +3092,29 @@ export const openEditMemberModal = (memberId) => {
  */
 export const renderMemberLists = (project) => {
   if (!project) return;
-
   const container = document.getElementById("member-lists-container");
   const tabsContainer = document.getElementById("member-list-tabs");
-
   if (!container || !tabsContainer) return;
 
-  // ヘッダークリックイベント (イベント委譲)
+  // ヘッダークリックイベント
   if (!container.dataset.listenerAdded) {
     container.addEventListener("click", (e) => {
       const th = e.target.closest("th[data-sort-key]");
       if (th) {
         const sectionDiv = th.closest("div[data-section-id]");
         if (!sectionDiv) return;
-
         const sectionId = sectionDiv.dataset.sectionId;
         const key = th.dataset.sortKey;
 
-        if (!state.sort[sectionId])
-          state.sort[sectionId] = { key: null, order: "asc" };
+        if (!state.sort[sectionId]) state.sort[sectionId] = { key: null, order: "asc" };
         const currentSort = state.sort[sectionId];
-
         if (currentSort.key === key) {
           currentSort.order = currentSort.order === "asc" ? "desc" : "asc";
         } else {
           currentSort.key = key;
           currentSort.order = "asc";
         }
-
-        // 再描画
-        renderMemberLists(
-          state.projects.find((p) => p.id === state.currentProjectId),
-        );
+        renderMemberLists(state.projects.find((p) => p.id === state.currentProjectId));
       }
     });
     container.dataset.listenerAdded = "true";
@@ -3387,20 +3122,13 @@ export const renderMemberLists = (project) => {
 
   // 1. 階層タブ生成
   const levels = getProjectLevels(project);
-  let tabsHtml = `<button class="level-tab-btn px-3 py-1 rounded-full text-sm font-bold transition-colors border ${
-    state.activeMemberLevel === "all"
-      ? "bg-blue-600 text-white border-blue-600"
-      : "bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-300 dark:border-slate-600 hover:bg-slate-100"
-  }" data-level="all">全て</button>`;
+  let tabsHtml = `<button class="level-tab-btn px-3 py-1 rounded-full text-sm font-bold transition-colors border ${state.activeMemberLevel === "all" ? "bg-blue-600 text-white border-blue-600" : "bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-300 dark:border-slate-600 hover:bg-slate-100"}" data-level="all">全て</button>`;
 
   levels.forEach((lvl) => {
     const isActive = state.activeMemberLevel === lvl.id;
-    const activeClass = isActive
-      ? "bg-blue-600 text-white border-blue-600"
-      : "bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-300 dark:border-slate-600 hover:bg-slate-100";
+    const activeClass = isActive ? "bg-blue-600 text-white border-blue-600" : "bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-300 dark:border-slate-600 hover:bg-slate-100";
     tabsHtml += `<button class="level-tab-btn px-3 py-1 rounded-full text-sm font-bold transition-colors border ${activeClass}" data-level="${lvl.id}">${lvl.label}</button>`;
   });
-
   tabsContainer.innerHTML = tabsHtml;
 
   tabsContainer.querySelectorAll(".level-tab-btn").forEach((btn) => {
@@ -3414,23 +3142,15 @@ export const renderMemberLists = (project) => {
   const jointsMap = new Map(project.joints.map((j) => [j.id, j]));
   const allMembers = [
     ...(project.members || []).map((m) => ({ ...m, isMember: true })),
-    ...project.joints
-      .filter((j) => j.countAsMember)
-      .map((j) => ({
-        id: j.id,
-        name: j.name,
-        jointId: j.id,
-        isMember: false,
-      })),
-  ]
-    .map((m) => ({ ...m, joint: jointsMap.get(m.jointId) }))
-    .filter((m) => m.joint)
-    .filter((m) => {
+    ...project.joints.filter((j) => j.countAsMember).map((j) => ({ id: j.id, name: j.name, jointId: j.id, isMember: false })),
+  ].map((m) => ({ ...m, joint: jointsMap.get(m.jointId) }))
+   .filter((m) => m.joint)
+   .filter((m) => {
       if (state.activeMemberLevel === "all") return true;
       if (!m.isMember) return true;
       if (!m.targetLevels || m.targetLevels.length === 0) return true;
       return m.targetLevels.includes(state.activeMemberLevel);
-    });
+   });
 
   // テーブル行生成ヘルパー
   const populateMemberTable = (tbodyId, members, color) => {
@@ -3440,41 +3160,28 @@ export const renderMemberLists = (project) => {
     tbody.innerHTML = members
       .map((member) => {
         const { joint } = member;
-        const borderColor = "border-slate-400",
-          darkBorderColor = "dark:border-slate-600";
+        const borderColor = "border-slate-400", darkBorderColor = "dark:border-slate-600";
         const isPin = joint.isPinJoint || false;
-        const colorBadge = joint.color
-          ? `<span class="inline-block w-3 h-3 rounded-full ml-2 border border-gray-400" style="background-color: ${joint.color}; vertical-align: middle;"></span>`
-          : "";
+        const colorBadge = joint.color ? `<span class="inline-block w-3 h-3 rounded-full ml-2 border border-gray-400" style="background-color: ${joint.color}; vertical-align: middle;"></span>` : "";
 
         let actionsHtml = member.isMember
           ? `<button data-id="${member.id}" class="edit-member-btn text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 font-semibold">編集</button>
-               <button data-id="${member.id}" class="delete-member-btn text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300 font-semibold">削除</button>`
+             <button data-id="${member.id}" class="delete-member-btn text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300 font-semibold">削除</button>`
           : `<button data-joint-id="${member.jointId}" class="edit-joint-btn text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 font-semibold">継手編集</button>`;
 
         let boltInfo = "";
         if (joint.isComplexSpl && joint.webInputs) {
-          const webInfo = joint.webInputs
-            .map((w) => `${w.size || "-"} / ${w.count}本`)
-            .join(",<br>");
+          const webInfo = joint.webInputs.map((w) => `${w.size || "-"} / ${w.count}本`).join(",<br>");
           boltInfo = `<td class="px-4 py-3 border-b border-r ${borderColor} ${darkBorderColor}">${webInfo}</td>`;
         } else {
           const singleBoltTypes = ["column", "wall_girt", "roof_purlin"];
           if (singleBoltTypes.includes(joint.type)) {
-            boltInfo = `<td class="px-4 py-3 border-b border-r ${borderColor} ${darkBorderColor}">${
-              joint.flangeSize || "-"
-            } / ${joint.flangeCount}本</td>`;
+            boltInfo = `<td class="px-4 py-3 border-b border-r ${borderColor} ${darkBorderColor}">${joint.flangeSize || "-"} / ${joint.flangeCount}本</td>`;
           } else if (isPin) {
-            boltInfo = `<td class="px-4 py-3 border-b border-r ${borderColor} ${darkBorderColor}">${
-              joint.webSize || "-"
-            } / ${joint.webCount}本</td>`;
+            boltInfo = `<td class="px-4 py-3 border-b border-r ${borderColor} ${darkBorderColor}">${joint.webSize || "-"} / ${joint.webCount}本</td>`;
           } else {
-            boltInfo = `<td class="px-4 py-3 border-b border-r ${borderColor} ${darkBorderColor}">${
-              joint.flangeSize || "-"
-            } / ${joint.flangeCount}本</td>
-                          <td class="px-4 py-3 border-b border-r ${borderColor} ${darkBorderColor}">${
-                            joint.webSize || "-"
-                          } / ${joint.webCount}本</td>`;
+            boltInfo = `<td class="px-4 py-3 border-b border-r ${borderColor} ${darkBorderColor}">${joint.flangeSize || "-"} / ${joint.flangeCount}本</td>
+                        <td class="px-4 py-3 border-b border-r ${borderColor} ${darkBorderColor}">${joint.webSize || "-"} / ${joint.webCount}本</td>`;
           }
         }
 
@@ -3482,33 +3189,20 @@ export const renderMemberLists = (project) => {
         if (!["wall_girt", "roof_purlin", "column"].includes(joint.type)) {
           const tempBoltInfo = getTempBoltInfo(joint, project.tempBoltMap);
           if (joint.isComplexSpl) {
-            const webTempInfo = tempBoltInfo.webs
-              .map((info) => {
-                const className = info.text.includes("未設定")
-                  ? "text-red-600 font-bold"
-                  : "";
+            const webTempInfo = tempBoltInfo.webs.map((info) => {
+                const className = info.text.includes("未設定") ? "text-red-600 font-bold" : "";
                 return `<span class="${className}" title="${info.formula}">${info.text}</span>`;
-              })
-              .join(",<br>");
+              }).join(",<br>");
             tempBoltInfoCells = `<td class="px-4 py-3 text-center border-b border-r ${borderColor} ${darkBorderColor}">${webTempInfo}</td>`;
           } else {
-            const twoColumns =
-              ["girder", "beam", "other", "stud"].includes(joint.type) &&
-              !joint.isPinJoint;
+            const twoColumns = ["girder", "beam", "other", "stud"].includes(joint.type) && !joint.isPinJoint;
             if (twoColumns) {
-              const flangeClass = tempBoltInfo.flange.text.includes("未設定")
-                ? "text-red-600 font-bold"
-                : "";
-              const webClass = tempBoltInfo.web.text.includes("未設定")
-                ? "text-red-600 font-bold"
-                : "";
-              tempBoltInfoCells = `
-                  <td class="px-4 py-3 text-center border-b border-r ${borderColor} ${darkBorderColor} ${flangeClass}" title="${tempBoltInfo.flange.formula}">${tempBoltInfo.flange.text}</td>
+              const flangeClass = tempBoltInfo.flange.text.includes("未設定") ? "text-red-600 font-bold" : "";
+              const webClass = tempBoltInfo.web.text.includes("未設定") ? "text-red-600 font-bold" : "";
+              tempBoltInfoCells = `<td class="px-4 py-3 text-center border-b border-r ${borderColor} ${darkBorderColor} ${flangeClass}" title="${tempBoltInfo.flange.formula}">${tempBoltInfo.flange.text}</td>
                   <td class="px-4 py-3 text-center border-b border-r ${borderColor} ${darkBorderColor} ${webClass}" title="${tempBoltInfo.web.formula}">${tempBoltInfo.web.text}</td>`;
             } else {
-              const singleClass = tempBoltInfo.single.text.includes("未設定")
-                ? "text-red-600 font-bold"
-                : "";
+              const singleClass = tempBoltInfo.single.text.includes("未設定") ? "text-red-600 font-bold" : "";
               tempBoltInfoCells = `<td class="px-4 py-3 text-center border-b border-r ${borderColor} ${darkBorderColor} ${singleClass}" title="${tempBoltInfo.single.formula}">${tempBoltInfo.single.text}</td>`;
             }
           }
@@ -3517,287 +3211,104 @@ export const renderMemberLists = (project) => {
         let floorBadge = "";
         if (member.isMember) {
           if (!member.targetLevels || member.targetLevels.length === 0) {
-            floorBadge =
-              '<span class="text-xs bg-gray-200 dark:bg-gray-700 px-1 rounded ml-2">全</span>';
+            floorBadge = '<span class="text-xs bg-gray-200 dark:bg-gray-700 px-1 rounded ml-2">全</span>';
           } else {
-            const displayLevels =
-              member.targetLevels.length > 3
-                ? `${member.targetLevels.length}フロア`
-                : member.targetLevels
-                    .map((l) => {
+            const displayLevels = member.targetLevels.length > 3 ? `${member.targetLevels.length}フロア`
+                : member.targetLevels.map((l) => {
                       const lvlObj = levels.find((x) => x.id === l);
-                      return lvlObj
-                        ? lvlObj.label.replace("階", "").replace("F", "")
-                        : l;
-                    })
-                    .join(",");
+                      return lvlObj ? lvlObj.label.replace("階", "").replace("F", "") : l;
+                    }).join(",");
             floorBadge = `<span class="text-xs bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 px-1 rounded ml-2">${displayLevels}</span>`;
           }
         } else {
-          floorBadge =
-            '<span class="text-xs bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 px-1 rounded ml-2">全</span>';
+          floorBadge = '<span class="text-xs bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 px-1 rounded ml-2">全</span>';
         }
 
+        // ▼▼▼ 追加: チェックボックス要素を判別するための属性 ▼▼▼
+        const checkboxHtml = member.isMember 
+          ? `<input type="checkbox" class="item-checkbox w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer" data-id="${member.id}" data-type="member">`
+          : `<span class="text-xs text-gray-400" title="継手マスターで「部材としてカウント」されているデータは一括削除できません">-</span>`;
+
         return `
-                <tr class="bg-${color}-50 dark:bg-slate-800/50 hover:bg-${color}-100 dark:hover:bg-slate-700/50">
-                    <td class="px-4 py-3 text-center border-b border-r ${borderColor} ${darkBorderColor}">
-                        <div class="flex justify-center gap-2 whitespace-nowrap">${actionsHtml}</div>
-                    </td>
-                    <td class="px-4 py-3 font-medium text-gray-900 dark:text-gray-100 border-b border-r js-searchable-name ${borderColor} ${darkBorderColor}">
-                        ${member.name}${floorBadge}
-                    </td>
-                    <td class="px-4 py-3 border-b border-r ${borderColor} ${darkBorderColor}">
-                        ${joint.name}${colorBadge}
-                    </td>
-                    ${boltInfo}
-                    ${tempBoltInfoCells}
-                </tr>`;
-      })
-      .join("");
+            <tr class="item-row bg-${color}-50 dark:bg-slate-800/50 hover:bg-${color}-100 dark:hover:bg-slate-700/50 transition-colors" data-id="${member.id}">
+                <td class="px-3 py-3 text-center border-b border-r ${borderColor} ${darkBorderColor}">
+                    ${checkboxHtml}
+                </td>
+                <td class="px-4 py-3 text-center border-b border-r ${borderColor} ${darkBorderColor}">
+                    <div class="flex justify-center gap-2 whitespace-nowrap">${actionsHtml}</div>
+                </td>
+                <td class="px-4 py-3 font-medium text-gray-900 dark:text-gray-100 border-b border-r js-searchable-name ${borderColor} ${darkBorderColor}">
+                    ${member.name}${floorBadge}
+                </td>
+                <td class="px-4 py-3 border-b border-r ${borderColor} ${darkBorderColor}">
+                    ${joint.name}${colorBadge}
+                </td>
+                ${boltInfo}
+                ${tempBoltInfoCells}
+            </tr>`;
+      }).join("");
   };
 
+  const selectAllHtml = '<input type="checkbox" class="select-all-checkbox w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer">';
+
   const memberSections = [
-    {
-      type: "girder",
-      isPin: false,
-      title: "部材 - 大梁",
-      color: "blue",
-      cols: [
-        { label: "操作", key: null },
-        { label: "部材名", key: "name" },
-        { label: "使用継手", key: "jointName" },
-        { label: "フランジ", key: "flange" },
-        { label: "ウェブ", key: "web" },
-        { label: "仮ボルト(フランジ)", key: "temp-flange" },
-        { label: "仮ボルト(ウェブ)", key: "temp-web" },
-      ],
-    },
-    {
-      type: "girder",
-      isPin: true,
-      title: "部材 - 大梁 (ピン取り)",
-      color: "cyan",
-      cols: [
-        { label: "操作", key: null },
-        { label: "部材名", key: "name" },
-        { label: "使用継手", key: "jointName" },
-        { label: "ウェブ", key: "web" },
-        { label: "仮ボルト", key: "temp-web" },
-      ],
-    },
-    {
-      type: "beam",
-      isPin: false,
-      title: "部材 - 小梁",
-      color: "green",
-      cols: [
-        { label: "操作", key: null },
-        { label: "部材名", key: "name" },
-        { label: "使用継手", key: "jointName" },
-        { label: "フランジ", key: "flange" },
-        { label: "ウェブ", key: "web" },
-        { label: "仮ボルト(フランジ)", key: "temp-flange" },
-        { label: "仮ボルト(ウェブ)", key: "temp-web" },
-      ],
-    },
-    {
-      type: "beam",
-      isPin: true,
-      title: "部材 - 小梁 (ピン取り)",
-      color: "teal",
-      cols: [
-        { label: "操作", key: null },
-        { label: "部材名", key: "name" },
-        { label: "使用継手", key: "jointName" },
-        { label: "ウェブ", key: "web" },
-        { label: "仮ボルト", key: "temp-web" },
-      ],
-    },
-    {
-      type: "column",
-      isPin: false,
-      title: "部材 - 本柱",
-      color: "red",
-      cols: [
-        { label: "操作", key: null },
-        { label: "部材名", key: "name" },
-        { label: "使用継手", key: "jointName" },
-        { label: "エレクション", key: "bolt" },
-      ],
-    },
-    {
-      type: "stud",
-      isPin: false,
-      title: "部材 - 間柱",
-      color: "indigo",
-      cols: [
-        { label: "操作", key: null },
-        { label: "部材名", key: "name" },
-        { label: "使用継手", key: "jointName" },
-        { label: "フランジボルト", key: "flange" },
-        { label: "ウェブボルト", key: "web" },
-        { label: "仮ボルト(フランジ)", key: "temp-flange" },
-        { label: "仮ボルト(ウェブ)", key: "temp-web" },
-      ],
-    },
-    {
-      type: "stud",
-      isPin: true,
-      title: "部材 - 間柱 (ピン取り)",
-      color: "purple",
-      cols: [
-        { label: "操作", key: null },
-        { label: "部材名", key: "name" },
-        { label: "使用継手", key: "jointName" },
-        { label: "ボルトサイズ", key: "bolt" },
-        { label: "仮ボルト", key: "temp-web" },
-      ],
-    },
-    {
-      type: "wall_girt",
-      isPin: false,
-      title: "部材 - 胴縁",
-      color: "gray",
-      cols: [
-        { label: "操作", key: null },
-        { label: "部材名", key: "name" },
-        { label: "使用継手", key: "jointName" },
-        { label: "ボルトサイズ", key: "bolt" },
-      ],
-    },
-    {
-      type: "roof_purlin",
-      isPin: false,
-      title: "部材 - 母屋",
-      color: "orange",
-      cols: [
-        { label: "操作", key: null },
-        { label: "部材名", key: "name" },
-        { label: "使用継手", key: "jointName" },
-        { label: "ボルトサイズ", key: "bolt" },
-      ],
-    },
-    {
-      type: "other",
-      isPin: false,
-      title: "部材 - その他",
-      color: "amber",
-      cols: [
-        { label: "操作", key: null },
-        { label: "部材名", key: "name" },
-        { label: "使用継手", key: "jointName" },
-        { label: "フランジ", key: "flange" },
-        { label: "ウェブ", key: "web" },
-        { label: "仮ボルト(フランジ)", key: "temp-flange" },
-        { label: "仮ボルト(ウェブ)", key: "temp-web" },
-      ],
-    },
-    {
-      type: "other",
-      isPin: true,
-      title: "部材 - その他 (ピン取り)",
-      color: "amber",
-      cols: [
-        { label: "操作", key: null },
-        { label: "部材名", key: "name" },
-        { label: "使用継手", key: "jointName" },
-        { label: "ボルト", key: "bolt" },
-        { label: "仮ボルト", key: "temp-web" },
-      ],
-    },
+    { type: "girder", isPin: false, title: "部材 - 大梁", color: "blue", cols: [{ label: selectAllHtml, key: null }, { label: "操作", key: null }, { label: "部材名", key: "name" }, { label: "使用継手", key: "jointName" }, { label: "フランジ", key: "flange" }, { label: "ウェブ", key: "web" }, { label: "仮ボルト(フランジ)", key: "temp-flange" }, { label: "仮ボルト(ウェブ)", key: "temp-web" }] },
+    { type: "girder", isPin: true, title: "部材 - 大梁 (ピン取り)", color: "cyan", cols: [{ label: selectAllHtml, key: null }, { label: "操作", key: null }, { label: "部材名", key: "name" }, { label: "使用継手", key: "jointName" }, { label: "ウェブ", key: "web" }, { label: "仮ボルト", key: "temp-web" }] },
+    { type: "beam", isPin: false, title: "部材 - 小梁", color: "green", cols: [{ label: selectAllHtml, key: null }, { label: "操作", key: null }, { label: "部材名", key: "name" }, { label: "使用継手", key: "jointName" }, { label: "フランジ", key: "flange" }, { label: "ウェブ", key: "web" }, { label: "仮ボルト(フランジ)", key: "temp-flange" }, { label: "仮ボルト(ウェブ)", key: "temp-web" }] },
+    { type: "beam", isPin: true, title: "部材 - 小梁 (ピン取り)", color: "teal", cols: [{ label: selectAllHtml, key: null }, { label: "操作", key: null }, { label: "部材名", key: "name" }, { label: "使用継手", key: "jointName" }, { label: "ウェブ", key: "web" }, { label: "仮ボルト", key: "temp-web" }] },
+    { type: "column", isPin: false, title: "部材 - 本柱", color: "red", cols: [{ label: selectAllHtml, key: null }, { label: "操作", key: null }, { label: "部材名", key: "name" }, { label: "使用継手", key: "jointName" }, { label: "エレクション", key: "bolt" }] },
+    { type: "stud", isPin: false, title: "部材 - 間柱", color: "indigo", cols: [{ label: selectAllHtml, key: null }, { label: "操作", key: null }, { label: "部材名", key: "name" }, { label: "使用継手", key: "jointName" }, { label: "フランジボルト", key: "flange" }, { label: "ウェブボルト", key: "web" }, { label: "仮ボルト(フランジ)", key: "temp-flange" }, { label: "仮ボルト(ウェブ)", key: "temp-web" }] },
+    { type: "stud", isPin: true, title: "部材 - 間柱 (ピン取り)", color: "purple", cols: [{ label: selectAllHtml, key: null }, { label: "操作", key: null }, { label: "部材名", key: "name" }, { label: "使用継手", key: "jointName" }, { label: "ボルトサイズ", key: "bolt" }, { label: "仮ボルト", key: "temp-web" }] },
+    { type: "wall_girt", isPin: false, title: "部材 - 胴縁", color: "gray", cols: [{ label: selectAllHtml, key: null }, { label: "操作", key: null }, { label: "部材名", key: "name" }, { label: "使用継手", key: "jointName" }, { label: "ボルトサイズ", key: "bolt" }] },
+    { type: "roof_purlin", isPin: false, title: "部材 - 母屋", color: "orange", cols: [{ label: selectAllHtml, key: null }, { label: "操作", key: null }, { label: "部材名", key: "name" }, { label: "使用継手", key: "jointName" }, { label: "ボルトサイズ", key: "bolt" }] },
+    { type: "other", isPin: false, title: "部材 - その他", color: "amber", cols: [{ label: selectAllHtml, key: null }, { label: "操作", key: null }, { label: "部材名", key: "name" }, { label: "使用継手", key: "jointName" }, { label: "フランジ", key: "flange" }, { label: "ウェブ", key: "web" }, { label: "仮ボルト(フランジ)", key: "temp-flange" }, { label: "仮ボルト(ウェブ)", key: "temp-web" }] },
+    { type: "other", isPin: true, title: "部材 - その他 (ピン取り)", color: "amber", cols: [{ label: selectAllHtml, key: null }, { label: "操作", key: null }, { label: "部材名", key: "name" }, { label: "使用継手", key: "jointName" }, { label: "ボルト", key: "bolt" }, { label: "仮ボルト", key: "temp-web" }] },
   ];
 
   let html = "";
   const sectionsToRender = [];
 
   memberSections.forEach((section) => {
-    const filteredMembers = allMembers.filter(
-      (m) =>
-        m.joint &&
-        m.joint.type === section.type &&
-        (m.joint.isPinJoint || false) === section.isPin,
-    );
+    const filteredMembers = allMembers.filter((m) => m.joint && m.joint.type === section.type && (m.joint.isPinJoint || false) === section.isPin);
     if (filteredMembers.length > 0) {
-      const sectionId = `member-${section.type}-${
-        section.isPin ? "pin" : "rigid"
-      }`;
+      const sectionId = `member-${section.type}-${section.isPin ? "pin" : "rigid"}`;
       const sortState = state.sort[sectionId];
 
       if (sortState && sortState.key) {
         filteredMembers.sort((a, b) => {
           const key = sortState.key;
-
           const getVal = (m) => {
             if (key === "name") return m.name;
             if (key === "jointName") return m.joint.name;
-            if (key === "flange")
-              return `${m.joint.flangeSize}-${m.joint.flangeCount}`;
+            if (key === "flange") return `${m.joint.flangeSize}-${m.joint.flangeCount}`;
             if (key === "web") return `${m.joint.webSize}-${m.joint.webCount}`;
-            if (key === "bolt")
-              return (
-                m.joint.flangeSize ||
-                m.joint.webSize ||
-                m.joint.shopTempBoltSize ||
-                ""
-              );
-            if (key === "web_complex")
-              return m.joint.webInputs && m.joint.webInputs.length > 0
-                ? m.joint.webInputs[0].size
-                : m.joint.webSize || "";
-
+            if (key === "bolt") return (m.joint.flangeSize || m.joint.webSize || m.joint.shopTempBoltSize || "");
+            if (key === "web_complex") return m.joint.webInputs && m.joint.webInputs.length > 0 ? m.joint.webInputs[0].size : m.joint.webSize || "";
             if (key.startsWith("temp")) {
               const info = getTempBoltInfo(m.joint, project.tempBoltMap);
               if (key === "temp-flange") return info.flange.text;
               if (key === "temp-web") return info.web.text;
-              if (key === "temp_web_complex")
-                return info.webs && info.webs.length > 0
-                  ? info.webs[0].text
-                  : info.web.text;
+              if (key === "temp_web_complex") return info.webs && info.webs.length > 0 ? info.webs[0].text : info.web.text;
             }
             return "";
           };
 
-          const valA = getVal(a);
-          const valB = getVal(b);
-
-          // ボルトサイズ系なら boltSort を使う
-          if (
-            [
-              "flange",
-              "web",
-              "bolt",
-              "web_complex",
-              "temp-flange",
-              "temp-web",
-              "temp_web_complex",
-            ].includes(key)
-          ) {
-            const strA =
-              valA === null || valA === undefined ? "" : String(valA);
-            const strB =
-              valB === null || valB === undefined ? "" : String(valB);
-            const cleanA = strA.split("/")[0].trim();
-            const cleanB = strB.split("/")[0].trim();
-
+          const valA = getVal(a), valB = getVal(b);
+          if (["flange", "web", "bolt", "web_complex", "temp-flange", "temp-web", "temp_web_complex"].includes(key)) {
+            const strA = valA === null || valA === undefined ? "" : String(valA);
+            const strB = valB === null || valB === undefined ? "" : String(valB);
+            const cleanA = strA.split("/")[0].trim(), cleanB = strB.split("/")[0].trim();
             const cmp = boltSort(cleanA, cleanB);
             if (cmp !== 0) return sortState.order === "asc" ? cmp : -cmp;
-
-            return sortState.order === "asc"
-              ? strA.localeCompare(strB)
-              : strB.localeCompare(strA);
+            return sortState.order === "asc" ? strA.localeCompare(strB) : strB.localeCompare(strA);
           }
-
           if (valA < valB) return sortState.order === "asc" ? -1 : 1;
           if (valA > valB) return sortState.order === "asc" ? 1 : -1;
           return 0;
         });
       } else {
-        // デフォルトソート
         filteredMembers.sort((a, b) => {
-          const jointNameCompare = a.joint.name.localeCompare(
-            b.joint.name,
-            "ja",
-          );
+          const jointNameCompare = a.joint.name.localeCompare(b.joint.name, "ja");
           if (jointNameCompare !== 0) return jointNameCompare;
           return a.name.localeCompare(b.name, "ja");
         });
@@ -3808,57 +3319,47 @@ export const renderMemberLists = (project) => {
       const hasComplexSpl = filteredMembers.some((m) => m.joint.isComplexSpl);
       if (hasComplexSpl && section.isPin) {
         finalCols = [
-          { label: "操作", key: null },
-          { label: "部材名", key: "name" },
-          { label: "使用継手", key: "jointName" },
-          { label: "ウェブ (複合SPL)", key: "web_complex" },
-          { label: "仮ボルト (複合SPL)", key: "temp_web_complex" },
+          { label: selectAllHtml, key: null }, { label: "操作", key: null }, { label: "部材名", key: "name" }, { label: "使用継手", key: "jointName" },
+          { label: "ウェブ (複合SPL)", key: "web_complex" }, { label: "仮ボルト (複合SPL)", key: "temp_web_complex" },
         ];
       }
 
-      const headerHtml = finalCols
-        .map((col) => {
-          let sortIcon = "";
-          let cursorClass = "";
-          let dataAttr = "";
+      const headerHtml = finalCols.map((col) => {
+          let sortIcon = "", cursorClass = "", dataAttr = "";
           if (col.key) {
-            cursorClass =
-              "cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors";
+            cursorClass = "cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors";
             dataAttr = `data-sort-key="${col.key}"`;
-            if (sortState && sortState.key === col.key) {
-              sortIcon = sortState.order === "asc" ? " ▲" : " ▼";
-            }
+            if (sortState && sortState.key === col.key) sortIcon = sortState.order === "asc" ? " ▲" : " ▼";
           }
           return `<th class="px-4 py-3 whitespace-nowrap ${cursorClass}" ${dataAttr}>${col.label}${sortIcon}</th>`;
-        })
-        .join("");
+        }).join("");
 
       const anchorId = `anchor-member-${section.type}-${section.isPin ? "pin" : "rigid"}`;
 
       html += `
-            <div id="${anchorId}" class="rounded-lg border border-slate-400 dark:border-slate-600 scroll-mt-24" data-section-title="部材：${section.title}" data-section-color="${section.color}" data-section-id="${sectionId}">
-                <h3 class="text-lg font-semibold bg-${section.color}-200 text-${section.color}-800 dark:bg-slate-700 dark:text-${section.color}-200 px-4 py-2 rounded-t-lg">${section.title}</h3>
-                <div class="overflow-x-auto custom-scrollbar bg-${section.color}-50 dark:bg-slate-900/50 rounded-b-lg">
-                    <table class="w-full min-w-[400px] text-sm text-left">
-                        <thead class="bg-${section.color}-100 text-${section.color}-700 dark:bg-slate-800/60 dark:text-${section.color}-200 text-xs"><tr>${headerHtml}</tr></thead>
-                        <tbody id="${tbodyId}"></tbody>
-                    </table>
-                </div>
-            </div>`;
-      sectionsToRender.push({
-        tbodyId,
-        filteredMembers,
-        color: section.color,
-        section,
-      });
+        <div id="${anchorId}" class="rounded-lg border border-slate-400 dark:border-slate-600 scroll-mt-24" data-section-title="部材：${section.title}" data-section-color="${section.color}" data-section-id="${sectionId}">
+            <h3 class="text-lg font-semibold bg-${section.color}-200 text-${section.color}-800 dark:bg-slate-700 dark:text-${section.color}-200 px-4 py-2 rounded-t-lg">${section.title}</h3>
+            <div class="overflow-x-auto custom-scrollbar bg-${section.color}-50 dark:bg-slate-900/50 rounded-b-lg">
+                <table class="w-full min-w-[400px] text-sm text-left">
+                    <thead class="bg-${section.color}-100 text-${section.color}-700 dark:bg-slate-800/60 dark:text-${section.color}-200 text-xs"><tr>${headerHtml}</tr></thead>
+                    <tbody id="${tbodyId}"></tbody>
+                </table>
+            </div>
+        </div>`;
+      sectionsToRender.push({ tbodyId, filteredMembers, color: section.color, section });
     }
   });
 
   container.innerHTML = html;
 
-  sectionsToRender.forEach((s) =>
-    populateMemberTable(s.tbodyId, s.filteredMembers, s.color, s.section),
-  );
+  sectionsToRender.forEach((s) => populateMemberTable(s.tbodyId, s.filteredMembers, s.color, s.section));
+
+  // 描画後、一括削除ボタンを隠す
+  const bulkBtn = document.getElementById('bulk-delete-btn');
+  if (bulkBtn) {
+      bulkBtn.classList.add('hidden');
+      bulkBtn.classList.remove('flex');
+  }
 };
 
 /**
