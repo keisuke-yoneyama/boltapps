@@ -163,6 +163,33 @@ export function setupEventListeners() {
   setupSearchFunctionality(); //検索機能イベント
 
   setupBulkDeleteEvents(); //一括削除イベント
+
+  // =========================================================
+  // FABからのナビゲーション画面遷移
+  // =========================================================
+  const fabNavListBtn = document.getElementById("fab-nav-list-btn");
+  const fabNavTallyBtn = document.getElementById("fab-nav-tally-btn");
+
+  // 物件一覧に戻る
+  if (fabNavListBtn) {
+    fabNavListBtn.addEventListener("click", () => {
+      // メニューを閉じる
+      closeFabIfOutside({ target: document.body }); 
+      // 画面を切り替える (ui.js の switchView を呼び出し)
+      switchView("project-list");
+    });
+  }
+
+  // 入力と集計タブを開く
+  if (fabNavTallyBtn) {
+    fabNavTallyBtn.addEventListener("click", () => {
+      // メニューを閉じる
+      closeFabIfOutside({ target: document.body });
+      // タブを切り替える (ui.js の switchTab を呼び出し)
+      switchTab("tally");
+    });
+  }
+
 }
 
 //登録用フローティングボタンイベント
