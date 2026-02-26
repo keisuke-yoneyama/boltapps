@@ -452,7 +452,7 @@ function setupComfirmDeleteModalEvents() {
     });
 }
 
-//プロジェクト編集モーダルの途中終了時の動作登録
+// プロジェクト編集モーダルの途中終了時の動作登録
 function setupEditProjectModalEvents() {
   const editProjectModal = document.getElementById("edit-project-modal");
   const closeBtn = document.getElementById("close-edit-project-modal-btn");
@@ -473,7 +473,16 @@ function setupEditProjectModalEvents() {
           closeModal(editProjectModal);
 
           // ★ここでクリア関数を呼ぶ！
-          resetProjectEditCache();
+          if (typeof resetProjectEditCache === "function") {
+             resetProjectEditCache();
+          }
+
+          // ▼▼▼ 追加: 次回開く時のために、DOM（入力欄）も強制的にクリアして残骸を消す ▼▼▼
+          const levelsContainer = document.getElementById("edit-custom-levels-container");
+          const areasContainer = document.getElementById("edit-custom-areas-container");
+          if (levelsContainer) levelsContainer.innerHTML = "";
+          if (areasContainer) areasContainer.innerHTML = "";
+          // ▲▲▲ 追加ここまで ▲▲▲
         }
       });
     });

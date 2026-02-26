@@ -2572,49 +2572,43 @@ export const openEditProjectModal = (project) => {
 
   // 表示切り替え
   const toggleWrapper = document.getElementById("edit-advanced-toggle-wrapper");
-  const simpleSettings = document.getElementById(
-    "edit-simple-project-settings",
-  );
-  const advancedSettings = document.getElementById(
-    "edit-advanced-project-settings",
-  );
+  const simpleSettings = document.getElementById("edit-simple-project-settings");
+  const advancedSettings = document.getElementById("edit-advanced-project-settings");
 
   if (toggleWrapper) toggleWrapper.classList.add("hidden"); // 編集時はモード切替不可
   if (simpleSettings) simpleSettings.classList.toggle("hidden", isAdvanced);
-  if (advancedSettings)
-    advancedSettings.classList.toggle("hidden", !isAdvanced);
+  if (advancedSettings) advancedSettings.classList.toggle("hidden", !isAdvanced);
+
+  // ▼▼▼ 修正: モードに関係なく、必ず一番最初にキャッシュを完全リセットする ▼▼▼
+  // ※ levelNameCache, areaNameCache は ui.js 上部で let または const 宣言されている前提
+  if (typeof levelNameCache !== 'undefined') levelNameCache.length = 0;
+  if (typeof areaNameCache !== 'undefined') areaNameCache.length = 0;
+  // ▲▲▲ 修正ここまで ▲▲▲
 
   if (isAdvanced) {
-    // キャッシュの更新 (ui.js内の変数を直接更新)
-    // ※ levelNameCache, areaNameCache は ui.js 上部で let 定義されている前提
-    // もし const で再代入できない場合は、中身を入れ替える処理が必要ですが、
-    // let で定義されていれば以下のように配列ごと更新してもOK（ただしモジュール変数の書き換えに注意）
+    // ▼▼▼ 修正: プロジェクトにデータがある場合のみ、コピーしてキャッシュに格納 ▼▼▼
+    if (Array.isArray(project.customLevels)) {
+      levelNameCache.push(...project.customLevels);
+    }
+    if (Array.isArray(project.customAreas)) {
+      areaNameCache.push(...project.customAreas);
+    }
+    // ▲▲▲ 修正ここまで ▲▲▲
 
-    // 安全策：配列の中身を入れ替える
-    levelNameCache.length = 0;
-    levelNameCache.push(...project.customLevels);
+    setVal("edit-custom-levels-count", levelNameCache.length);
+    setVal("edit-custom-areas-count", areaNameCache.length);
 
-    areaNameCache.length = 0;
-    areaNameCache.push(...project.customAreas);
-
-    setVal("edit-custom-levels-count", project.customLevels.length);
-    setVal("edit-custom-areas-count", project.customAreas.length);
-
-    const levelsContainer = document.getElementById(
-      "edit-custom-levels-container",
-    );
-    const areasContainer = document.getElementById(
-      "edit-custom-areas-container",
-    );
+    const levelsContainer = document.getElementById("edit-custom-levels-container");
+    const areasContainer = document.getElementById("edit-custom-areas-container");
 
     generateCustomInputFields(
-      project.customLevels.length,
+      levelNameCache.length, // プロジェクトのlengthではなくキャッシュのlengthを使う
       levelsContainer,
       "edit-level",
       levelNameCache,
     );
     generateCustomInputFields(
-      project.customAreas.length,
+      areaNameCache.length,
       areasContainer,
       "edit-area",
       areaNameCache,
