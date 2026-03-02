@@ -2333,7 +2333,7 @@ export const renderTempBoltResults = (project) => {
 };
 
 /**
- * 物件一覧を描画し、イベントを設定する
+ * 物件一覧を描画し、アニメーション付きのアコーディオンを設定する
  */
 export const renderProjectList = (callbacks) => {
   if (callbacks) savedListCallbacks = callbacks;
@@ -2365,7 +2365,7 @@ export const renderProjectList = (callbacks) => {
       <div class="project-group mb-4 bg-white dark:bg-slate-800 rounded-xl shadow-md border border-slate-200 dark:border-slate-700 overflow-hidden">
         <div class="flex items-center bg-slate-50 dark:bg-slate-700/30 border-b border-slate-100 dark:border-slate-700">
           <div class="accordion-trigger flex-1 flex items-center gap-3 p-4 cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors" data-group-name="${groupName}">
-            <svg class="w-5 h-5 text-yellow-500 transform transition-transform duration-200 group-arrow pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <svg class="w-5 h-5 text-yellow-500 transition-transform duration-300 group-arrow pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
             </svg>
             <h3 class="font-bold text-slate-800 dark:text-slate-100 truncate pointer-events-none">物件名：${groupName}</h3>
@@ -2381,7 +2381,8 @@ export const renderProjectList = (callbacks) => {
             </button>
           </div>
         </div>
-        <div class="project-group-content hidden flex flex-col divide-y divide-slate-100 dark:divide-slate-700">
+        
+        <div class="project-group-content transition-all duration-300 ease-in-out max-h-0 opacity-0 overflow-hidden flex flex-col divide-y divide-slate-100 dark:divide-slate-700">
           ${groupProjects.map(p => `
             <div class="project-item-row flex items-center p-3 hover:bg-yellow-50 dark:hover:bg-yellow-900/10 transition-colors cursor-pointer" data-id="${p.id}">
               <div class="px-2 py-1 checkbox-click-zone">
@@ -2402,7 +2403,7 @@ export const renderProjectList = (callbacks) => {
 
   container.innerHTML = html;
 
-  // 物件アクションボタン
+  // ボタンイベント
   container.querySelectorAll('.edit-group-action-btn').forEach(btn => {
     btn.onclick = (e) => { e.stopPropagation(); currentCallbacks.onGroupEdit(btn.dataset.groupName); };
   });
@@ -2410,21 +2411,26 @@ export const renderProjectList = (callbacks) => {
     btn.onclick = (e) => { e.stopPropagation(); currentCallbacks.onGroupAggregate(btn.dataset.groupName); };
   });
 
-  // ★修正：排他的アコーディオン制御
+  // ★アニメーション付き排他的アコーディオン制御
   container.querySelectorAll('.accordion-trigger').forEach(trigger => {
     trigger.onclick = () => {
       const groupDiv = trigger.closest('.project-group');
       const content = groupDiv.querySelector('.project-group-content');
       const arrow = trigger.querySelector('.group-arrow');
-      const isCurrentlyHidden = content.classList.contains('hidden');
-      
-      // 1. まず全てのコンテンツを閉じる
-      container.querySelectorAll('.project-group-content').forEach(c => c.classList.add('hidden'));
+      const isOpening = content.style.maxHeight === "0px" || content.style.maxHeight === "";
+
+      // 1. 全てを閉じる
+      container.querySelectorAll('.project-group-content').forEach(c => {
+        c.style.maxHeight = "0px";
+        c.classList.add('opacity-0');
+      });
       container.querySelectorAll('.group-arrow').forEach(a => a.classList.remove('rotate-90'));
 
-      // 2. クリックされたものがもともと閉じていた場合のみ、開く
-      if (isCurrentlyHidden) {
-        content.classList.remove('hidden');
+      // 2. ターゲットだけを開く
+      if (isOpening) {
+        // scrollHeight を使うことで、中身に応じた正確な高さをセットできる
+        content.style.maxHeight = content.scrollHeight + "px";
+        content.classList.remove('opacity-0');
         if (arrow) arrow.classList.add('rotate-90');
       }
     };
