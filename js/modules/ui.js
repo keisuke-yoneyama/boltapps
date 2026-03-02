@@ -4453,24 +4453,40 @@ export const renderDetailView = () => {
     return;
   }
 
-  const navProjectTitle = document.getElementById("nav-project-title");
-  if (navProjectTitle) navProjectTitle.textContent = project.name;
+  // --- ▼▼▼ 追加：ヘッダー表示の切り替え ▼▼▼ ---
+  const listContext = document.getElementById("nav-list-context");
+  const detailContext = document.getElementById("nav-detail-context");
+  const detailButtons = document.getElementById("nav-detail-buttons");
+  const boltSettingsBtn = document.getElementById("nav-btn-bolt-settings");
 
+  // 物件一覧用のタイトル（システム名）を隠し、詳細用のエリア（セレクター用）を表示する
+  if (listContext) listContext.classList.add("hidden");
+  if (detailContext) detailContext.classList.remove("hidden");
+  
+  // 右側のタブボタンや設定ボタンも表示
+  if (detailButtons) detailButtons.classList.remove("hidden", "md:hidden");
+  if (boltSettingsBtn) boltSettingsBtn.classList.remove("hidden");
+  // --- ▲▲▲ 追加ここまで ▲▲▲ ---
+
+  // プロジェクトセレクターを描画（中身を流し込む）
+  renderProjectSwitcher();
+
+  // 以前のタイトル表示用コードは不要なのでコメントアウトまたは削除
+  // const navProjectTitle = document.getElementById("nav-project-title");
+  // if (navProjectTitle) navProjectTitle.textContent = project.name;
+
+  // 各種リスト・シートの描画
   renderJointsList(project);
   renderMemberLists(project);
-  // ヘッダーのプロジェクトセレクターを描画
-  renderProjectSwitcher();
+
   // 常設フォームの階層チェックボックス
-  const staticLevelsContainer = document.getElementById(
-    "add-member-levels-container",
-  );
+  const staticLevelsContainer = document.getElementById("add-member-levels-container");
   if (staticLevelsContainer) {
     staticLevelsContainer.innerHTML = "";
     const levels = getProjectLevels(project);
     levels.forEach((lvl) => {
       const label = document.createElement("label");
-      label.className =
-        "flex items-center gap-2 text-sm cursor-pointer text-slate-700 dark:text-slate-300";
+      label.className = "flex items-center gap-2 text-sm cursor-pointer text-slate-700 dark:text-slate-300";
       label.innerHTML = `<input type="checkbox" value="${lvl.id}" class="static-level-checkbox h-4 w-4 text-blue-600 rounded border-gray-300 focus:ring-yellow-500"> ${lvl.label}`;
       staticLevelsContainer.appendChild(label);
     });
@@ -4479,7 +4495,6 @@ export const renderDetailView = () => {
   renderTallySheet(project);
   renderResults(project);
 };
-
 /**
  * Undo/Redoボタンの活性状態を更新する
  */
