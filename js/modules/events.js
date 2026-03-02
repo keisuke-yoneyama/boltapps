@@ -42,6 +42,8 @@ import {
   updateTallySheetCalculations,
   // closeQuickNavIfOutside,
   populateJointSelectorModal,
+  openEditProjectModal,
+  openCopyProjectModal,
 } from "./ui.js"; // ui.jsで作った関数を使う
 
 import { resetTempJointData, state,resetProjectEditCache,resetProjectEditNewCache } from "./state.js";
