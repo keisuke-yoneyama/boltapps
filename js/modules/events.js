@@ -43,7 +43,7 @@ import {
   // closeQuickNavIfOutside,
   populateJointSelectorModal,
   openEditProjectModal,
-  openCopyProjectModal,
+  // openCopyProjectModal,
 } from "./ui.js"; // ui.jsで作った関数を使う
 
 import { resetTempJointData, state,resetProjectEditCache,resetProjectEditNewCache } from "./state.js";
