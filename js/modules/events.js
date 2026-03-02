@@ -53,8 +53,6 @@ import { BOLT_TYPES } from "./config.js";
 import {
   saveGlobalBoltSizes,
   updateProjectPropertyNameBatch,
-  writeBatch,
-  doc,
 } from "./firebase.js";
 
 import {
@@ -3843,7 +3841,7 @@ function setupGroupActionEvents() {
       const oldName = oldNameInput.value;
       const newName = newNameInput.value.trim();
 
-      // 何も変わっていない場合は閉じるだけ
+      // 変更がない場合は何もしない
       if (!newName || oldName === newName) {
         if (editGroupModal) closeModal(editGroupModal);
         return;
@@ -3858,43 +3856,24 @@ function setupGroupActionEvents() {
         return;
       }
 
-      // --- 1. 楽観的UI更新 (ローカルStateを先に書き換える) ---
+      // --- 1. 楽観的UI更新 ---
       projectsToUpdate.forEach((project) => {
         project.propertyName = newName;
       });
-
-      // --- 2. UI再描画 ---
       updateProjectListUI();
-
-      // --- 3. モーダルを閉じて通知 ---
       if (editGroupModal) closeModal(editGroupModal);
-      showToast(`物件名を「${newName}」に更新しました。`);
+      showToast(`物件名を「${newName}」に一括更新しました。`);
 
-      // --- 4. DB更新 (直接 writeBatch を使用して以前の動作を再現) ---
+      // --- 2. DB更新 (firebase.js のヘルパー関数を活用) ---
       try {
-        // ※ firebase/firestore から import { writeBatch, doc } from "firebase/firestore"; が必要
-        // db インスタンスがこのファイルで利用可能であることを確認してください
-        const batch = writeBatch(db); 
-
-        projectsToUpdate.forEach((proj) => {
-          if (proj.id) {
-            // コレクション名 "projects" が正しいか確認してください
-            const docRef = doc(db, "projects", proj.id);
-            batch.update(docRef, { propertyName: newName });
-          }
-        });
-
-        await batch.commit();
-        console.log(`[Firestore] ${projectsToUpdate.length}件の物件名を一括更新しました。`);
-
+        const targetIds = projectsToUpdate.map((p) => p.id);
+        // インポートしたヘルパー関数を呼び出すだけ！
+        await updateProjectPropertyNameBatch(targetIds, newName);
       } catch (err) {
-        console.error("物件名の一括更新（DB）に失敗しました: ", err);
-        // エラー時はユーザーにリロードを促す
+        console.error("物件名の一括更新に失敗しました: ", err);
         showCustomAlert(
-          "データベースの更新に失敗しました。権限エラーまたは通信エラーの可能性があります。ページをリロードして確認してください。",
+          "データベースの更新に失敗しました。権限設定を確認してください。",
         );
-        
-        // 失敗した場合は、可能であればローカルの状態を戻す等の処理を入れるとより親切です
       }
     });
   }

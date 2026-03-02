@@ -125,20 +125,15 @@ export const saveGlobalBoltSizes = async (globalBoltSizes) => {
  * @param {string} newName - 新しい物件名
  */
 export async function updateProjectPropertyNameBatch(ids, newName) {
-  // 方法A: Promise.all で並列実行 (シンプル)
-  const updates = ids.map((id) => {
-    const projectRef = doc(db, "projects", id);
-    return updateDoc(projectRef, { propertyName: newName });
-  });
-  await Promise.all(updates);
-
-  // 方法B: WriteBatch を使う (より堅牢な方法。500件以内ならこちら推奨)
-  /*
   const batch = writeBatch(db);
-  ids.forEach(id => {
-    const projectRef = doc(db, "projects", id);
+
+  ids.forEach((id) => {
+    // 【重要】パスを実際のプロジェクト保存場所（artifacts/...）に合わせる
+    // projectsCollectionRef の構造を利用します
+    const projectRef = doc(db, `artifacts/${appId}/public/data/projects`, id);
     batch.update(projectRef, { propertyName: newName });
   });
+
   await batch.commit();
-  */
+  console.log(`[Firebase] ${ids.length}件のドキュメントを一括更新しました。`);
 }
