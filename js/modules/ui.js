@@ -2347,7 +2347,6 @@ export const renderProjectList = (callbacks) => {
     return;
   }
 
-  // 1. グループ化
   const groups = {};
   state.projects.forEach((p) => {
     const propName = p.propertyName || "（物件名未設定）";
@@ -2365,7 +2364,6 @@ export const renderProjectList = (callbacks) => {
     html += `
       <div class="project-group mb-4 bg-white dark:bg-slate-800 rounded-xl shadow-md border border-slate-200 dark:border-slate-700 overflow-hidden">
         <div class="flex items-center bg-slate-50 dark:bg-slate-700/30 border-b border-slate-100 dark:border-slate-700">
-          
           <div class="accordion-trigger flex-1 flex items-center gap-3 p-4 cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors" data-group-name="${groupName}">
             <svg class="w-5 h-5 text-yellow-500 transform transition-transform duration-200 group-arrow pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
@@ -2375,15 +2373,14 @@ export const renderProjectList = (callbacks) => {
           </div>
 
           <div class="flex items-center gap-1 px-3">
-            <button class="edit-group-action-btn p-2 text-slate-500 hover:bg-white dark:hover:bg-slate-600 rounded-lg transition-colors" data-group-name="${groupName}" title="物件情報を編集">
+            <button class="edit-group-action-btn p-2 text-slate-500 hover:bg-white dark:hover:bg-slate-600 rounded-lg transition-colors" data-group-name="${groupName}">
               <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="pointer-events-none"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
             </button>
-            <button class="aggregate-group-action-btn p-2 text-blue-600 hover:bg-white dark:hover:bg-slate-600 rounded-lg transition-colors" data-group-name="${groupName}" title="集計結果表示">
+            <button class="aggregate-group-action-btn p-2 text-blue-600 hover:bg-white dark:hover:bg-slate-600 rounded-lg transition-colors" data-group-name="${groupName}">
               <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="pointer-events-none"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>
             </button>
           </div>
         </div>
-
         <div class="project-group-content hidden flex flex-col divide-y divide-slate-100 dark:divide-slate-700">
           ${groupProjects.map(p => `
             <div class="project-item-row flex items-center p-3 hover:bg-yellow-50 dark:hover:bg-yellow-900/10 transition-colors cursor-pointer" data-id="${p.id}">
@@ -2405,57 +2402,45 @@ export const renderProjectList = (callbacks) => {
 
   container.innerHTML = html;
 
-  // --- イベント設定（役割ごとに確実に分離） ---
-
-  // 1. 物件名編集ボタン
+  // 物件アクションボタン
   container.querySelectorAll('.edit-group-action-btn').forEach(btn => {
-    btn.onclick = (e) => {
-      e.preventDefault();
-      e.stopPropagation(); // 親のクリックイベントを100%遮断
-      currentCallbacks.onGroupEdit(btn.dataset.groupName);
-    };
+    btn.onclick = (e) => { e.stopPropagation(); currentCallbacks.onGroupEdit(btn.dataset.groupName); };
+  });
+  container.querySelectorAll('.aggregate-group-action-btn').forEach(btn => {
+    btn.onclick = (e) => { e.stopPropagation(); currentCallbacks.onGroupAggregate(btn.dataset.groupName); };
   });
 
-  // 2. 集計ボタン
-  container.querySelectorAll('.aggregate-group-aggregate-btn, .aggregate-group-action-btn').forEach(btn => {
-    btn.onclick = (e) => {
-      e.preventDefault();
-      e.stopPropagation(); // 親のクリックイベントを100%遮断
-      currentCallbacks.onGroupAggregate(btn.dataset.groupName);
-    };
-  });
-
-  // 3. アコーディオン開閉（トリガーエリア限定）
+  // ★修正：排他的アコーディオン制御
   container.querySelectorAll('.accordion-trigger').forEach(trigger => {
     trigger.onclick = () => {
       const groupDiv = trigger.closest('.project-group');
       const content = groupDiv.querySelector('.project-group-content');
       const arrow = trigger.querySelector('.group-arrow');
+      const isCurrentlyHidden = content.classList.contains('hidden');
       
-      const isHidden = content.classList.contains('hidden');
-      content.classList.toggle('hidden');
-      if (arrow) arrow.classList.toggle('rotate-90', isHidden);
+      // 1. まず全てのコンテンツを閉じる
+      container.querySelectorAll('.project-group-content').forEach(c => c.classList.add('hidden'));
+      container.querySelectorAll('.group-arrow').forEach(a => a.classList.remove('rotate-90'));
+
+      // 2. クリックされたものがもともと閉じていた場合のみ、開く
+      if (isCurrentlyHidden) {
+        content.classList.remove('hidden');
+        if (arrow) arrow.classList.add('rotate-90');
+      }
     };
   });
 
-  // 4. 工事行のクリック
+  // 工事行のクリック
   container.querySelectorAll('.project-item-row').forEach(row => {
     row.onclick = (e) => {
-      // チェックボックスまたはその周囲がクリックされた場合
       if (e.target.closest('.checkbox-click-zone') || e.target.classList.contains('project-checkbox')) {
         updateProjectOpBar(currentCallbacks);
         return;
       }
-      // それ以外（名前など）なら詳細へ
       currentCallbacks.onSelect(row.dataset.id);
     };
   });
-
-  // 初期化：バーを隠す
-  const bar = document.getElementById('project-op-bar');
-  if (bar) bar.classList.add("translate-y-24", "opacity-0", "pointer-events-none");
 };
-
 /**
  * 物件用フローティングバーの表示更新
  */
@@ -5720,7 +5705,6 @@ export const renderProjectSwitcher = () => {
     <div class="text-[10px] text-slate-500 dark:text-slate-400 font-bold tracking-wider truncate mb-[-2px]">
       ${propertyName}
     </div>
-    
     <div class="relative inline-block text-left">
       <button id="switcher-trigger" class="flex items-center gap-1 py-0.5 rounded-md hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors group">
         <span class="text-base font-bold text-slate-900 dark:text-slate-100 truncate max-w-[150px] sm:max-w-xs">
@@ -5745,32 +5729,42 @@ export const renderProjectSwitcher = () => {
     </div>
   `;
 
-  // --- イベント設定 ---
   const trigger = document.getElementById("switcher-trigger");
   const dropdown = document.getElementById("switcher-dropdown");
 
   if (trigger && dropdown) {
+    // トリガーをクリックした時の挙動
     trigger.onclick = (e) => {
-      e.stopPropagation();
-      dropdown.classList.toggle("opacity-0");
-      dropdown.classList.toggle("pointer-events-none");
-      dropdown.classList.toggle("translate-y-2");
+      e.stopPropagation(); // windowへのクリック伝播を止める
+      const isHidden = dropdown.classList.contains("opacity-0");
+      if (isHidden) {
+        dropdown.classList.remove("opacity-0", "pointer-events-none", "translate-y-2");
+      } else {
+        dropdown.classList.add("opacity-0", "pointer-events-none", "translate-y-2");
+      }
     };
 
-    // 外側クリックで閉じる
-    window.addEventListener("click", () => {
-      dropdown.classList.add("opacity-0", "pointer-events-none", "translate-y-2");
-    }, { once: true });
+    // ★追加：画面のどこをクリックしても閉じる処理
+    const handleOutsideClick = (e) => {
+      if (!dropdown.contains(e.target) && e.target !== trigger) {
+        dropdown.classList.add("opacity-0", "pointer-events-none", "translate-y-2");
+        // メニューが閉じたらイベントリスナーを解除してメモリを節約
+        document.removeEventListener("click", handleOutsideClick);
+      }
+    };
+
+    // メニューが開いたときだけリスナーを登録する仕組み
+    trigger.addEventListener("click", () => {
+      document.addEventListener("click", handleOutsideClick);
+    });
   }
 
-  // 工事切り替え実行
+  // 切り替え実行
   container.querySelectorAll(".switcher-item").forEach(item => {
     item.onclick = () => {
       const targetId = item.dataset.targetId;
       if (targetId === state.currentProjectId) return;
-
       state.currentProjectId = targetId;
-      // ページ全体を再描画（詳細表示）
       if (typeof renderDetailView === "function") renderDetailView();
       showToast(`${item.querySelector('span').textContent} へジャンプしました`);
     };
