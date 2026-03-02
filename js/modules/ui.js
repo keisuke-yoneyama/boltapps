@@ -2333,10 +2333,6 @@ export const renderTempBoltResults = (project) => {
 };
 
 /**
- * プロジェクトリストを描画し、イベントを設定する.物件一覧をアコーディオン形式で描画し、イベントを設定する
- * @param {Object} callbacks - 各ボタンのアクション { onSelect, onEdit, onDuplicate, onDelete, onGroupEdit, onGroupAggregate }
- */
-/**
  * 物件一覧をアコーディオン形式で描画し、イベントを設定する
  */
 export const renderProjectList = (callbacks) => {
@@ -2390,14 +2386,15 @@ export const renderProjectList = (callbacks) => {
         <div class="project-group-content hidden flex flex-col divide-y divide-slate-100 dark:divide-slate-700">
           ${groupProjects.map(p => `
             <div class="project-item-row flex items-center p-3 hover:bg-yellow-50 dark:hover:bg-yellow-900/10 transition-colors cursor-pointer" data-id="${p.id}">
-              <div class="px-2 checkbox-area">
-                <input type="checkbox" class="project-checkbox w-5 h-5 rounded border-slate-300 text-yellow-500 focus:ring-yellow-400 cursor-pointer" data-id="${p.id}">
+              <div class="px-2 py-1 checkbox-wrapper">
+                <input type="checkbox" class="project-checkbox w-6 h-6 rounded border-slate-300 text-yellow-500 focus:ring-yellow-400 cursor-pointer" data-id="${p.id}">
               </div>
               <div class="flex-1 min-w-0 px-2 pointer-events-none">
                 <h4 class="font-bold text-slate-900 dark:text-slate-100 truncate">${p.name}</h4>
-                <p class="text-xs text-slate-500 truncate mt-0.5">${new Date(p.createdAt).toLocaleDateString()} 登録</p>
+                </div>
+              <div class="text-slate-300 px-2 pointer-events-none">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>
               </div>
-              <div class="text-slate-300 px-2 pointer-events-none"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg></div>
             </div>
           `).join('')}
         </div>
@@ -2408,7 +2405,7 @@ export const renderProjectList = (callbacks) => {
   container.innerHTML = html;
 
   // --- 全体イベントリスナー (委譲方式) ---
-  // すでにあるリスナーを一度削除して再登録（二重発火防止）
+  // 古いイベントを確実に消すため、コンテナを一度クローンして差し替える
   const newContainer = container.cloneNode(true);
   container.parentNode.replaceChild(newContainer, container);
 
@@ -2429,7 +2426,14 @@ export const renderProjectList = (callbacks) => {
       return currentCallbacks.onGroupAggregate(aggGroupBtn.dataset.groupName);
     }
 
-    // 3. ヘッダーの開閉（アコーディオン）
+    // 3. チェックボックスそのもの、またはその外枠がクリックされた場合
+    if (target.classList.contains("project-checkbox") || target.closest(".checkbox-wrapper")) {
+        // changeイベントが確実に発火するように少し遅延させてバー更新を呼ぶ
+        setTimeout(() => updateProjectOpBar(currentCallbacks), 0);
+        return; 
+    }
+
+    // 4. ヘッダーの開閉（アコーディオン）
     const header = target.closest(".project-group-header");
     if (header) {
       const groupDiv = header.closest(".project-group");
@@ -2445,26 +2449,21 @@ export const renderProjectList = (callbacks) => {
       return;
     }
 
-    // 4. チェックボックス
-    if (target.closest(".checkbox-area")) {
-        return; // changeイベントで処理するため何もしない
-    }
-
-    // 5. 工事行のクリック (詳細へ)
+    // 5. 工事行のクリック (詳細画面へ)
     const row = target.closest(".project-item-row");
     if (row) {
       currentCallbacks.onSelect(row.dataset.id);
     }
   });
 
-  // チェックボックス変更イベント
+  // チェックボックス変更イベント（キーボード操作用など）
   newContainer.addEventListener("change", (e) => {
     if (e.target.classList.contains("project-checkbox")) {
       updateProjectOpBar(currentCallbacks);
     }
   });
 
-  // バーをリセット
+  // 初期化時にバーを隠す
   const bar = document.getElementById('project-op-bar');
   if (bar) bar.classList.add("translate-y-24", "opacity-0", "pointer-events-none");
 };
@@ -2474,23 +2473,23 @@ export const renderProjectList = (callbacks) => {
 function updateProjectOpBar(callbacks) {
   const bar = document.getElementById("project-op-bar");
   const countLabel = document.getElementById("project-selection-count");
+  // 画面内のチェックされているボックスを正しく取得
   const checkedBoxes = Array.from(document.querySelectorAll(".project-checkbox:checked"));
   const count = checkedBoxes.length;
 
   if (!bar) return;
 
   if (count > 0) {
-    countLabel.textContent = count;
+    if (countLabel) countLabel.textContent = count;
     bar.classList.remove("translate-y-24", "opacity-0", "pointer-events-none");
 
     const firstId = checkedBoxes[0].dataset.id;
 
-    // ボタン設定用の共通処理
+    // ボタン設定
     const setupBtn = (id, action, needsOneOnly = false) => {
       const btn = document.getElementById(id);
       if (!btn) return;
 
-      // 古いイベントを確実に消すため、クローンを作成
       const newBtn = btn.cloneNode(true);
       btn.parentNode.replaceChild(newBtn, btn);
 
@@ -2498,19 +2497,30 @@ function updateProjectOpBar(callbacks) {
         newBtn.classList.add("hidden");
       } else {
         newBtn.classList.remove("hidden");
-        newBtn.onclick = () => action(firstId);
+        newBtn.onclick = (e) => {
+          e.stopPropagation();
+          action(firstId);
+        };
       }
     };
 
     setupBtn("project-edit-btn-bulk", callbacks.onEdit, true);
     setupBtn("project-copy-btn-bulk", callbacks.onDuplicate, true);
-    setupBtn("project-delete-btn-bulk", (id) => {
-      if (count === 1) {
-        callbacks.onDelete(id);
-      } else {
-        alert("複数削除は現在一件ずつ対応しています。");
-      }
-    });
+    
+    // 削除ボタン
+    const deleteBtn = document.getElementById("project-delete-btn-bulk");
+    if (deleteBtn) {
+        const newDeleteBtn = deleteBtn.cloneNode(true);
+        deleteBtn.parentNode.replaceChild(newDeleteBtn, deleteBtn);
+        newDeleteBtn.onclick = (e) => {
+            e.stopPropagation();
+            if (count === 1) {
+                callbacks.onDelete(firstId);
+            } else {
+                alert("一括削除は現在1件ずつのみ対応しています。");
+            }
+        };
+    }
   } else {
     bar.classList.add("translate-y-24", "opacity-0", "pointer-events-none");
   }
