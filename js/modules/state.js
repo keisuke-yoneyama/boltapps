@@ -15,7 +15,8 @@ export const state = {
   tempOrderDetailsView: "section", // 'location' or 'section'
   tempOrderDetailsGroupAll: false, // 工区まとめ設定 (true=全工区まとめ, false=工区別)
   tempOrderDetailsGroupKey: "section", // 'section' (工区別) or 'floor' (フロア別)
-
+  tallyFilterLevel : 'all',
+  tallyFilterType : 'all',
   // ▼▼▼ 追記: 個別の階層設定を保持する配列 ▼▼▼
   bulkMemberLevels: [], // 部材ごとの階層ID配列を格納する配列
   activeBulkMemberIndex: -1, // 現在階層を選択中の部材のインデックス
