@@ -2336,19 +2336,22 @@ export const renderTempBoltResults = (project) => {
  * プロジェクトリストを描画し、イベントを設定する.物件一覧をアコーディオン形式で描画し、イベントを設定する
  * @param {Object} callbacks - 各ボタンのアクション { onSelect, onEdit, onDuplicate, onDelete, onGroupEdit, onGroupAggregate }
  */
+/**
+ * 物件一覧をアコーディオン形式で描画する (引数はcallbacksのみに統一)
+ */
 export const renderProjectList = (callbacks) => {
   if (callbacks) savedListCallbacks = callbacks;
   const currentCallbacks = callbacks || savedListCallbacks;
   
   const container = document.getElementById("projects-container");
-  if (!container) return;
+  if (!container || !currentCallbacks) return;
 
   if (state.projects.length === 0) {
-    container.innerHTML = '<p class="text-center text-gray-500 dark:text-gray-400 py-8">まだ工事が登録されていません。<br>右下の＋ボタンから追加してください。</p>';
+    container.innerHTML = '<p class="text-center text-gray-500 py-8">まだ工事が登録されていません。</p>';
     return;
   }
 
-  // 1. 物件名でグループ化
+  // 1. 物件名でグループ化 (state.projects を直接使用)
   const groups = {};
   state.projects.forEach((p) => {
     const propName = p.propertyName || "（物件名未設定）";
@@ -2356,7 +2359,6 @@ export const renderProjectList = (callbacks) => {
     groups[propName].push(p);
   });
 
-  // 物件名の並び替え（未設定を最後に）
   const sortedGroupNames = Object.keys(groups).sort((a, b) =>
     a === "（物件名未設定）" ? 1 : b === "（物件名未設定）" ? -1 : a.localeCompare(b, "ja")
   );
@@ -2364,7 +2366,6 @@ export const renderProjectList = (callbacks) => {
   let html = "";
   sortedGroupNames.forEach((groupName) => {
     const groupProjects = groups[groupName];
-    
     html += `
       <div class="project-group mb-4 bg-white dark:bg-slate-800 rounded-xl shadow-md border border-slate-200 dark:border-slate-700 overflow-hidden">
         <div class="project-group-header flex justify-between items-center p-4 bg-slate-50 dark:bg-slate-700/30 cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors" data-group="${groupName}">
@@ -2375,43 +2376,28 @@ export const renderProjectList = (callbacks) => {
             <h3 class="font-bold text-slate-800 dark:text-slate-100 truncate">物件名：${groupName}</h3>
             <span class="bg-slate-200 dark:bg-slate-600 text-slate-600 dark:text-slate-300 text-xs px-2 py-0.5 rounded-full">${groupProjects.length}件</span>
           </div>
-          
           <div class="flex items-center gap-1" onclick="event.stopPropagation()">
-            <button data-property-name="${groupName}" class="edit-group-btn p-2 text-slate-500 hover:bg-white dark:hover:bg-slate-600 rounded-lg transition-colors" title="物件情報を編集">
+            <button class="edit-group-btn p-2 text-slate-500 hover:bg-white dark:hover:bg-slate-600 rounded-lg transition-colors" data-group="${groupName}">
               <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
             </button>
-            <button data-property-name="${groupName}" class="show-aggregated-results-btn p-2 text-blue-600 hover:bg-white dark:hover:bg-slate-600 rounded-lg transition-colors" title="集計結果表示">
+            <button class="show-aggregated-results-btn p-2 text-blue-600 hover:bg-white dark:hover:bg-slate-600 rounded-lg transition-colors" data-group="${groupName}">
               <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>
             </button>
           </div>
         </div>
-
         <div class="project-group-content hidden flex flex-col divide-y divide-slate-100 dark:divide-slate-700">
-          ${groupProjects.map(p => {
-            const description = p.mode === "advanced"
-              ? `${p.customLevels.length}階層 / ${p.customAreas.length}エリア`
-              : `${p.floors}階 (+R${p.hasPH ? ",PH" : ""}) / ${p.sections}工区`;
-
-            return `
-              <div class="project-item-row group flex items-center p-3 hover:bg-yellow-50 dark:hover:bg-yellow-900/10 transition-colors cursor-pointer" data-id="${p.id}">
-                <div class="px-2" onclick="event.stopPropagation()">
-                  <input type="checkbox" class="project-checkbox w-5 h-5 rounded border-slate-300 text-yellow-500 focus:ring-yellow-400 cursor-pointer" data-id="${p.id}">
-                </div>
-                <div class="flex-1 min-w-0 px-2 select-trigger">
-                  <div class="flex items-center gap-2">
-                    <h4 class="font-bold text-slate-900 dark:text-slate-100 truncate">${p.name}</h4>
-                    <span class="text-[10px] bg-slate-100 dark:bg-slate-700 px-1.5 py-0.5 rounded text-slate-500">${p.mode === 'advanced' ? 'カスタム' : p.floors + 'F'}</span>
-                  </div>
-                  <p class="text-xs text-slate-500 truncate mt-0.5">
-                    ${description} | 登録: ${new Date(p.createdAt).toLocaleDateString()}
-                  </p>
-                </div>
-                <div class="text-slate-300 group-hover:text-yellow-500 transition-colors px-2">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>
-                </div>
+          ${groupProjects.map(p => `
+            <div class="project-item-row flex items-center p-3 hover:bg-yellow-50 dark:hover:bg-yellow-900/10 transition-colors cursor-pointer" data-id="${p.id}">
+              <div class="px-2" onclick="event.stopPropagation()">
+                <input type="checkbox" class="project-checkbox w-5 h-5 rounded border-slate-300 text-yellow-500 focus:ring-yellow-400 cursor-pointer" data-id="${p.id}">
               </div>
-            `;
-          }).join('')}
+              <div class="flex-1 min-w-0 px-2">
+                <h4 class="font-bold text-slate-900 dark:text-slate-100 truncate">${p.name}</h4>
+                <p class="text-xs text-slate-500 truncate mt-0.5">${new Date(p.createdAt).toLocaleDateString()} 登録</p>
+              </div>
+              <div class="text-slate-300 px-2"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg></div>
+            </div>
+          `).join('')}
         </div>
       </div>
     `;
@@ -2420,44 +2406,31 @@ export const renderProjectList = (callbacks) => {
   container.innerHTML = html;
 
   // --- イベント設定 ---
+  container.onclick = (e) => {
+    const header = e.target.closest(".project-group-header");
+    const row = e.target.closest(".project-item-row");
+    const editGroup = e.target.closest(".edit-group-btn");
+    const aggGroup = e.target.closest(".show-aggregated-results-btn");
 
-  // 1. グループヘッダーの開閉
-  container.querySelectorAll(".project-group-header").forEach(header => {
-    header.addEventListener("click", () => {
+    if (editGroup) return currentCallbacks.onGroupEdit(editGroup.dataset.group);
+    if (aggGroup) return currentCallbacks.onGroupAggregate(aggGroup.dataset.group);
+
+    if (header) {
       const content = header.nextElementSibling;
       const arrow = header.querySelector(".group-arrow");
-      const isHidden = content.classList.contains("hidden");
       content.classList.toggle("hidden");
-      if (arrow) arrow.classList.toggle("rotate-90", isHidden);
-    });
-  });
+      if (arrow) arrow.classList.toggle("rotate-90");
+    } else if (row && !e.target.closest(".project-checkbox")) {
+      currentCallbacks.onSelect(row.dataset.id);
+    }
+  };
 
-  // 2. 物件アクション (編集・集計)
-  container.querySelectorAll(".edit-group-btn").forEach(btn => {
-    btn.addEventListener("click", (e) => currentCallbacks.onGroupEdit(btn.dataset.propertyName));
-  });
-  container.querySelectorAll(".show-aggregated-results-btn").forEach(btn => {
-    btn.addEventListener("click", (e) => currentCallbacks.onGroupAggregate(btn.dataset.propertyName));
-  });
-
-  // 3. 工事選択 (行クリック)
-  container.querySelectorAll(".project-item-row").forEach(row => {
-    row.addEventListener("click", (e) => {
-      // チェックボックスやその外枠以外をクリックした場合のみ詳細へ
-      if (!e.target.closest(".project-checkbox")) {
-        currentCallbacks.onSelect(row.dataset.id);
-      }
-    });
-  });
-
-  // 4. チェックボックス変更時のバー更新
-  container.addEventListener("change", (e) => {
+  container.onchange = (e) => {
     if (e.target.classList.contains("project-checkbox")) {
       updateProjectOpBar(currentCallbacks);
     }
-  });
+  };
 
-  // 描画時にバーを一度リセットして隠す
   const bar = document.getElementById('project-op-bar');
   if (bar) bar.classList.add("translate-y-24", "opacity-0", "pointer-events-none");
 };
@@ -5297,25 +5270,21 @@ export const setupQuickNav = () => {
  * プロジェクトリストの描画とアクション定義を行うラッパー関数
  */
 export const updateProjectListUI = () => {
-  const projects = state.projects;
-
-  renderProjectList(projects, {
-    // --- 選択 (行をクリックした時) ---
+  // renderProjectList を呼び出す際、callbacksオブジェクトだけを渡すように統一
+  renderProjectList({
+    // --- 選択 ---
     onSelect: (id) => {
       const originalProject = state.projects.find((p) => p.id == id);
       if (originalProject) {
         state.currentProjectId = originalProject.id;
-      } else {
-        state.currentProjectId = id;
       }
-
       if (typeof resetMemberForm === "function") resetMemberForm();
       state.sort = {};
       if (typeof renderDetailView === "function") renderDetailView();
       switchView("detail");
     },
 
-    // --- 編集 (バーのボタンから呼び出し) ---
+    // --- 編集 ---
     onEdit: (id) => {
       const project = state.projects.find((p) => p.id === id);
       if (project && typeof openEditProjectModal === "function") {
@@ -5323,14 +5292,14 @@ export const updateProjectListUI = () => {
       }
     },
 
-    // --- 削除 (バーのボタンから呼び出し) ---
+    // --- 削除 ---
     onDelete: (id) => {
       if (typeof openConfirmDeleteModal === "function") {
         openConfirmDeleteModal(id, "project");
       }
     },
 
-    // --- 複製 (バーのボタンから呼び出し) ---
+    // --- 複製 ---
     onDuplicate: (id) => {
       const project = state.projects.find((p) => p.id === id);
       if (project) {
@@ -5347,17 +5316,12 @@ export const updateProjectListUI = () => {
             counter++;
           }
           copyNewNameInput.value = `${baseName}(${counter})`;
-
-          const defaultRadio = document.querySelector('input[name="copy-mode"][value="with_master"]');
-          if (defaultRadio) defaultRadio.checked = true;
-
           openModal(copyProjectModal);
-          setTimeout(() => copyNewNameInput.select(), 100);
         }
       }
     },
 
-    // --- 物件名（グループ）の編集 ---
+    // --- 物件情報編集 ---
     onGroupEdit: (propertyName) => {
       const oldNameInput = document.getElementById("edit-group-old-name");
       const newNameInput = document.getElementById("edit-group-new-name");
@@ -5366,15 +5330,18 @@ export const updateProjectListUI = () => {
       openModal(document.getElementById("edit-group-modal"));
     },
 
-    // --- 物件ごとの集計表示 ---
+    // --- 集計表示 ---
     onGroupAggregate: (propertyName) => {
       const projectsInGroup = state.projects.filter(p => p.propertyName === propertyName);
       if (projectsInGroup.length > 0) {
-        const aggregatedData = calculateAggregatedResults(projectsInGroup);
-        if (typeof renderAggregatedResults === "function") {
-          renderAggregatedResults(propertyName, aggregatedData);
+        // calculator.jsからインポートした集計ロジックを使用
+        if (typeof calculateAggregatedResults === "function") {
+          const aggregatedData = calculateAggregatedResults(projectsInGroup);
+          if (typeof renderAggregatedResults === "function") {
+            renderAggregatedResults(propertyName, aggregatedData);
+          }
+          openModal(document.getElementById("aggregated-results-modal"));
         }
-        openModal(document.getElementById("aggregated-results-modal"));
       }
     },
   });
