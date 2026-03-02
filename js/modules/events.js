@@ -3164,66 +3164,85 @@ function setupTallySheetInteractions() {
       }
     });
 
-    // --- ドラッグ＆ドロップ ---
+// --- ドラッグ＆ドロップ ---
     tallySheetContainer.addEventListener("dragstart", (e) => {
       if (e.target.classList.contains("tally-input") && !e.target.disabled) {
         dragSourceElement = e.target;
         e.dataTransfer.effectAllowed = "move";
+        // ドラッグ中の見た目を少し変える
+        e.target.classList.add("opacity-50");
       }
     });
 
     tallySheetContainer.addEventListener("dragover", (e) => {
       if (e.target.classList.contains("tally-input") && !e.target.disabled) {
-        e.preventDefault();
+        e.preventDefault(); // ドロップを許可
+        e.target.classList.add("bg-yellow-100", "dark:bg-yellow-900/30");
+      }
+    });
+
+    tallySheetContainer.addEventListener("dragleave", (e) => {
+      if (e.target.classList.contains("tally-input")) {
+        e.target.classList.remove("bg-yellow-100", "dark:bg-yellow-900/30");
       }
     });
 
     tallySheetContainer.addEventListener("dragend", (e) => {
+      if (e.target.classList.contains("tally-input")) {
+        e.target.classList.remove("opacity-50");
+      }
+      // ここで null にしても、drop 内のローカル変数が値を保持するので安全になります
       dragSourceElement = null;
     });
 
     tallySheetContainer.addEventListener("drop", (e) => {
       e.preventDefault();
-      const dropTargetElement = e.target;
+      const dropTarget = e.target;
+      
+      // ★修正のポイント: 現在のドラッグ元をローカル変数に固定（キャプチャ）する
+      const dragSource = dragSourceElement;
+
+      if (dropTarget.classList.contains("tally-input")) {
+        dropTarget.classList.remove("bg-yellow-100", "dark:bg-yellow-900/30");
+      }
 
       if (
-        !dragSourceElement ||
-        !dropTargetElement ||
-        !dropTargetElement.classList.contains("tally-input") ||
-        dropTargetElement === dragSourceElement ||
-        dropTargetElement.disabled
+        !dragSource ||
+        !dropTarget ||
+        !dropTarget.classList.contains("tally-input") ||
+        dropTarget === dragSource ||
+        dropTarget.disabled
       ) {
-        dragSourceElement = null;
         return;
       }
 
-      const sourceValue = dragSourceElement.value || "(空)";
-      const targetValue = dropTargetElement.value || "(空)";
+      const sourceValue = dragSource.value || "(空)";
+      const targetValue = dropTarget.value || "(空)";
 
-      // 確認モーダルの内容設定
-      const confirmActionTitle = document.getElementById(
-        "confirm-action-title",
-      );
-      const confirmActionMessage = document.getElementById(
-        "confirm-action-message",
-      );
-      const confirmActionModal = document.getElementById(
-        "confirm-action-modal",
-      );
+      // モーダルの準備
+      const confirmActionTitle = document.getElementById("confirm-action-title");
+      const confirmActionMessage = document.getElementById("confirm-action-message");
+      const confirmActionModal = document.getElementById("confirm-action-modal");
 
       if (confirmActionTitle) confirmActionTitle.textContent = "数値の移動確認";
       if (confirmActionMessage) {
         confirmActionMessage.innerHTML = `セルからセルへ数値を移動しますか？<br><br>
-             移動元セルの値: <strong class="text-blue-600 dark:text-blue-400">${sourceValue}</strong><br>
-             移動先セルの値: <strong class="text-red-600 dark:text-red-400">${targetValue}</strong> (この値は上書きされます)`;
+             移動元: <strong class="text-blue-600">${sourceValue}</strong><br>
+             移動先: <strong class="text-red-600">${targetValue}</strong> (上書きされます)`;
       }
 
+      // ★修正のポイント: dragSource と dropTarget という「変数名」をクロージャで使用
       state.pendingAction = () => {
-        dropTargetElement.value = dragSourceElement.value;
-        dragSourceElement.value = "";
-        dragSourceElement.dispatchEvent(new Event("change", { bubbles: true }));
-        dropTargetElement.dispatchEvent(new Event("change", { bubbles: true }));
-        dragSourceElement = null;
+        if (dragSource && dropTarget) {
+          dropTarget.value = dragSource.value;
+          dragSource.value = "";
+          
+          // 値の変更をシステムに通知
+          dragSource.dispatchEvent(new Event("change", { bubbles: true }));
+          dropTarget.dispatchEvent(new Event("change", { bubbles: true }));
+          
+          showToast("数値を移動しました");
+        }
       };
 
       if (confirmActionModal) openModal(confirmActionModal);
