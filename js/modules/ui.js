@@ -4386,11 +4386,11 @@ export const switchView = (viewName) => {
       navElements.mobileNavDetailButtons.classList.remove("hidden");
     }
 
-    // タイトル更新
-    const project = state.projects.find((p) => p.id === state.currentProjectId);
-    if (project && navElements.navProjectTitle) {
-      navElements.navProjectTitle.textContent = project.name;
-    }
+    // // タイトル更新
+    // const project = state.projects.find((p) => p.id === state.currentProjectId);
+    // if (project && navElements.navProjectTitle) {
+    //   navElements.navProjectTitle.textContent = project.name;
+    // }
 
     switchTab("joints");
 
