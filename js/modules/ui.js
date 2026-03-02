@@ -2333,7 +2333,7 @@ export const renderTempBoltResults = (project) => {
 };
 
 /**
- * 物件一覧をアコーディオン形式で描画し、イベントを設定する
+ * 物件一覧を描画し、イベントを設定する
  */
 export const renderProjectList = (callbacks) => {
   if (callbacks) savedListCallbacks = callbacks;
@@ -2343,11 +2343,11 @@ export const renderProjectList = (callbacks) => {
   if (!container || !currentCallbacks) return;
 
   if (state.projects.length === 0) {
-    container.innerHTML = '<p class="text-center text-gray-500 py-8">まだ工事が登録されていません。</p>';
+    container.innerHTML = '<p class="text-center text-gray-500 py-8">工事が登録されていません。</p>';
     return;
   }
 
-  // 1. 物件名でグループ化
+  // 1. グループ化
   const groups = {};
   state.projects.forEach((p) => {
     const propName = p.propertyName || "（物件名未設定）";
@@ -2372,7 +2372,6 @@ export const renderProjectList = (callbacks) => {
             <h3 class="font-bold text-slate-800 dark:text-slate-100 truncate">物件名：${groupName}</h3>
             <span class="bg-slate-200 dark:bg-slate-600 text-slate-600 dark:text-slate-300 text-xs px-2 py-0.5 rounded-full">${groupProjects.length}件</span>
           </div>
-          
           <div class="flex items-center gap-1 ml-2">
             <button class="edit-group-action-btn p-2 text-slate-500 hover:bg-white dark:hover:bg-slate-600 rounded-lg transition-colors" data-group-name="${groupName}">
               <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="pointer-events-none"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
@@ -2382,16 +2381,15 @@ export const renderProjectList = (callbacks) => {
             </button>
           </div>
         </div>
-
         <div class="project-group-content hidden flex flex-col divide-y divide-slate-100 dark:divide-slate-700">
           ${groupProjects.map(p => `
             <div class="project-item-row flex items-center p-3 hover:bg-yellow-50 dark:hover:bg-yellow-900/10 transition-colors cursor-pointer" data-id="${p.id}">
-              <div class="px-2 py-1 checkbox-wrapper">
-                <input type="checkbox" class="project-checkbox w-6 h-6 rounded border-slate-300 text-yellow-500 focus:ring-yellow-400 cursor-pointer" data-id="${p.id}">
+              <div class="px-2 py-1 flex items-center justify-center">
+                <input type="checkbox" class="project-checkbox w-6 h-6 rounded border-slate-300 text-yellow-500 focus:ring-yellow-400 cursor-pointer z-10" data-id="${p.id}">
               </div>
               <div class="flex-1 min-w-0 px-2 pointer-events-none">
                 <h4 class="font-bold text-slate-900 dark:text-slate-100 truncate">${p.name}</h4>
-                </div>
+              </div>
               <div class="text-slate-300 px-2 pointer-events-none">
                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>
               </div>
@@ -2404,124 +2402,94 @@ export const renderProjectList = (callbacks) => {
 
   container.innerHTML = html;
 
-  // --- 全体イベントリスナー (委譲方式) ---
-  // 古いイベントを確実に消すため、コンテナを一度クローンして差し替える
-  const newContainer = container.cloneNode(true);
-  container.parentNode.replaceChild(newContainer, container);
-
-  newContainer.addEventListener("click", (e) => {
+  // --- イベント委譲 ---
+  // 古いリスナーを削除するためにコンテナを差し替えるのはやめ、addEventListenerで管理
+  container.onclick = (e) => {
     const target = e.target;
 
-    // 1. 物件名編集ボタン
-    const editGroupBtn = target.closest(".edit-group-action-btn");
-    if (editGroupBtn) {
-      e.stopPropagation();
-      return currentCallbacks.onGroupEdit(editGroupBtn.dataset.groupName);
-    }
-
-    // 2. 集計ボタン
-    const aggGroupBtn = target.closest(".aggregate-group-action-btn");
-    if (aggGroupBtn) {
-      e.stopPropagation();
-      return currentCallbacks.onGroupAggregate(aggGroupBtn.dataset.groupName);
-    }
-
-    // 3. チェックボックスそのもの、またはその外枠がクリックされた場合
-    if (target.classList.contains("project-checkbox") || target.closest(".checkbox-wrapper")) {
-        // changeイベントが確実に発火するように少し遅延させてバー更新を呼ぶ
-        setTimeout(() => updateProjectOpBar(currentCallbacks), 0);
-        return; 
-    }
-
-    // 4. ヘッダーの開閉（アコーディオン）
-    const header = target.closest(".project-group-header");
-    if (header) {
-      const groupDiv = header.closest(".project-group");
-      const content = groupDiv.querySelector(".project-group-content");
-      const arrow = header.querySelector(".group-arrow");
-      
-      const isOpening = content.classList.contains("hidden");
-      content.classList.toggle("hidden");
-      if (arrow) {
-        if (isOpening) arrow.classList.add("rotate-90");
-        else arrow.classList.remove("rotate-90");
-      }
+    // 1. チェックボックスが直接クリックされた場合
+    if (target.classList.contains("project-checkbox")) {
+      // 親の行クリック(詳細移動)を邪魔しないように処理
+      updateProjectOpBar(currentCallbacks);
       return;
     }
 
-    // 5. 工事行のクリック (詳細画面へ)
+    // 2. 物件アクションボタン
+    const editBtn = target.closest(".edit-group-action-btn");
+    const aggBtn = target.closest(".aggregate-group-action-btn");
+    if (editBtn) { e.stopPropagation(); return currentCallbacks.onGroupEdit(editBtn.dataset.groupName); }
+    if (aggBtn) { e.stopPropagation(); return currentCallbacks.onGroupAggregate(aggBtn.dataset.groupName); }
+
+    // 3. ヘッダーの開閉
+    const header = target.closest(".project-group-header");
+    if (header) {
+      const content = header.nextElementSibling;
+      const arrow = header.querySelector(".group-arrow");
+      const isOpening = content.classList.contains("hidden");
+      content.classList.toggle("hidden");
+      if (arrow) arrow.classList.toggle("rotate-90", isOpening);
+      return;
+    }
+
+    // 4. 工事行のクリック (詳細画面へ)
     const row = target.closest(".project-item-row");
     if (row) {
       currentCallbacks.onSelect(row.dataset.id);
     }
-  });
-
-  // チェックボックス変更イベント（キーボード操作用など）
-  newContainer.addEventListener("change", (e) => {
-    if (e.target.classList.contains("project-checkbox")) {
-      updateProjectOpBar(currentCallbacks);
-    }
-  });
-
-  // 初期化時にバーを隠す
+  };
+  
+  // 初期状態でバーを隠す
   const bar = document.getElementById('project-op-bar');
   if (bar) bar.classList.add("translate-y-24", "opacity-0", "pointer-events-none");
 };
+
 /**
- * 物件用フローティングバーの表示更新
+ * 操作バーの表示更新
  */
 function updateProjectOpBar(callbacks) {
   const bar = document.getElementById("project-op-bar");
   const countLabel = document.getElementById("project-selection-count");
-  // 画面内のチェックされているボックスを正しく取得
   const checkedBoxes = Array.from(document.querySelectorAll(".project-checkbox:checked"));
   const count = checkedBoxes.length;
 
-  if (!bar) return;
+  console.log("選択中の件数:", count); // ★デバッグ用
+
+  if (!bar) {
+    console.error("操作バー(project-op-bar)が見つかりません。HTMLを確認してください。");
+    return;
+  }
 
   if (count > 0) {
     if (countLabel) countLabel.textContent = count;
+    // 表示する
     bar.classList.remove("translate-y-24", "opacity-0", "pointer-events-none");
 
     const firstId = checkedBoxes[0].dataset.id;
 
-    // ボタン設定
-    const setupBtn = (id, action, needsOneOnly = false) => {
+    // ボタンにアクションを紐付け（一度イベントをクリア）
+    const setupBtn = (id, action, isSingleOnly) => {
       const btn = document.getElementById(id);
       if (!btn) return;
-
       const newBtn = btn.cloneNode(true);
       btn.parentNode.replaceChild(newBtn, btn);
-
-      if (needsOneOnly && count !== 1) {
+      
+      if (isSingleOnly && count !== 1) {
         newBtn.classList.add("hidden");
       } else {
         newBtn.classList.remove("hidden");
-        newBtn.onclick = (e) => {
-          e.stopPropagation();
-          action(firstId);
-        };
+        newBtn.onclick = (e) => { e.stopPropagation(); action(firstId); };
       }
     };
 
     setupBtn("project-edit-btn-bulk", callbacks.onEdit, true);
     setupBtn("project-copy-btn-bulk", callbacks.onDuplicate, true);
+    setupBtn("project-delete-btn-bulk", (id) => {
+      if (count === 1) callbacks.onDelete(id);
+      else alert("一括削除は現在1件ずつのみ対応しています。");
+    }, false);
     
-    // 削除ボタン
-    const deleteBtn = document.getElementById("project-delete-btn-bulk");
-    if (deleteBtn) {
-        const newDeleteBtn = deleteBtn.cloneNode(true);
-        deleteBtn.parentNode.replaceChild(newDeleteBtn, deleteBtn);
-        newDeleteBtn.onclick = (e) => {
-            e.stopPropagation();
-            if (count === 1) {
-                callbacks.onDelete(firstId);
-            } else {
-                alert("一括削除は現在1件ずつのみ対応しています。");
-            }
-        };
-    }
   } else {
+    // 隠す
     bar.classList.add("translate-y-24", "opacity-0", "pointer-events-none");
   }
 }
