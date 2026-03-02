@@ -3731,7 +3731,8 @@ export const renderTallySheet = (project) => {
   updateTallySheetCalculations(project);
 };
 /**
- * 集計結果（Results）画面を描画する（消失ガード・二重サイズ対応版）
+ * 集計結果（Results）画面を描画する
+ * 再計算ボタンを削除し、常に全データから安全に表示用クローンを生成します。
  */
 export const renderResults = (project) => {
   const resultsCardContent = document.getElementById("results-card-content");
@@ -3740,16 +3741,20 @@ export const renderResults = (project) => {
   if (resultsCardContent) resultsCardContent.innerHTML = "";
   if (!resultsCard) return;
 
+  // 描画更新のため一時的に隠す
   resultsCard.classList.add("hidden");
+
   if (!project) return;
 
-  // 1. 全データでの集計計算を実行（ project.tally は絶対に書き換えない）
+  // 1. 全データ（project.tally）に基づいた計算をまず実行
+  // ※ ここで返ってくる resultsByLocation は「現在の入力全件」の集計結果です。
   const { resultsByLocation } = calculateResults(project);
   
+  // 状態（絞り込み条件）を取得
   const activeLevel = state.activeTallyLevel || "all";
   const activeType = state.activeTallyType || "all";
 
-  // 2. 表示対象のロケーションIDを特定
+  // 2. 表示対象のロケーションID（階層）を特定
   const targetLocationIds = new Set();
   if (project.mode === "advanced") {
     project.customLevels.forEach((level) => {
@@ -3769,7 +3774,8 @@ export const renderResults = (project) => {
     }
   }
 
-  // 3. 種別(ピン取り含む)に基づいてデータをフィルタリング
+  // 3. 種別フィルターに基づき、表示用のデータ（filteredResults）を生成
+  // 元の resultsByLocation や project.tally は一切書き換えないため安全です。
   const filteredResultsByLocation = {};
   const filteredBoltSizes = new Set();
   let grandTotalBolts = 0;
@@ -3786,11 +3792,10 @@ export const renderResults = (project) => {
       let filteredTotal = 0;
 
       for (const [jointName, count] of Object.entries(data.joints)) {
-        // 継手オブジェクトを特定
+        // 継手オブジェクトを特定（大梁通常/ピンを区別するため）
         const jointObj = project.joints.find(j => j.name.trim() === jointName.trim());
         
-        // ★ 剛接合（通常大梁）は複数のサイズ行にまたがるため、
-        // jointObjの判定が一致すれば、どのサイズ行であっても集計に含める
+        // 絞り込み判定
         if (activeType === "all") {
           filteredJoints[jointName] = count;
           filteredTotal += count;
@@ -3803,6 +3808,7 @@ export const renderResults = (project) => {
         }
       }
 
+      // このサイズ（ボルト径×首下）で本数が残っていれば表示対象とする
       if (filteredTotal > 0) {
         filteredResultsByLocation[locId][size] = {
           total: filteredTotal,
@@ -3814,13 +3820,10 @@ export const renderResults = (project) => {
     }
   }
 
+  // アクションエリア（Excel出力のみ維持）
   const buttonsHtml = `
     <div class="flex justify-end gap-4 mb-4">
-        <button id="recalculate-btn" class="btn btn-secondary text-sm flex items-center gap-2">
-            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
-            最新の入力内容で再計算
-        </button>
-        <button id="export-excel-btn" class="btn bg-green-600 hover:bg-green-700 text-white text-sm font-bold flex items-center gap-2">
+        <button id="export-excel-btn" class="btn bg-green-600 hover:bg-green-700 dark:bg-green-700 dark:hover:bg-green-600 text-white text-sm font-bold flex items-center gap-2">
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
             Excelデータを出力
         </button>
@@ -3828,7 +3831,7 @@ export const renderResults = (project) => {
 
   if (filteredBoltSizes.size === 0) {
     if (resultsCardContent) {
-      resultsCardContent.innerHTML = buttonsHtml + '<p class="text-gray-500 p-12 text-center bg-slate-50 dark:bg-slate-800 rounded-xl border-2 border-dashed">絞り込み条件に一致する入力データはありません。</p>';
+      resultsCardContent.innerHTML = buttonsHtml + '<p class="text-gray-500 p-12 text-center bg-slate-50 dark:bg-slate-800 rounded-xl border-2 border-dashed border-slate-200 dark:border-slate-700 font-bold text-lg">現在の絞り込み条件に一致する入力データはありません。</p>';
     }
     resultsCard.classList.remove("hidden");
     return;
@@ -3836,7 +3839,7 @@ export const renderResults = (project) => {
 
   const sortedSizes = Array.from(filteredBoltSizes).sort(boltSort);
 
-  // --- テーブル1：フロア工区別テーブル ---
+  // --- テーブル1：フロア工区別 ---
   let floorColumns = [];
   if (project.mode === "advanced") {
     project.customLevels.forEach((level) => {
@@ -3873,7 +3876,7 @@ export const renderResults = (project) => {
         </div>
         <div class="overflow-x-auto custom-scrollbar">
             <table class="w-auto text-sm border-collapse">
-                <thead class="bg-slate-200 dark:bg-slate-700 text-xs">
+                <thead class="bg-slate-200 dark:bg-slate-700 text-xs text-slate-700 dark:text-slate-300">
                     <tr>
                         <th class="px-2 py-3 sticky left-0 bg-slate-200 dark:bg-slate-700 z-10 border border-slate-300 dark:border-slate-600">ボルトサイズ</th>
                         ${floorHeaders}
@@ -3977,7 +3980,7 @@ export const renderResults = (project) => {
         for (const [n, c] of Object.entries(d.joints)) rowTotalJoints[n] = (rowTotalJoints[n] || 0) + c;
       }
       const detailsAttr = d?.joints ? `data-details='${JSON.stringify(d.joints)}'` : "";
-      sectionTableHtml += `<td class="px-2 py-2 text-center border ${cellValue > 0 ? 'has-details cursor-pointer hover:bg-yellow-100' : ''}" ${detailsAttr}>${cellValue > 0 ? cellValue.toLocaleString() : "-"}</td>`;
+      sectionTableHtml += `<td class="px-2 py-2 text-center border ${cellValue > 0 ? 'has-details cursor-pointer hover:bg-yellow-100 dark:hover:bg-yellow-800/50' : ''}" ${detailsAttr}>${cellValue > 0 ? cellValue.toLocaleString() : "-"}</td>`;
     });
 
     const rowTotalDetailsAttr = Object.keys(rowTotalJoints).length > 0 ? `data-details='${JSON.stringify(rowTotalJoints)}'` : "";
@@ -3985,29 +3988,30 @@ export const renderResults = (project) => {
   });
   sectionTableHtml += `</tbody></table></div></div>`;
 
-  // 注文明細
+  // 明細・その他コンテナ
   const orderDetailsContainer = `<div id="order-details-container" data-section-title="本ボルト注文明細" data-section-color="pink" class="scroll-mt-24 mt-12"></div>`;
   const tempBoltsHtml = renderTempBoltResults(project);
+  const shopTempBoltsHtml = typeof renderShopTempBoltResults === "function" ? renderShopTempBoltResults(project) : "";
 
+  // 全要素を統合
   if (resultsCardContent) {
-    resultsCardContent.innerHTML = buttonsHtml + floorTableHtml + sectionTableHtml + orderDetailsContainer + tempBoltsHtml;
+    resultsCardContent.innerHTML = 
+      buttonsHtml + 
+      floorTableHtml + 
+      sectionTableHtml + 
+      orderDetailsContainer + 
+      tempBoltsHtml + 
+      shopTempBoltsHtml;
   }
 
+  // 注文明細の描画（フィルタリング済みデータを渡す）
   const container = document.getElementById("order-details-container");
   if (container) {
     renderOrderDetails(container, project, filteredResultsByLocation);
   }
 
+  // 最後に表示状態に戻す
   resultsCard.classList.remove("hidden");
-
-  // 【重要】再計算ボタンイベント
-  const recalcBtn = document.getElementById("recalculate-btn");
-  if (recalcBtn) {
-    recalcBtn.onclick = () => {
-      renderResults(project); 
-      showToast("最新の入力データで再計算しました");
-    };
-  }
 };
 
 /**
