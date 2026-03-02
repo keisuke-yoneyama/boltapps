@@ -165,6 +165,8 @@ export function setupEventListeners() {
   setupBulkDeleteEvents(); //一括削除イベント
 
   setupMasterFabEvents(); //大ボスボタンイベント
+
+  setupProjectListNewEvents();
 }
 
 function setupMasterFabEvents(){
@@ -4649,6 +4651,107 @@ function setupBulkDeleteEvents() {
                     modal.classList.remove("hidden");
                     setTimeout(() => modal.classList.remove("opacity-0"), 10);
                 }
+            }
+        });
+    }
+}
+/**
+ * 新しい物件一覧のイベント設定
+ */
+export function setupProjectListNewEvents() {
+    const container = document.getElementById("projects-container");
+    if (!container) return;
+
+    // 1. アコーディオンの開閉とカードクリックの委譲
+    container.addEventListener("click", (e) => {
+        const header = e.target.closest(".project-group-header");
+        const row = e.target.closest(".project-item-row");
+        const checkbox = e.target.closest(".project-checkbox");
+
+        // チェックボックスクリック時は何もしない（changeイベントで処理）
+        if (checkbox) return;
+
+        // グループヘッダーの開閉
+        if (header) {
+            const content = header.nextElementSibling;
+            const arrow = header.querySelector(".group-arrow");
+            const isHidden = content.classList.contains("hidden");
+            
+            content.classList.toggle("hidden");
+            if (arrow) arrow.classList.toggle("rotate-90", isHidden);
+            return;
+        }
+
+        // 工事行のクリック（詳細へ移動）
+        if (row) {
+            const projectId = row.dataset.id;
+            state.currentProjectId = projectId;
+            switchView("detail"); // ui.js の関数
+            renderDetailView();   // ui.js の関数
+        }
+    });
+
+    // 2. チェックボックスの監視とバーの表示
+    container.addEventListener("change", (e) => {
+        if (e.target.classList.contains("project-checkbox")) {
+            updateProjectOpBarUI();
+        }
+    });
+
+    // 3. バーのUI更新処理
+    function updateProjectOpBarUI() {
+        const bar = document.getElementById("project-op-bar");
+        const countLabel = document.getElementById("project-selection-count");
+        const checkedBoxes = document.querySelectorAll(".project-checkbox:checked");
+        const count = checkedBoxes.length;
+
+        if (!bar) return;
+
+        if (count > 0) {
+            countLabel.textContent = count;
+            bar.classList.remove("translate-y-24", "opacity-0", "pointer-events-none");
+            
+            // 編集・複製は1件の時のみ表示
+            const editBtn = document.getElementById("project-edit-btn-bulk");
+            const copyBtn = document.getElementById("project-copy-btn-bulk");
+            if (editBtn) editBtn.classList.toggle("hidden", count !== 1);
+            if (copyBtn) copyBtn.classList.toggle("hidden", count !== 1);
+        } else {
+            bar.classList.add("translate-y-24", "opacity-0", "pointer-events-none");
+        }
+    }
+
+    // 4. バー内のボタン処理
+    const barEdit = document.getElementById("project-edit-btn-bulk");
+    const barCopy = document.getElementById("project-copy-btn-bulk");
+    const barDelete = document.getElementById("project-delete-btn-bulk");
+
+    if (barEdit) {
+        barEdit.addEventListener("click", () => {
+            const id = document.querySelector(".project-checkbox:checked")?.dataset.id;
+            const project = state.projects.find(p => p.id === id);
+            if (project) openEditProjectModal(project); // 既存の編集関数
+        });
+    }
+
+    if (barCopy) {
+        barCopy.addEventListener("click", () => {
+            const id = document.querySelector(".project-checkbox:checked")?.dataset.id;
+            if (id) openCopyProjectModal(id); // 既存の複製関数
+        });
+    }
+
+    if (barDelete) {
+        barDelete.addEventListener("click", () => {
+            const checkedBoxes = document.querySelectorAll(".project-checkbox:checked");
+            const ids = Array.from(checkedBoxes).map(cb => cb.dataset.id);
+            
+            if (ids.length === 1) {
+                // 1件なら既存の削除確認を利用
+                openConfirmDeleteModal(ids[0], "project");
+            } else {
+                // 複数削除（必要であれば実装。まずは警告を出すか1件ずつ処理）
+                showCustomAlert("複数削除は現在1件ずつの対応となります。");
             }
         });
     }

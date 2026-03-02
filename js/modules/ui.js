@@ -2332,176 +2332,187 @@ export const renderTempBoltResults = (project) => {
   return floorTable;
 };
 
-//★末尾に記載する
 /**
- * プロジェクトリストを描画し、イベントを設定する
+ * プロジェクトリストを描画し、イベントを設定する.物件一覧をアコーディオン形式で描画し、イベントを設定する
  * @param {Object} callbacks - 各ボタンのアクション { onSelect, onEdit, onDuplicate, onDelete, onGroupEdit, onGroupAggregate }
  */
 export const renderProjectList = (callbacks) => {
-  // ★追加: コールバックを保存しておく（Undo/Redoでの再描画用）
-  if (callbacks) {
-    savedListCallbacks = callbacks;
-  }
-  // 1. コンテナ取得 (IDで直接取得)
+  if (callbacks) savedListCallbacks = callbacks;
+  const currentCallbacks = callbacks || savedListCallbacks;
+  
   const container = document.getElementById("projects-container");
   if (!container) return;
 
   if (state.projects.length === 0) {
-    container.innerHTML =
-      '<p class="text-center text-gray-500 dark:text-gray-400 py-8">まだ工事が登録されていません。<br>右下の＋ボタンから追加してください。</p>';
+    container.innerHTML = '<p class="text-center text-gray-500 dark:text-gray-400 py-8">まだ工事が登録されていません。<br>右下の＋ボタンから追加してください。</p>';
     return;
   }
 
-  const groupedProjects = {};
-  const unGroupedProjects = [];
-
-  // 2. プロジェクトを物件名でグループ化
+  // 1. 物件名でグループ化
+  const groups = {};
   state.projects.forEach((p) => {
-    if (p.propertyName) {
-      if (!groupedProjects[p.propertyName]) {
-        groupedProjects[p.propertyName] = [];
-      }
-      groupedProjects[p.propertyName].push(p);
-    } else {
-      unGroupedProjects.push(p);
-    }
+    const propName = p.propertyName || "（物件名未設定）";
+    if (!groups[propName]) groups[propName] = [];
+    groups[propName].push(p);
   });
 
+  // 物件名の並び替え（未設定を最後に）
+  const sortedGroupNames = Object.keys(groups).sort((a, b) =>
+    a === "（物件名未設定）" ? 1 : b === "（物件名未設定）" ? -1 : a.localeCompare(b, "ja")
+  );
+
   let html = "";
-
-  // 3. グループ化されたプロジェクトのHTML生成
-  for (const propertyName in groupedProjects) {
-    const projectsInGroup = groupedProjects[propertyName];
+  sortedGroupNames.forEach((groupName) => {
+    const groupProjects = groups[groupName];
+    
     html += `
-            <section class="bg-white dark:bg-slate-800 p-4 rounded-xl shadow-lg border border-slate-200 dark:border-slate-700 mb-6">
-                <div class="flex flex-col sm:flex-row justify-between sm:items-center mb-4 border-b border-slate-300 dark:border-slate-600 pb-3 gap-2">
-                    <h3 class="text-xl font-bold text-slate-800 dark:text-slate-200 truncate" title="${propertyName}">
-                        <span class="text-sm font-normal text-slate-500">物件名：</span>${propertyName}
-                    </h3>
-                    <div class="flex items-center gap-2">
-                        <button data-property-name="${propertyName}" class="edit-group-btn btn btn-neutral text-sm">物件情報編集</button>
-                        <button data-property-name="${propertyName}" class="show-aggregated-results-btn btn btn-secondary text-sm">集計結果表示</button>
-                    </div>
+      <div class="project-group mb-4 bg-white dark:bg-slate-800 rounded-xl shadow-md border border-slate-200 dark:border-slate-700 overflow-hidden">
+        <div class="project-group-header flex justify-between items-center p-4 bg-slate-50 dark:bg-slate-700/30 cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors" data-group="${groupName}">
+          <div class="flex items-center gap-3">
+            <svg class="w-5 h-5 text-yellow-500 transform transition-transform duration-200 group-arrow" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+            </svg>
+            <h3 class="font-bold text-slate-800 dark:text-slate-100 truncate">物件名：${groupName}</h3>
+            <span class="bg-slate-200 dark:bg-slate-600 text-slate-600 dark:text-slate-300 text-xs px-2 py-0.5 rounded-full">${groupProjects.length}件</span>
+          </div>
+          
+          <div class="flex items-center gap-1" onclick="event.stopPropagation()">
+            <button data-property-name="${groupName}" class="edit-group-btn p-2 text-slate-500 hover:bg-white dark:hover:bg-slate-600 rounded-lg transition-colors" title="物件情報を編集">
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+            </button>
+            <button data-property-name="${groupName}" class="show-aggregated-results-btn p-2 text-blue-600 hover:bg-white dark:hover:bg-slate-600 rounded-lg transition-colors" title="集計結果表示">
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>
+            </button>
+          </div>
+        </div>
+
+        <div class="project-group-content hidden flex flex-col divide-y divide-slate-100 dark:divide-slate-700">
+          ${groupProjects.map(p => {
+            const description = p.mode === "advanced"
+              ? `${p.customLevels.length}階層 / ${p.customAreas.length}エリア`
+              : `${p.floors}階 (+R${p.hasPH ? ",PH" : ""}) / ${p.sections}工区`;
+
+            return `
+              <div class="project-item-row group flex items-center p-3 hover:bg-yellow-50 dark:hover:bg-yellow-900/10 transition-colors cursor-pointer" data-id="${p.id}">
+                <div class="px-2" onclick="event.stopPropagation()">
+                  <input type="checkbox" class="project-checkbox w-5 h-5 rounded border-slate-300 text-yellow-500 focus:ring-yellow-400 cursor-pointer" data-id="${p.id}">
                 </div>
-                
-                <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                <div class="flex-1 min-w-0 px-2 select-trigger">
+                  <div class="flex items-center gap-2">
+                    <h4 class="font-bold text-slate-900 dark:text-slate-100 truncate">${p.name}</h4>
+                    <span class="text-[10px] bg-slate-100 dark:bg-slate-700 px-1.5 py-0.5 rounded text-slate-500">${p.mode === 'advanced' ? 'カスタム' : p.floors + 'F'}</span>
+                  </div>
+                  <p class="text-xs text-slate-500 truncate mt-0.5">
+                    ${description} | 登録: ${new Date(p.createdAt).toLocaleDateString()}
+                  </p>
+                </div>
+                <div class="text-slate-300 group-hover:text-yellow-500 transition-colors px-2">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>
+                </div>
+              </div>
             `;
-    projectsInGroup.forEach((p) => {
-      let description =
-        p.mode === "advanced"
-          ? `${p.customLevels.length}階層 / ${p.customAreas.length}エリア`
-          : `${p.floors}階建て (+R階${p.hasPH ? ", +PH階" : ""}) / ${
-              p.sections
-            }工区`;
-
-      html += `
-                <div class="project-card cursor-pointer hover:bg-blue-50 dark:hover:bg-slate-600 transition-colors bg-slate-50 dark:bg-slate-700/50 border border-slate-200 dark:border-slate-600 p-3 rounded-lg flex flex-col justify-between gap-3 h-full" data-id="${p.id}">
-                    <div class="project-card-content" data-id="${p.id}">
-                        <h4 class="font-bold text-slate-900 dark:text-slate-100 mb-1">${p.name}</h4>
-                        <p class="text-sm text-slate-600 dark:text-slate-400">${description}</p>
-                    </div>
-                    <div class="grid grid-cols-4 gap-2 w-full">
-                        <button data-id="${p.id}" class="select-project-btn btn btn-primary text-xs px-1 py-2 flex justify-center items-center">選択</button>
-                        <button data-id="${p.id}" class="edit-project-btn btn btn-neutral text-xs px-1 py-2 flex justify-center items-center">編集</button>
-                        <button data-id="${p.id}" class="duplicate-project-btn btn btn-secondary text-xs px-1 py-2 flex justify-center items-center" title="複製">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
-                        </button>
-                        <button data-id="${p.id}" class="delete-project-btn btn btn-danger text-xs px-1 py-2 flex justify-center items-center">削除</button>
-                    </div>
-                </div>`;
-    });
-    html += `</div></section>`;
-  }
-
-  // 4. グループ化されていないプロジェクトのHTML生成
-  if (unGroupedProjects.length > 0) {
-    if (Object.keys(groupedProjects).length > 0) {
-      html += `<h3 class="text-lg font-semibold text-slate-700 dark:text-slate-300 my-4 border-t pt-4">物件名未設定の工事</h3>`;
-    }
-
-    html += `<div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">`;
-
-    unGroupedProjects.forEach((p) => {
-      let description =
-        p.mode === "advanced"
-          ? `${p.customLevels.length}階層 / ${p.customAreas.length}エリア`
-          : `${p.floors}階建て (+R階${p.hasPH ? ", +PH階" : ""}) / ${
-              p.sections
-            }工区`;
-
-      html += `
-                <div class="project-card cursor-pointer hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-4 rounded-lg flex flex-col justify-between gap-3 h-full shadow-sm" data-id="${p.id}">
-                    <div class="project-card-content" data-id="${p.id}">
-                        <h4 class="font-bold text-lg text-slate-900 dark:text-slate-100 mb-1">${p.name}</h4>
-                        <p class="text-sm text-slate-700 dark:text-slate-300">${description}</p>
-                    </div>
-                    <div class="grid grid-cols-4 gap-2 w-full">
-                        <button data-id="${p.id}" class="select-project-btn btn btn-primary text-xs px-1 py-2 flex justify-center items-center">選択</button>
-                        <button data-id="${p.id}" class="edit-project-btn btn btn-secondary text-xs px-1 py-2 flex justify-center items-center">編集</button>
-                        <button data-id="${p.id}" class="duplicate-project-btn btn btn-secondary text-xs px-1 py-2 flex justify-center items-center" title="複製">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
-                        </button>
-                        <button data-id="${p.id}" class="delete-project-btn btn btn-danger text-xs px-1 py-2 flex justify-center items-center">削除</button>
-                    </div>
-                </div>`;
-    });
-
-    html += `</div>`;
-  }
+          }).join('')}
+        </div>
+      </div>
+    `;
+  });
 
   container.innerHTML = html;
 
-  // ▼▼▼ 5. イベントリスナーの設定 (デバッグログ付き) ▼▼▼
+  // --- イベント設定 ---
 
-  const addListener = (selector, callback) => {
-    if (!callback) return;
-    container.querySelectorAll(selector).forEach((btn) => {
-      btn.addEventListener("click", (e) => {
-        e.stopPropagation();
-        const id = btn.dataset.id || btn.dataset.propertyName;
-        console.log(`[DEBUG] Button clicked: ${selector}, ID: ${id}`); // ★ログ
-        callback(id);
-      });
+  // 1. グループヘッダーの開閉
+  container.querySelectorAll(".project-group-header").forEach(header => {
+    header.addEventListener("click", () => {
+      const content = header.nextElementSibling;
+      const arrow = header.querySelector(".group-arrow");
+      const isHidden = content.classList.contains("hidden");
+      content.classList.toggle("hidden");
+      if (arrow) arrow.classList.toggle("rotate-90", isHidden);
     });
-  };
+  });
 
-  addListener(".select-project-btn", callbacks.onSelect);
-  addListener(".edit-project-btn", callbacks.onEdit);
-  addListener(".duplicate-project-btn", callbacks.onDuplicate);
-  addListener(".delete-project-btn", callbacks.onDelete);
-  addListener(".edit-group-btn", callbacks.onGroupEdit);
-  addListener(".show-aggregated-results-btn", callbacks.onGroupAggregate);
+  // 2. 物件アクション (編集・集計)
+  container.querySelectorAll(".edit-group-btn").forEach(btn => {
+    btn.addEventListener("click", (e) => currentCallbacks.onGroupEdit(btn.dataset.propertyName));
+  });
+  container.querySelectorAll(".show-aggregated-results-btn").forEach(btn => {
+    btn.addEventListener("click", (e) => currentCallbacks.onGroupAggregate(btn.dataset.propertyName));
+  });
 
-  // カード自体のクリック（プロジェクト選択）
-  if (callbacks.onSelect) {
-    console.log("[DEBUG] Adding click listeners to cards..."); // ★ログ
-
-    const cards = container.querySelectorAll(".project-card");
-    console.log(`[DEBUG] Found ${cards.length} cards.`); // ★ログ
-
-    cards.forEach((card) => {
-      card.addEventListener("click", (e) => {
-        console.log("[DEBUG] Card clicked!", e.target); // ★ログ
-
-        // ボタンが押された場合は無視（念のため）
-        if (e.target.closest("button")) {
-          console.log("[DEBUG] Clicked on button, ignoring card click."); // ★ログ
-          return;
-        }
-
-        const id = card.dataset.id;
-        console.log(`[DEBUG] Card ID: ${id} (type: ${typeof id})`); // ★ログ
-
-        if (id) {
-          console.log("[DEBUG] Calling callbacks.onSelect..."); // ★ログ
-          callbacks.onSelect(id);
-        } else {
-          console.error("[DEBUG] Error: Card has no ID!"); // ★ログ
-        }
-      });
+  // 3. 工事選択 (行クリック)
+  container.querySelectorAll(".project-item-row").forEach(row => {
+    row.addEventListener("click", (e) => {
+      // チェックボックスやその外枠以外をクリックした場合のみ詳細へ
+      if (!e.target.closest(".project-checkbox")) {
+        currentCallbacks.onSelect(row.dataset.id);
+      }
     });
-  }
+  });
+
+  // 4. チェックボックス変更時のバー更新
+  container.addEventListener("change", (e) => {
+    if (e.target.classList.contains("project-checkbox")) {
+      updateProjectOpBar(currentCallbacks);
+    }
+  });
+
+  // 描画時にバーを一度リセットして隠す
+  const bar = document.getElementById('project-op-bar');
+  if (bar) bar.classList.add("translate-y-24", "opacity-0", "pointer-events-none");
 };
+
+/**
+ * 物件用フローティングバーの表示更新（内部ヘルパー）
+ */
+function updateProjectOpBar(callbacks) {
+  const bar = document.getElementById("project-op-bar");
+  const countLabel = document.getElementById("project-selection-count");
+  const checkedBoxes = document.querySelectorAll(".project-checkbox:checked");
+  const count = checkedBoxes.length;
+
+  if (!bar) return;
+
+  if (count > 0) {
+    countLabel.textContent = count;
+    bar.classList.remove("translate-y-24", "opacity-0", "pointer-events-none");
+
+    const firstId = checkedBoxes[0].dataset.id;
+
+    // ボタンのイベントと表示制御
+    const setupBtn = (id, action, hideOnMultiple = false) => {
+      const btn = document.getElementById(id);
+      if (!btn) return;
+      const newBtn = btn.cloneNode(true);
+      btn.parentNode.replaceChild(newBtn, btn);
+      
+      if (hideOnMultiple && count !== 1) {
+        newBtn.classList.add("hidden");
+      } else {
+        newBtn.classList.remove("hidden");
+        newBtn.onclick = () => action(firstId);
+      }
+    };
+
+    setupBtn("project-edit-btn-bulk", callbacks.onEdit, true);
+    setupBtn("project-copy-btn-bulk", callbacks.onDuplicate, true);
+    
+    // 削除ボタン
+    const deleteBtn = document.getElementById("project-delete-btn-bulk");
+    const newDeleteBtn = deleteBtn.cloneNode(true);
+    deleteBtn.parentNode.replaceChild(newDeleteBtn, deleteBtn);
+    newDeleteBtn.onclick = () => {
+      if (count === 1) {
+        callbacks.onDelete(firstId);
+      } else {
+        // 複数削除は現時点では一件ずつ、または全ループ
+        alert("一括削除は現在1件ずつのみ対応しています。");
+      }
+    };
+  } else {
+    bar.classList.add("translate-y-24", "opacity-0", "pointer-events-none");
+  }
+}
 /**
  * カスタム入力フィールド（階層・エリア名）を動的に生成する
  * ※ openEditProjectModal から呼ばれるヘルパー関数
@@ -5284,116 +5295,82 @@ export const setupQuickNav = () => {
 
 /**
  * プロジェクトリストの描画とアクション定義を行うラッパー関数
- * (app.js から ui.js に移動)
  */
 export const updateProjectListUI = () => {
-  // ui.js内の関数 renderProjectList を呼び出す
-  renderProjectList({
-    // --- 選択 ---
+  const projects = state.projects;
+
+  renderProjectList(projects, {
+    // --- 選択 (行をクリックした時) ---
     onSelect: (id) => {
-      console.log(`[DEBUG] onSelect called with ID: ${id}`);
-
-      // IDの型合わせと検索
       const originalProject = state.projects.find((p) => p.id == id);
-
       if (originalProject) {
         state.currentProjectId = originalProject.id;
       } else {
-        console.warn(`[DEBUG] Project NOT found for ID: ${id}`);
         state.currentProjectId = id;
       }
 
-      // フォームリセット & 画面切り替え (ui.js内の関数)
       if (typeof resetMemberForm === "function") resetMemberForm();
       state.sort = {};
-
       if (typeof renderDetailView === "function") renderDetailView();
-      switchView("detail"); // ui.js内の関数
+      switchView("detail");
     },
 
-    // --- 編集 ---
+    // --- 編集 (バーのボタンから呼び出し) ---
     onEdit: (id) => {
       const project = state.projects.find((p) => p.id === id);
-      // openEditProjectModal は ui.js 内にある前提
       if (project && typeof openEditProjectModal === "function") {
         openEditProjectModal(project);
-      } else {
-        console.error("openEditProjectModal is not defined.");
       }
     },
 
-    // --- 削除 ---
+    // --- 削除 (バーのボタンから呼び出し) ---
     onDelete: (id) => {
-      // openConfirmDeleteModal は ui.js 内にある前提
       if (typeof openConfirmDeleteModal === "function") {
         openConfirmDeleteModal(id, "project");
       }
     },
 
-    // --- 複製 ---
+    // --- 複製 (バーのボタンから呼び出し) ---
     onDuplicate: (id) => {
       const project = state.projects.find((p) => p.id === id);
       if (project) {
-        const copySourceIdInput = document.getElementById(
-          "copy-source-project-id",
-        );
-        const copyNewNameInput = document.getElementById(
-          "copy-new-project-name",
-        );
+        const copySourceIdInput = document.getElementById("copy-source-project-id");
+        const copyNewNameInput = document.getElementById("copy-new-project-name");
         const copyProjectModal = document.getElementById("copy-project-modal");
 
         if (copySourceIdInput && copyNewNameInput && copyProjectModal) {
           copySourceIdInput.value = id;
-
-          // 名前生成ロジック
-          const sameGroupProjects = state.projects.filter(
-            (p) => p.propertyName === project.propertyName,
-          );
           let baseName = project.name.replace(/\(\d+\)$/, "").trim();
           let counter = 2;
-
-          while (
-            sameGroupProjects.some(
-              (p) =>
-                p.name ===
-                (counter === 1 ? baseName : `${baseName}(${counter})`),
-            )
-          ) {
+          const sameGroupProjects = state.projects.filter(p => p.propertyName === project.propertyName);
+          while (sameGroupProjects.some(p => p.name === (counter === 1 ? baseName : `${baseName}(${counter})`))) {
             counter++;
           }
           copyNewNameInput.value = `${baseName}(${counter})`;
 
-          const defaultRadio = document.querySelector(
-            'input[name="copy-mode"][value="with_master"]',
-          );
+          const defaultRadio = document.querySelector('input[name="copy-mode"][value="with_master"]');
           if (defaultRadio) defaultRadio.checked = true;
 
-          openModal(copyProjectModal); // ui.js内の関数
+          openModal(copyProjectModal);
           setTimeout(() => copyNewNameInput.select(), 100);
         }
       }
     },
 
-    // --- グループ編集 ---
+    // --- 物件名（グループ）の編集 ---
     onGroupEdit: (propertyName) => {
       const oldNameInput = document.getElementById("edit-group-old-name");
       const newNameInput = document.getElementById("edit-group-new-name");
       if (oldNameInput) oldNameInput.value = propertyName;
       if (newNameInput) newNameInput.value = propertyName;
-
       openModal(document.getElementById("edit-group-modal"));
     },
 
-    // --- 集計表示 ---
+    // --- 物件ごとの集計表示 ---
     onGroupAggregate: (propertyName) => {
-      const projectsInGroup = state.projects.filter(
-        (p) => p.propertyName === propertyName,
-      );
+      const projectsInGroup = state.projects.filter(p => p.propertyName === propertyName);
       if (projectsInGroup.length > 0) {
-        // calculator.js からインポートした関数を使用
         const aggregatedData = calculateAggregatedResults(projectsInGroup);
-
-        // ui.js 内の関数を使用
         if (typeof renderAggregatedResults === "function") {
           renderAggregatedResults(propertyName, aggregatedData);
         }
