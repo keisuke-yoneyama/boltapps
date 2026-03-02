@@ -4355,6 +4355,8 @@ export const switchView = (viewName) => {
 
     // ※古い updateQuickNavVisibility() の呼び出しは削除しました
   } else {
+    state.activeTallyLevel = "all";
+    state.activeTallyType = "all";
     // リストを表示
     viewList.classList.remove("hidden");
     viewList.style.display = "block";
@@ -5738,6 +5740,9 @@ export const renderProjectSwitcher = () => {
     item.onclick = () => {
       const targetId = item.dataset.targetId;
       if (targetId === state.currentProjectId) return;
+      // ★ 切り替え前に絞り込み状態をリセット
+      state.activeTallyLevel = "all";
+      state.activeTallyType = "all";
       state.currentProjectId = targetId;
       if (typeof renderDetailView === "function") renderDetailView();
       showToast(`${item.querySelector('span').textContent} へジャンプしました`);
