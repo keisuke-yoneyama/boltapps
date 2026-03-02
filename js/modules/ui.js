@@ -2339,6 +2339,9 @@ export const renderTempBoltResults = (project) => {
 /**
  * 物件一覧をアコーディオン形式で描画する (引数はcallbacksのみに統一)
  */
+/**
+ * 物件一覧をアコーディオン形式で描画し、イベントを設定する
+ */
 export const renderProjectList = (callbacks) => {
   if (callbacks) savedListCallbacks = callbacks;
   const currentCallbacks = callbacks || savedListCallbacks;
@@ -2351,7 +2354,7 @@ export const renderProjectList = (callbacks) => {
     return;
   }
 
-  // 1. 物件名でグループ化 (state.projects を直接使用)
+  // 1. 物件名でグループ化
   const groups = {};
   state.projects.forEach((p) => {
     const propName = p.propertyName || "（物件名未設定）";
@@ -2368,34 +2371,35 @@ export const renderProjectList = (callbacks) => {
     const groupProjects = groups[groupName];
     html += `
       <div class="project-group mb-4 bg-white dark:bg-slate-800 rounded-xl shadow-md border border-slate-200 dark:border-slate-700 overflow-hidden">
-        <div class="project-group-header flex justify-between items-center p-4 bg-slate-50 dark:bg-slate-700/30 cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors" data-group="${groupName}">
-          <div class="flex items-center gap-3">
-            <svg class="w-5 h-5 text-yellow-500 transform transition-transform duration-200 group-arrow" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <div class="project-group-header flex justify-between items-center p-4 bg-slate-50 dark:bg-slate-700/30 cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors" data-group-name="${groupName}">
+          <div class="flex items-center gap-3 pointer-events-none"> <svg class="w-5 h-5 text-yellow-500 transform transition-transform duration-200 group-arrow" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
             </svg>
             <h3 class="font-bold text-slate-800 dark:text-slate-100 truncate">物件名：${groupName}</h3>
             <span class="bg-slate-200 dark:bg-slate-600 text-slate-600 dark:text-slate-300 text-xs px-2 py-0.5 rounded-full">${groupProjects.length}件</span>
           </div>
-          <div class="flex items-center gap-1" onclick="event.stopPropagation()">
-            <button class="edit-group-btn p-2 text-slate-500 hover:bg-white dark:hover:bg-slate-600 rounded-lg transition-colors" data-group="${groupName}">
-              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+          
+          <div class="flex items-center gap-1">
+            <button class="edit-group-action-btn p-2 text-slate-500 hover:bg-white dark:hover:bg-slate-600 rounded-lg transition-colors" data-group-name="${groupName}" title="物件情報を編集">
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="pointer-events-none"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
             </button>
-            <button class="show-aggregated-results-btn p-2 text-blue-600 hover:bg-white dark:hover:bg-slate-600 rounded-lg transition-colors" data-group="${groupName}">
-              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>
+            <button class="aggregate-group-action-btn p-2 text-blue-600 hover:bg-white dark:hover:bg-slate-600 rounded-lg transition-colors" data-group-name="${groupName}" title="集計結果表示">
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="pointer-events-none"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>
             </button>
           </div>
         </div>
+
         <div class="project-group-content hidden flex flex-col divide-y divide-slate-100 dark:divide-slate-700">
           ${groupProjects.map(p => `
             <div class="project-item-row flex items-center p-3 hover:bg-yellow-50 dark:hover:bg-yellow-900/10 transition-colors cursor-pointer" data-id="${p.id}">
-              <div class="px-2" onclick="event.stopPropagation()">
+              <div class="px-2">
                 <input type="checkbox" class="project-checkbox w-5 h-5 rounded border-slate-300 text-yellow-500 focus:ring-yellow-400 cursor-pointer" data-id="${p.id}">
               </div>
               <div class="flex-1 min-w-0 px-2">
                 <h4 class="font-bold text-slate-900 dark:text-slate-100 truncate">${p.name}</h4>
                 <p class="text-xs text-slate-500 truncate mt-0.5">${new Date(p.createdAt).toLocaleDateString()} 登録</p>
               </div>
-              <div class="text-slate-300 px-2"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg></div>
+              <div class="text-slate-300 px-2"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="pointer-events-none"><path d="M9 18l6-6-6-6"/></svg></div>
             </div>
           `).join('')}
         </div>
@@ -2405,43 +2409,65 @@ export const renderProjectList = (callbacks) => {
 
   container.innerHTML = html;
 
-  // --- イベント設定 ---
-  container.onclick = (e) => {
-    const header = e.target.closest(".project-group-header");
-    const row = e.target.closest(".project-item-row");
-    const editGroup = e.target.closest(".edit-group-btn");
-    const aggGroup = e.target.closest(".show-aggregated-results-btn");
+  // --- イベント登録 (addEventListener を使用して確実に動作させる) ---
 
-    if (editGroup) return currentCallbacks.onGroupEdit(editGroup.dataset.group);
-    if (aggGroup) return currentCallbacks.onGroupAggregate(aggGroup.dataset.group);
+  // 全体クリックの委譲
+  container.addEventListener("click", (e) => {
+    const target = e.target;
 
+    // 1. 物件名編集ボタン
+    const editBtn = target.closest(".edit-group-action-btn");
+    if (editBtn) {
+      e.stopPropagation();
+      return currentCallbacks.onGroupEdit(editBtn.dataset.groupName);
+    }
+
+    // 2. 集計ボタン
+    const aggBtn = target.closest(".aggregate-group-action-btn");
+    if (aggBtn) {
+      e.stopPropagation();
+      return currentCallbacks.onGroupAggregate(aggBtn.dataset.groupName);
+    }
+
+    // 3. ヘッダーの開閉（アコーディオン）
+    const header = target.closest(".project-group-header");
     if (header) {
-      const content = header.nextElementSibling;
+      const groupDiv = header.closest(".project-group");
+      const content = groupDiv.querySelector(".project-group-content");
       const arrow = header.querySelector(".group-arrow");
+      
+      const isOpening = content.classList.contains("hidden");
       content.classList.toggle("hidden");
-      if (arrow) arrow.classList.toggle("rotate-90");
-    } else if (row && !e.target.closest(".project-checkbox")) {
+      if (arrow) arrow.classList.toggle("rotate-90", isOpening);
+      return;
+    }
+
+    // 4. 工事行のクリック (詳細へ)
+    const row = target.closest(".project-item-row");
+    if (row && !target.closest(".project-checkbox")) {
       currentCallbacks.onSelect(row.dataset.id);
     }
-  };
+  });
 
-  container.onchange = (e) => {
+  // チェックボックスの監視
+  container.addEventListener("change", (e) => {
     if (e.target.classList.contains("project-checkbox")) {
       updateProjectOpBar(currentCallbacks);
     }
-  };
+  });
 
+  // バーを隠す
   const bar = document.getElementById('project-op-bar');
   if (bar) bar.classList.add("translate-y-24", "opacity-0", "pointer-events-none");
 };
 
 /**
- * 物件用フローティングバーの表示更新（内部ヘルパー）
+ * 物件用フローティングバーの表示更新
  */
 function updateProjectOpBar(callbacks) {
   const bar = document.getElementById("project-op-bar");
   const countLabel = document.getElementById("project-selection-count");
-  const checkedBoxes = document.querySelectorAll(".project-checkbox:checked");
+  const checkedBoxes = Array.from(document.querySelectorAll(".project-checkbox:checked"));
   const count = checkedBoxes.length;
 
   if (!bar) return;
@@ -2452,14 +2478,16 @@ function updateProjectOpBar(callbacks) {
 
     const firstId = checkedBoxes[0].dataset.id;
 
-    // ボタンのイベントと表示制御
-    const setupBtn = (id, action, hideOnMultiple = false) => {
+    // ボタン設定用の共通処理
+    const setupBtn = (id, action, needsOneOnly = false) => {
       const btn = document.getElementById(id);
       if (!btn) return;
+
+      // 古いイベントを確実に消すため、クローンを作成
       const newBtn = btn.cloneNode(true);
       btn.parentNode.replaceChild(newBtn, btn);
-      
-      if (hideOnMultiple && count !== 1) {
+
+      if (needsOneOnly && count !== 1) {
         newBtn.classList.add("hidden");
       } else {
         newBtn.classList.remove("hidden");
@@ -2469,19 +2497,13 @@ function updateProjectOpBar(callbacks) {
 
     setupBtn("project-edit-btn-bulk", callbacks.onEdit, true);
     setupBtn("project-copy-btn-bulk", callbacks.onDuplicate, true);
-    
-    // 削除ボタン
-    const deleteBtn = document.getElementById("project-delete-btn-bulk");
-    const newDeleteBtn = deleteBtn.cloneNode(true);
-    deleteBtn.parentNode.replaceChild(newDeleteBtn, deleteBtn);
-    newDeleteBtn.onclick = () => {
+    setupBtn("project-delete-btn-bulk", (id) => {
       if (count === 1) {
-        callbacks.onDelete(firstId);
+        callbacks.onDelete(id);
       } else {
-        // 複数削除は現時点では一件ずつ、または全ループ
-        alert("一括削除は現在1件ずつのみ対応しています。");
+        alert("複数削除は現在一件ずつ対応しています。");
       }
-    };
+    });
   } else {
     bar.classList.add("translate-y-24", "opacity-0", "pointer-events-none");
   }
