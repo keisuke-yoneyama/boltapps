@@ -4458,7 +4458,8 @@ export const renderDetailView = () => {
 
   renderJointsList(project);
   renderMemberLists(project);
-
+  // ヘッダーのプロジェクトセレクターを描画
+  renderProjectSwitcher();
   // 常設フォームの階層チェックボックス
   const staticLevelsContainer = document.getElementById(
     "add-member-levels-container",
@@ -5686,3 +5687,77 @@ export function updateQuickNavLinks() {
     "blue"
   );
 }
+
+/**
+ * 固定ヘッダー内にプロジェクト切り替えUIを描画する
+ */
+export const renderProjectSwitcher = () => {
+  const container = document.getElementById("project-switcher-container");
+  if (!container) return;
+
+  const currentProject = state.projects.find(p => p.id === state.currentProjectId);
+  if (!currentProject) return;
+
+  const propertyName = currentProject.propertyName || "（物件名未設定）";
+  const peers = state.projects.filter(p => p.propertyName === propertyName);
+
+  container.innerHTML = `
+    <div class="text-[10px] text-slate-500 dark:text-slate-400 font-bold tracking-wider truncate mb-[-2px]">
+      ${propertyName}
+    </div>
+    
+    <div class="relative inline-block text-left">
+      <button id="switcher-trigger" class="flex items-center gap-1 py-0.5 rounded-md hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors group">
+        <span class="text-base font-bold text-slate-900 dark:text-slate-100 truncate max-w-[150px] sm:max-w-xs">
+          ${currentProject.name}
+        </span>
+        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="text-slate-400 group-hover:text-yellow-500 transition-transform"><path d="m6 9 6 6 6-6"/></svg>
+      </button>
+
+      <div id="switcher-dropdown" class="absolute left-0 mt-2 w-72 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-2xl opacity-0 pointer-events-none translate-y-2 transition-all z-50 overflow-hidden">
+        <div class="p-3 border-b border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50 text-[10px] font-black text-slate-400 uppercase tracking-widest">
+          同物件内の工事
+        </div>
+        <div class="max-h-80 overflow-y-auto py-1">
+          ${peers.map(p => `
+            <button data-target-id="${p.id}" class="switcher-item w-full text-left px-4 py-3 text-sm ${p.id === currentProject.id ? 'bg-yellow-50 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400 font-bold' : 'text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700'} transition-colors flex items-center justify-between border-l-4 ${p.id === currentProject.id ? 'border-yellow-500' : 'border-transparent'}">
+              <span class="truncate">${p.name}</span>
+              ${p.id === currentProject.id ? '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>' : ''}
+            </button>
+          `).join('')}
+        </div>
+      </div>
+    </div>
+  `;
+
+  // --- イベント設定 ---
+  const trigger = document.getElementById("switcher-trigger");
+  const dropdown = document.getElementById("switcher-dropdown");
+
+  if (trigger && dropdown) {
+    trigger.onclick = (e) => {
+      e.stopPropagation();
+      dropdown.classList.toggle("opacity-0");
+      dropdown.classList.toggle("pointer-events-none");
+      dropdown.classList.toggle("translate-y-2");
+    };
+
+    // 外側クリックで閉じる
+    window.addEventListener("click", () => {
+      dropdown.classList.add("opacity-0", "pointer-events-none", "translate-y-2");
+    }, { once: true });
+  }
+
+  // 工事切り替え実行
+  container.querySelectorAll(".switcher-item").forEach(item => {
+    item.onclick = () => {
+      const targetId = item.dataset.targetId;
+      if (targetId === state.currentProjectId) return;
+
+      state.currentProjectId = targetId;
+      // ページ全体を再描画（詳細表示）
+      if (typeof renderDetailView === "function") renderDetailView();
+      showToast(`${item.querySelector('span').textContent} へジャンプしました`);
+    };
+  });
+};
