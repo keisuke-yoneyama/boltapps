@@ -2432,6 +2432,19 @@ export const renderProjectList = (callbacks) => {
         content.style.maxHeight = content.scrollHeight + "px";
         content.classList.remove('opacity-0');
         if (arrow) arrow.classList.add('rotate-90');
+
+        // --- ★追加：オートスクロール処理 ---
+        // アニメーションの開始と同時にスクロール位置を調整
+        setTimeout(() => {
+          const navHeight = document.getElementById('fixed-nav')?.offsetHeight || 0;
+          const elementPosition = groupDiv.getBoundingClientRect().top;
+          const offsetPosition = elementPosition + window.pageYOffset - navHeight - 10; // 10pxの余白
+
+          window.scrollTo({
+            top: offsetPosition,
+            behavior: "smooth" // 滑らかにスクロール
+          });
+        }, 50); // アコーディオン展開の計算待ちでわずかに遅延
       }
     };
   });
