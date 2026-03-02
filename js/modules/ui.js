@@ -3577,7 +3577,7 @@ export const renderTallySheet = (project) => {
   });
   tabsContainer.innerHTML = tabsHtml;
 
-  // 2. 種別タブの生成（ピン取りを動的に区別）
+  // 2. 種別タブの生成（ピン取りを厳密に区別）
   const allTallyItems = getTallyList(project);
   const existingTypeIds = [...new Set(allTallyItems.map(item => getJointTypeId(item.joint)))];
   
@@ -3592,7 +3592,7 @@ export const renderTallySheet = (project) => {
   });
   if (typeTabsContainer) typeTabsContainer.innerHTML = typeTabsHtml;
 
-  // イベント設定
+  // タブイベント設定
   tabsContainer.querySelectorAll(".tally-tab-btn").forEach((btn) => {
     btn.onclick = () => { state.activeTallyLevel = btn.dataset.level; renderTallySheet(project); renderResults(project); };
   });
@@ -3602,7 +3602,7 @@ export const renderTallySheet = (project) => {
     });
   }
 
-  // 3. データのフィルタリング
+  // 3. データの絞り込み（表示用）
   const tallyList = allTallyItems.filter((item) => {
     const isAllFloorMember = !item.targetLevels || item.targetLevels.length === 0;
     const isSpecificFloor = item.targetLevels && item.targetLevels.includes(state.activeTallyLevel);
@@ -3615,12 +3615,12 @@ export const renderTallySheet = (project) => {
   });
 
   if (tallyList.length === 0) {
-    tallySheetContainer.innerHTML = '<p class="text-gray-500 dark:text-gray-400 p-8 text-center bg-slate-50 dark:bg-slate-800 rounded-xl">表示する部材がありません。</p>';
+    tallySheetContainer.innerHTML = '<p class="text-gray-500 p-8 text-center bg-slate-50 dark:bg-slate-800 rounded-xl border-2 border-dashed">表示条件に合う部材がありません。</p>';
     if (resultsCard) resultsCard.classList.add("hidden");
     return;
   }
 
-  // 4. ロケーション行の特定
+  // 4. ロケーション（行）の生成
   let locations = [];
   if (project.mode === "advanced") {
     project.customLevels.forEach((level) => {
@@ -3633,8 +3633,7 @@ export const renderTallySheet = (project) => {
       for (let s = 1; s <= project.sections; s++) locations.push({ id: `${f}-${s}`, label: `${f}階 ${s}工区` });
     }
     if (state.activeTallyLevel === "all" || state.activeTallyLevel === "R") {
-      for (let s = 1; s <= project.sections; s++)
-        for (let s = 1; s <= project.sections; s++) locations.push({ id: `R-${s}`, label: `R階 ${s}工区` });
+      for (let s = 1; s <= project.sections; s++) locations.push({ id: `R-${s}`, label: `R階 ${s}工区` });
     }
     if (project.hasPH && (state.activeTallyLevel === "all" || state.activeTallyLevel === "PH")) {
       for (let s = 1; s <= project.sections; s++) locations.push({ id: `PH-${s}`, label: `PH階 ${s}工区` });
@@ -3643,7 +3642,7 @@ export const renderTallySheet = (project) => {
 
   const locks = project.tallyLocks || {};
 
-  // テーブル生成：ヘッダー（色分け復元版）
+  // テーブル構築（ヘッダー・スタイル固定版）
   const lockHeaderRow = tallyList.map((item) => {
     const isLocked = locks[item.id] || false;
     const colorClass = getJointColorClasses(item.joint);
@@ -3655,7 +3654,7 @@ export const renderTallySheet = (project) => {
   const headers = tallyList.map((item) => {
     const isLocked = locks[item.id] || false;
     const colorClass = getJointColorClasses(item.joint);
-    return `<th class="px-2 py-3 text-center border min-w-32 ${colorClass} ${isLocked ? 'locked-column' : ''}">${item.name}</th>`;
+    return `<th class="px-2 py-3 text-center border min-w-32 break-all ${colorClass} ${isLocked ? 'locked-column' : ''}">${item.name}</th>`;
   }).join("");
 
   const boltSizeHeaders = tallyList.map((item) => {
@@ -3667,14 +3666,13 @@ export const renderTallySheet = (project) => {
       const sizes = [];
       if (j.flangeSize) sizes.push(j.flangeSize);
       if (j.webSize) sizes.push(j.webSize);
-      boltSizeText = sizes.length > 0 ? sizes.join("・") : "-";
+      boltSizeText = sizes.length > 0 ? sizes.join(",<br>") : "-";
     }
     const isLocked = locks[item.id] || false;
     const colorClass = getJointColorClasses(item.joint);
-    return `<th class="px-2 py-3 text-center border min-w-32 ${colorClass} ${isLocked ? 'locked-column' : ''}">${boltSizeText}</th>`;
+    return `<th class="px-2 py-2 text-center border min-w-32 text-[10px] leading-tight ${colorClass} ${isLocked ? 'locked-column' : ''}">${boltSizeText}</th>`;
   }).join("");
 
-  // データ行
   const bodyRows = locations.map((loc) => `
     <tr class="tally-row table-row-color">
       <td class="px-2 py-3 font-medium sticky left-0 z-10 border border-slate-200 dark:border-slate-700 table-sticky-color">
@@ -3700,29 +3698,31 @@ export const renderTallySheet = (project) => {
   }).join("");
 
   tallySheetContainer.innerHTML = `
-    <table class="table-fixed text-sm text-left border-collapse">
-        <thead class="sticky top-0 z-20">
-            <tr class="table-sticky-header-color">
-                <th class="px-2 py-3 sticky left-0 z-30 align-bottom border border-slate-300 dark:border-slate-600" rowspan="3">階層 / エリア</th>
-                ${lockHeaderRow}
-                <th class="px-2 py-3 sticky right-0 align-middle font-bold text-slate-700 dark:text-slate-200 border border-slate-300 dark:border-slate-600" rowspan="3">合計</th>
-            </tr>
-            <tr>${headers}</tr>
-            <tr>${boltSizeHeaders}</tr>
-        </thead>
-        <tbody>${bodyRows}</tbody>
-        <tfoot class="font-bold sticky bottom-0 table-footer-color">
-            <tr>
-                <td class="px-2 py-2 sticky left-0 z-10 border border-orange-400 dark:border-orange-700">列合計</td>
-                ${footerCols}
-                <td class="grand-total px-2 py-2 text-center sticky right-0 border border-orange-400 dark:border-orange-700"></td>
-            </tr>
-        </tfoot>
-    </table>`;
+    <div class="overflow-x-auto custom-scrollbar">
+      <table class="table-fixed text-sm text-left border-collapse">
+          <thead class="sticky top-0 z-20">
+              <tr class="table-sticky-header-color">
+                  <th class="px-2 py-3 sticky left-0 z-30 align-bottom border border-slate-300 dark:border-slate-600" rowspan="3">階層 / エリア</th>
+                  ${lockHeaderRow}
+                  <th class="px-2 py-3 sticky right-0 align-middle font-bold text-slate-700 dark:text-slate-200 border border-slate-300 dark:border-slate-600" rowspan="3">合計</th>
+              </tr>
+              <tr>${headers}</tr>
+              <tr>${boltSizeHeaders}</tr>
+          </thead>
+          <tbody>${bodyRows}</tbody>
+          <tfoot class="font-bold sticky bottom-0 table-footer-color">
+              <tr>
+                  <td class="px-2 py-2 sticky left-0 z-10 border border-orange-400 dark:border-orange-700">列合計</td>
+                  ${footerCols}
+                  <td class="grand-total px-2 py-2 text-center sticky right-0 border border-orange-400 dark:border-orange-700"></td>
+              </tr>
+          </tfoot>
+      </table>
+    </div>`;
 
   if (tallyCard) {
-    tallyCard.classList.remove("hidden");
     tallyCard.id = "anchor-tally-input";
+    tallyCard.classList.remove("hidden");
     tallyCard.setAttribute("data-section-title", "箇所数入力");
     tallyCard.classList.add("scroll-mt-24");
   }
@@ -3731,7 +3731,7 @@ export const renderTallySheet = (project) => {
   updateTallySheetCalculations(project);
 };
 /**
- * 集計結果（Results）画面を描画する（剛接合・二重絞り込み完全対応版）
+ * 集計結果（Results）画面を描画する（消失ガード・二重サイズ対応版）
  */
 export const renderResults = (project) => {
   const resultsCardContent = document.getElementById("results-card-content");
@@ -3740,18 +3740,16 @@ export const renderResults = (project) => {
   if (resultsCardContent) resultsCardContent.innerHTML = "";
   if (!resultsCard) return;
 
-  // 描画更新のため一時的に隠す
   resultsCard.classList.add("hidden");
-
   if (!project) return;
 
-  // 1. 全データでの集計計算を実行（元データ project.tally は一切書き換えない）
+  // 1. 全データでの集計計算を実行（ project.tally は絶対に書き換えない）
   const { resultsByLocation } = calculateResults(project);
   
   const activeLevel = state.activeTallyLevel || "all";
   const activeType = state.activeTallyType || "all";
 
-  // 2. 表示対象のロケーションID（階層）を特定
+  // 2. 表示対象のロケーションIDを特定
   const targetLocationIds = new Set();
   if (project.mode === "advanced") {
     project.customLevels.forEach((level) => {
@@ -3771,7 +3769,7 @@ export const renderResults = (project) => {
     }
   }
 
-  // 3. 種別(通常/ピン)に基づき、剛接合の構造を考慮してデータをフィルタリング
+  // 3. 種別(ピン取り含む)に基づいてデータをフィルタリング
   const filteredResultsByLocation = {};
   const filteredBoltSizes = new Set();
   let grandTotalBolts = 0;
@@ -3790,25 +3788,21 @@ export const renderResults = (project) => {
       for (const [jointName, count] of Object.entries(data.joints)) {
         // 継手オブジェクトを特定
         const jointObj = project.joints.find(j => j.name.trim() === jointName.trim());
-        if (!jointObj) {
-          if (activeType === "all") {
+        
+        // ★ 剛接合（通常大梁）は複数のサイズ行にまたがるため、
+        // jointObjの判定が一致すれば、どのサイズ行であっても集計に含める
+        if (activeType === "all") {
+          filteredJoints[jointName] = count;
+          filteredTotal += count;
+        } else if (jointObj) {
+          const currentJointTypeId = getJointTypeId(jointObj);
+          if (currentJointTypeId === activeType) {
             filteredJoints[jointName] = count;
             filteredTotal += count;
           }
-          continue;
-        }
-
-        // 通常の大梁かピン取りかを厳密に判定
-        const currentJointTypeId = getJointTypeId(jointObj);
-        
-        // 絞り込み一致判定
-        if (activeType === "all" || currentJointTypeId === activeType) {
-          filteredJoints[jointName] = count;
-          filteredTotal += count;
         }
       }
 
-      // このサイズ（行）に該当するボルトがあれば保持
       if (filteredTotal > 0) {
         filteredResultsByLocation[locId][size] = {
           total: filteredTotal,
@@ -3820,12 +3814,11 @@ export const renderResults = (project) => {
     }
   }
 
-  // 操作ボタン
   const buttonsHtml = `
     <div class="flex justify-end gap-4 mb-4">
         <button id="recalculate-btn" class="btn btn-secondary text-sm flex items-center gap-2">
             <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
-            結果を再描画
+            最新の入力内容で再計算
         </button>
         <button id="export-excel-btn" class="btn bg-green-600 hover:bg-green-700 text-white text-sm font-bold flex items-center gap-2">
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
@@ -3835,7 +3828,7 @@ export const renderResults = (project) => {
 
   if (filteredBoltSizes.size === 0) {
     if (resultsCardContent) {
-      resultsCardContent.innerHTML = buttonsHtml + '<p class="text-gray-500 p-12 text-center bg-slate-50 dark:bg-slate-800 rounded-xl border-2 border-dashed border-slate-200 dark:border-slate-700">絞り込み条件に一致するデータがありません。</p>';
+      resultsCardContent.innerHTML = buttonsHtml + '<p class="text-gray-500 p-12 text-center bg-slate-50 dark:bg-slate-800 rounded-xl border-2 border-dashed">絞り込み条件に一致する入力データはありません。</p>';
     }
     resultsCard.classList.remove("hidden");
     return;
@@ -3884,7 +3877,7 @@ export const renderResults = (project) => {
                     <tr>
                         <th class="px-2 py-3 sticky left-0 bg-slate-200 dark:bg-slate-700 z-10 border border-slate-300 dark:border-slate-600">ボルトサイズ</th>
                         ${floorHeaders}
-                        <th class="px-2 py-3 text-center sticky right-0 bg-yellow-300 dark:bg-yellow-800 text-yellow-900 dark:text-yellow-100 border border-yellow-400">総合計</th>
+                        <th class="px-2 py-3 text-center sticky right-0 bg-yellow-300 dark:bg-yellow-800 text-yellow-900 dark:text-yellow-100 border border-yellow-400 font-bold">総合計</th>
                     </tr>
                 </thead>
                 <tbody>`;
@@ -4007,13 +4000,12 @@ export const renderResults = (project) => {
 
   resultsCard.classList.remove("hidden");
 
-  // 【重要】再計算ボタンのイベントをここで設定し、誤動作を防ぐ
+  // 【重要】再計算ボタンイベント
   const recalcBtn = document.getElementById("recalculate-btn");
   if (recalcBtn) {
     recalcBtn.onclick = () => {
-      // データを上書きせず、現在の project.tally に基づいて再描画するだけにする
-      renderDetailView(); 
-      showToast("最新の入力データで再集計しました");
+      renderResults(project); 
+      showToast("最新の入力データで再計算しました");
     };
   }
 };
