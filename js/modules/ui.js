@@ -3558,10 +3558,14 @@ export const renderTallySheet = (project) => {
 
   // 4. データのフィルタリング (階層 × 種別の二重フィルター)
   const tallyList = getTallyList(project).filter((item) => {
-    // 階層フィルター
+    // --- 階層フィルターの判定 ---
+    const isAllFloorMember = !item.targetLevels || item.targetLevels.length === 0; // ★階層指定がない＝全階層
+    const isSpecificFloor = item.targetLevels && item.targetLevels.includes(state.activeTallyLevel);
+
     const matchLevel = (state.activeTallyLevel === "all") ||
       (!item.isMember) ||
-      (item.targetLevels && item.targetLevels.includes(state.activeTallyLevel));
+      isAllFloorMember || // ★ここを追加：全階層部材なら常にパス
+      isSpecificFloor;
 
     // 種別フィルター
     const matchType = (state.activeTallyType === "all") || (item.joint.type === state.activeTallyType);
@@ -3884,7 +3888,7 @@ export const renderResults = (project) => {
 
   // 1. 基本となる集計計算を実行
   const { resultsByLocation } = calculateResults(project);
-  
+
   // 現在のフィルター状態を取得
   const activeLevel = state.activeTallyLevel || "all";
   const activeType = state.activeTallyType || "all";
@@ -3935,6 +3939,16 @@ export const renderResults = (project) => {
       // 各継手が選択された種別に合致するか判定
       for (const [jointName, count] of Object.entries(data.joints)) {
         const jointObj = project.joints.find(j => j.name === jointName);
+
+        // --- 判定ロジック ---
+        // 集計対象のロケーションID(locId)に含まれる部材のうち、
+        // 1. 全階層部材 または 階層が一致する部材
+        // 2. かつ、種別が一致する部材
+        // を抽出します。
+
+        // ※resultsByLocationは既にロケーション(階層)ごとに集計されているので、
+        // ここでは「種別」のフィルターをメインに適用します。
+
         if (activeType === "all" || (jointObj && jointObj.type === activeType)) {
           filteredJoints[jointName] = count;
           filteredTotal += count;
@@ -4058,7 +4072,7 @@ export const renderResults = (project) => {
         cellValue = cellData?.total || 0;
         if (cellData?.joints) jointData = cellData.joints;
       }
-      
+
       let tooltipText = "", detailsClass = "", dataAttribute = "";
       if (Object.keys(jointData).length > 0) {
         tooltipText = Object.entries(jointData).map(([name, count]) => `${name}: ${count.toLocaleString()}本`).join("\n");
