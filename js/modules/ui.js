@@ -35,7 +35,8 @@ const BOLT_TYPE_ORDER = [
   "Dドブ16",
   "Dユニ16",
 ];
-
+// ▼▼▼ エラー解消：部材カウント用アイコンの定義 ▼▼▼
+const memberIconSvgRaw = `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect><path d="M9 14h6"></path><path d="M9 18h6"></path><path d="M9 10h6"></path></svg>`;
 // クイックナビゲーションの状態管理
 let isQuickNavOpen = false;
 // ▼▼▼ 追加: リスト描画用のコールバックを記憶する変数 ▼▼▼
@@ -177,45 +178,29 @@ const getJointFilterLabel = (filterId) => {
   return isPin ? `${label}(ピン)` : label;
 };
 /**
- * 継手の種別とピン取り設定から、カテゴリカラー（昼/夜対応）を返却する
+ * カテゴリカラーの定義（ダークモード完全対応）
  */
 const getJointCategoryColorClasses = (joint) => {
   if (!joint) return "bg-slate-200 text-slate-800 dark:bg-slate-700 dark:text-slate-200";
   const t = joint.type;
   const p = joint.isPinJoint;
-
-  // ダークモード時は背景を深く、文字を明るく設定
-  if (t === "girder") {
-    return p 
-      ? "bg-cyan-200 text-cyan-900 border-cyan-300 dark:bg-cyan-900 dark:text-cyan-100 dark:border-cyan-700" 
-      : "bg-blue-200 text-blue-900 border-blue-300 dark:bg-blue-900 dark:text-blue-100 dark:border-blue-700";
-  }
-  if (t === "beam") {
-    return p 
-      ? "bg-teal-200 text-teal-900 border-teal-300 dark:bg-teal-900 dark:text-teal-100 dark:border-teal-700" 
-      : "bg-green-200 text-green-900 border-green-300 dark:bg-emerald-900 dark:text-emerald-100 dark:border-emerald-700";
-  }
-  if (t === "column") return "bg-red-200 text-red-900 border-red-300 dark:bg-rose-900 dark:text-rose-100 dark:border-rose-700";
-  if (t === "stud") {
-    return p 
-      ? "bg-purple-200 text-purple-900 border-purple-300 dark:bg-purple-900 dark:text-purple-100 dark:border-purple-700" 
-      : "bg-indigo-200 text-indigo-900 border-indigo-300 dark:bg-indigo-900 dark:text-indigo-100 dark:border-indigo-700";
-  }
-  if (t === "wall_girt") return "bg-gray-200 text-gray-900 border-gray-300 dark:bg-slate-700 dark:text-slate-200 dark:border-slate-600";
-  if (t === "roof_purlin") return "bg-orange-200 text-orange-900 border-orange-300 dark:bg-orange-900 dark:text-orange-100 dark:border-orange-700";
-  
-  return "bg-amber-200 text-amber-900 border-amber-300 dark:bg-amber-900 dark:text-amber-100 dark:border-amber-700";
+  if (t === "girder") return p ? "bg-cyan-200 text-cyan-900 border-cyan-300 dark:bg-cyan-900 dark:text-cyan-100" : "bg-blue-200 text-blue-900 border-blue-300 dark:bg-blue-900 dark:text-blue-100";
+  if (t === "beam") return p ? "bg-teal-200 text-teal-900 border-teal-300 dark:bg-teal-900 dark:text-teal-100" : "bg-green-200 text-green-900 border-green-300 dark:bg-emerald-900 dark:text-emerald-100";
+  if (t === "column") return "bg-red-200 text-red-900 border-red-300 dark:bg-rose-900 dark:text-rose-100";
+  if (t === "stud") return p ? "bg-purple-200 text-purple-900 border-purple-300 dark:bg-purple-900 dark:text-purple-100" : "bg-indigo-200 text-indigo-900 border-indigo-300 dark:bg-indigo-900 dark:text-indigo-100";
+  if (t === "wall_girt") return "bg-slate-200 text-slate-900 border-slate-300 dark:bg-slate-700 dark:text-slate-200";
+  if (t === "roof_purlin") return "bg-orange-200 text-orange-900 border-orange-300 dark:bg-orange-900 dark:text-orange-100";
+  return "bg-amber-200 text-amber-900 border-amber-300 dark:bg-amber-900 dark:text-amber-100";
 };
 
 /**
- * 継手の構成に基づき「継手名：n本」のペアを動的に生成する（ツールチップ用）
+ * 継手の部位に基づいた詳細（ツールチップ用）
+ * 書式：「継手名：n本」 (胴縁・母屋・ピンは部位名なし)
  */
 const getBoltTooltipText = (joint) => {
   if (!joint) return "";
   let lines = [];
   const name = joint.name || "継手名未設定";
-
-  // 胴縁(wall_girt)と母屋(roof_purlin)はピン取りと同じ「部位名なし」の処理
   const isSimpleLabel = joint.isPinJoint || joint.type === "wall_girt" || joint.type === "roof_purlin";
 
   if (joint.isComplexSpl && joint.webInputs) {
@@ -226,11 +211,9 @@ const getBoltTooltipText = (joint) => {
     const total = (joint.webCount || 0) + (joint.flangeCount || 0);
     if (total > 0) lines.push(`${name}：${total}本`);
   } else {
-    // 剛接合などの部位（F/W）を分ける必要があるもの
     if (joint.flangeCount > 0) lines.push(`${name}(F)：${joint.flangeCount}本`);
     if (joint.webCount > 0) lines.push(`${name}(W)：${joint.webCount}本`);
   }
-  
   return lines.length > 0 ? lines.join("\n") : "ボルト設定なし";
 };
 
@@ -4042,7 +4025,7 @@ export const renderTallySheet = (project) => {
 
   const allItems = getTallyList(project);
 
-  // 1. 階層タブ (ダークモード対応)
+  // 1. 階層タブ生成
   const levels = getProjectLevels(project);
   let floorHtml = `<button class="tally-tab-btn px-4 py-1.5 rounded-full text-sm font-bold border transition-all ${
     state.activeTallyLevel === "all" 
@@ -4060,7 +4043,7 @@ export const renderTallySheet = (project) => {
   });
   floorTabs.innerHTML = floorHtml;
 
-  // 2. 種別タブ (ダークモード対応)
+  // 2. 種別タブ生成
   const uniqueFilterIds = [...new Set(allItems.map(item => getJointFilterId(item.joint)))].sort();
   let typeHtml = `<button class="tally-type-tab-btn px-4 py-1.5 rounded-full text-sm font-bold border transition-all ${
     state.activeTallyType === "all" 
@@ -4078,7 +4061,7 @@ export const renderTallySheet = (project) => {
   });
   if (typeTabs) typeTabs.innerHTML = typeHtml;
 
-  // タブクリックイベント
+  // タブイベント
   floorTabs.querySelectorAll(".tally-tab-btn").forEach(btn => {
     btn.onclick = () => { state.activeTallyLevel = btn.dataset.level; renderTallySheet(project); renderResults(project); };
   });
@@ -4088,7 +4071,7 @@ export const renderTallySheet = (project) => {
     });
   }
 
-  // 3. 表示データのフィルタリング
+  // 3. データのフィルタリング
   const displayItems = allItems.filter(item => {
     const isCommon = !item.targetLevels || item.targetLevels.length === 0;
     const matchLevel = state.activeTallyLevel === "all" || !item.isMember || isCommon || item.targetLevels.includes(state.activeTallyLevel);
@@ -4097,12 +4080,12 @@ export const renderTallySheet = (project) => {
   });
 
   if (displayItems.length === 0) {
-    tallySheetContainer.innerHTML = '<p class="text-gray-500 p-12 text-center bg-slate-50 dark:bg-slate-800/50 rounded-xl border-2 border-dashed border-slate-200 dark:border-slate-700 font-bold">表示条件に合う部材がありません。</p>';
+    tallySheetContainer.innerHTML = '<p class="text-gray-500 p-12 text-center bg-slate-50 dark:bg-slate-800/40 rounded-xl border-2 border-dashed border-slate-200 dark:border-slate-700 font-bold">表示条件に合う部材がありません。</p>';
     if (resultsCard) resultsCard.classList.add("hidden");
     return;
   }
 
-  // 4. ロケーション(行)のフィルタリング
+  // 4. ロケーション生成 (PH対応)
   let locations = [];
   if (project.mode === "advanced") {
     project.customLevels.forEach(lvl => {
@@ -4124,10 +4107,10 @@ export const renderTallySheet = (project) => {
 
   const locks = project.tallyLocks || {};
 
-  // --- テーブル構築：カラー・バッジ語尾・折り返し禁止 ---
+  // --- テーブル構築：カラー・バッジ・アイコン語尾・横スクロール強制 ---
   const lockRow = displayItems.map(item => {
     const colorClass = getJointCategoryColorClasses(item.joint);
-    return `<td class="px-2 py-1 text-center border ${colorClass}">
+    return `<td class="px-2 py-1 text-center border border-slate-300 dark:border-slate-600 ${colorClass}">
               <input type="checkbox" class="tally-lock-checkbox h-4 w-4 rounded cursor-pointer" data-id="${item.id}" ${locks[item.id] ? "checked" : ""}>
             </td>`;
   }).join("");
@@ -4136,15 +4119,15 @@ export const renderTallySheet = (project) => {
     const colorClass = getJointCategoryColorClasses(item.joint);
     const badgeColor = item.joint.color || '#cbd5e1';
     
-    // ご指定のSVGアイコンを使用
+    // 指定のSVGアイコンを使用し、語尾に配置
     const memberIconHtml = item.joint.countAsMember
-      ? `<span class="inline-flex items-center justify-center ml-1 text-emerald-600 dark:text-emerald-300 cursor-help" title="部材として集計される継手">${memberIconSvgRaw}</span>`
+      ? `<span class="inline-flex items-center justify-center ml-1.5 text-emerald-700 dark:text-emerald-300" title="部材として集計">${memberIconSvgRaw}</span>`
       : "";
 
-    return `<th class="px-4 py-3 text-center border min-w-[160px] whitespace-nowrap font-bold ${colorClass}">
+    return `<th class="px-4 py-3 text-center border border-slate-300 dark:border-slate-600 min-w-[180px] whitespace-nowrap font-bold ${colorClass}">
               <div class="flex items-center justify-center gap-1.5">
                 <span>${item.name}</span>
-                <span class="flex-shrink-0 w-3 h-3 rounded-full border border-black/20 dark:border-white/20 shadow-sm" style="background-color: ${badgeColor}"></span>
+                <span class="flex-shrink-0 w-3.5 h-3.5 rounded-full border border-black/20 dark:border-white/20 shadow-sm" style="background-color: ${badgeColor}"></span>
                 ${memberIconHtml}
               </div>
             </th>`;
@@ -4156,7 +4139,8 @@ export const renderTallySheet = (project) => {
     const tooltipText = getBoltTooltipText(j);
     let sizeDisplay = j.isComplexSpl && j.webInputs ? j.webInputs.map(w => w.size).join(", ") : [j.flangeSize, j.webSize].filter(Boolean).join(", ");
     
-    return `<th class="px-2 py-2 text-center border min-w-[160px] text-[10px] leading-tight font-medium cursor-help whitespace-nowrap bolt-info-trigger ${colorClass}" 
+    // whitespace-nowrap で折り返し禁止
+    return `<th class="px-2 py-2 text-center border border-slate-300 dark:border-slate-600 min-w-[180px] text-[10px] leading-tight font-medium cursor-help whitespace-nowrap bolt-info-trigger ${colorClass}" 
                 title="${tooltipText}" data-tooltip-content="${tooltipText}">
               ${sizeDisplay || "-"}
             </th>`;
@@ -4167,9 +4151,9 @@ export const renderTallySheet = (project) => {
       <td class="px-4 py-3 font-bold sticky left-0 z-10 border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 whitespace-nowrap group-hover:bg-slate-50 dark:group-hover:bg-slate-700/50">${loc.label}</td>
       ${displayItems.map(item => {
         const val = project.tally?.[loc.id]?.[item.id] ?? "";
-        return `<td class="p-0 border border-slate-200 dark:border-slate-700 ${locks[item.id] ? 'bg-slate-100 dark:bg-slate-900/40' : 'group-hover:bg-slate-50/50 dark:group-hover:bg-slate-800/20'}">
+        return `<td class="p-0 border border-slate-200 dark:border-slate-700 ${locks[item.id] ? 'bg-slate-100 dark:bg-slate-900/40' : 'group-hover:bg-slate-50 dark:group-hover:bg-slate-800/20'}">
                   <input type="text" inputmode="numeric" data-location="${loc.id}" data-id="${item.id}" 
-                         class="tally-input w-full bg-transparent border-transparent py-3 text-center text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-yellow-500 transition-all" value="${val}" ${locks[item.id] ? "disabled" : ""}>
+                         class="tally-input w-full bg-transparent border-transparent py-3 text-center text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-yellow-500 transition-all font-medium" value="${val}" ${locks[item.id] ? "disabled" : ""}>
                 </td>`;
       }).join("")}
       <td class="row-total px-4 py-2 text-center font-bold sticky right-0 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-blue-700 dark:text-blue-400 whitespace-nowrap"></td>
@@ -4179,16 +4163,16 @@ export const renderTallySheet = (project) => {
     <div class="overflow-x-auto custom-scrollbar">
       <table class="table-fixed text-sm border-collapse w-full">
         <thead class="sticky top-0 z-20">
-          <tr class="bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400">
-            <th class="px-4 py-3 sticky left-0 z-30 bg-slate-100 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 text-xs align-bottom whitespace-nowrap" rowspan="3">階層 / 工区</th>
+          <tr class="bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400">
+            <th class="px-4 py-3 sticky left-0 z-30 bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-600 text-xs align-bottom whitespace-nowrap" rowspan="3">階層 / 工区</th>
             ${lockRow}
-            <th class="sticky right-0 bg-slate-100 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 font-bold align-middle whitespace-nowrap" rowspan="3">合計</th>
+            <th class="sticky right-0 bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-600 font-bold align-middle whitespace-nowrap" rowspan="3">合計</th>
           </tr>
           <tr>${headerRow}</tr>
           <tr>${sizeRow}</tr>
         </thead>
         <tbody>${bodyHtml}</tbody>
-        <tfoot class="font-bold sticky bottom-0 bg-orange-50 dark:bg-slate-900/95 backdrop-blur-sm">
+        <tfoot class="font-bold sticky bottom-0 bg-orange-50 dark:bg-slate-900/90 backdrop-blur-sm">
           <tr class="whitespace-nowrap">
             <td class="px-4 py-2 sticky left-0 z-10 border border-orange-400 dark:border-orange-700 text-orange-800 dark:text-orange-300">列合計</td>
             ${displayItems.map(item => `<td data-id="${item.id}" class="col-total px-2 py-2 text-center border border-orange-400 dark:border-orange-700 text-orange-900 dark:text-orange-300"></td>`).join("")}
@@ -4198,7 +4182,7 @@ export const renderTallySheet = (project) => {
       </table>
     </div>`;
 
-  // モバイル対応用タップイベント登録
+  // モバイル対応タップイベント
   tallySheetContainer.querySelectorAll(".bolt-info-trigger").forEach(el => {
     el.onclick = () => {
       const content = el.dataset.tooltipContent;
