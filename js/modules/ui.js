@@ -4128,7 +4128,7 @@ export const renderTallySheet = (project) => {
               <div class="flex items-center justify-center gap-1.5">
                 <span>${item.name}</span>
                 <span class="flex-shrink-0 w-3.5 h-3.5 rounded-full border border-black/20 dark:border-white/20 shadow-sm" style="background-color: ${badgeColor}"></span>
-                ${memberIconHtml}
+                ${memberIconSvgRaw}
               </div>
             </th>`;
   }).join("");
