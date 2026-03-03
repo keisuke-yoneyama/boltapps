@@ -3967,66 +3967,56 @@ export const renderShopTempBoltResults = (project) => {
             </div>`;
 };
 /**
- * 数量入力シート（Tally Sheet）を描画する
+ * 箇所数入力シート（Tally Sheet）を描画する
  */
 export const renderTallySheet = (project) => {
   if (!project) return;
 
   const tallySheetContainer = document.getElementById("tally-sheet-container");
-  const tabsContainer = document.getElementById("tally-floor-tabs");
-  const typeTabsContainer = document.getElementById("tally-type-tabs");
+  const floorTabs = document.getElementById("tally-floor-tabs");
+  const typeTabs = document.getElementById("tally-type-tabs");
   const tallyCard = document.getElementById("tally-card");
   const resultsCard = document.getElementById("results-card");
 
-  if (!tallySheetContainer || !tabsContainer) return;
+  if (!tallySheetContainer || !floorTabs) return;
 
-  // 1. フィルター状態の初期化
-  if (state.activeTallyLevel === undefined) state.activeTallyLevel = "all";
-  if (state.activeTallyType === undefined) state.activeTallyType = "all";
+  // 1. 状態の初期化
+  if (!state.activeTallyLevel) state.activeTallyLevel = "all";
+  if (!state.activeTallyType) state.activeTallyType = "all";
 
-  // 2. データの取得（calculator.jsのロジックを使用）
-  const allTallyItems = getTallyList(project);
+  // 2. 全データの取得（calculator.js の既存ロジックを使用）
+  const allItems = getTallyList(project);
 
   // 3. 階層タブの生成
   const levels = getProjectLevels(project);
-  let tabsHtml = `<button class="tally-tab-btn px-3 py-1 rounded-full text-sm font-bold border transition-colors ${
-    state.activeTallyLevel === "all"
-      ? "bg-blue-600 text-white border-blue-600"
-      : "bg-white dark:bg-slate-800 text-slate-600 border-slate-300 dark:border-slate-600"
-  }" data-level="all">全表示</button>`;
-
+  let floorHtml = `<button class="tally-tab-btn px-4 py-1.5 rounded-full text-sm font-bold border transition-all ${state.activeTallyLevel === "all" ? "bg-blue-600 text-white border-blue-600 shadow-md" : "bg-white dark:bg-slate-800 text-slate-600 border-slate-300 dark:border-slate-600 hover:bg-slate-100"}" data-level="all">全表示</button>`;
   levels.forEach((lvl) => {
     const active = state.activeTallyLevel === lvl.id;
-    tabsHtml += `<button class="tally-tab-btn px-3 py-1 rounded-full text-sm font-bold border transition-colors ${active ? "bg-blue-600 text-white border-blue-600" : "bg-white dark:bg-slate-800 text-slate-600 border-slate-300"}" data-level="${lvl.id}">${lvl.label}</button>`;
+    floorHtml += `<button class="tally-tab-btn px-4 py-1.5 rounded-full text-sm font-bold border transition-all ${active ? "bg-blue-600 text-white border-blue-600 shadow-md" : "bg-white dark:bg-slate-800 text-slate-600 border-slate-300"}" data-level="${lvl.id}">${lvl.label}</button>`;
   });
-  tabsContainer.innerHTML = tabsHtml;
+  floorTabs.innerHTML = floorHtml;
 
-  // 4. 種別タブの生成（全種別のピン取りを動的に抽出）
+  // 4. 種別タブの動的生成
   const uniqueFilterIds = [
-    ...new Set(allTallyItems.map((item) => getJointFilterId(item.joint))),
+    ...new Set(allItems.map((item) => getJointFilterId(item.joint))),
   ].sort();
-  let typeTabsHtml = `<button class="tally-type-tab-btn px-3 py-1 rounded-full text-sm font-bold border transition-colors ${
-    state.activeTallyType === "all"
-      ? "bg-emerald-600 text-white border-emerald-600"
-      : "bg-white dark:bg-slate-800 text-slate-600 border-slate-300"
-  }" data-type="all">全種別</button>`;
-
+  let typeHtml = `<button class="tally-type-tab-btn px-4 py-1.5 rounded-full text-sm font-bold border transition-all ${state.activeTallyType === "all" ? "bg-emerald-600 text-white border-emerald-600 shadow-md" : "bg-white dark:bg-slate-800 text-slate-600 border-slate-300"}" data-type="all">全種別</button>`;
   uniqueFilterIds.forEach((fid) => {
     const active = state.activeTallyType === fid;
-    typeTabsHtml += `<button class="tally-type-tab-btn px-3 py-1 rounded-full text-sm font-bold border transition-colors ${active ? "bg-emerald-600 text-white border-emerald-600" : "bg-white dark:bg-slate-800 text-slate-600"}" data-type="${fid}">${getJointFilterLabel(fid)}</button>`;
+    typeHtml += `<button class="tally-type-tab-btn px-4 py-1.5 rounded-full text-sm font-bold border transition-all ${active ? "bg-emerald-600 text-white border-emerald-600 shadow-md" : "bg-white dark:bg-slate-800 text-slate-600 border-slate-300"}" data-type="${fid}">${getJointFilterLabel(fid)}</button>`;
   });
-  if (typeTabsContainer) typeTabsContainer.innerHTML = typeTabsHtml;
+  if (typeTabs) typeTabs.innerHTML = typeHtml;
 
-  // タブクリックイベント
-  tabsContainer.querySelectorAll(".tally-tab-btn").forEach((btn) => {
+  // タブイベント
+  floorTabs.querySelectorAll(".tally-tab-btn").forEach((btn) => {
     btn.onclick = () => {
       state.activeTallyLevel = btn.dataset.level;
       renderTallySheet(project);
       renderResults(project);
     };
   });
-  if (typeTabsContainer) {
-    typeTabsContainer.querySelectorAll(".tally-type-tab-btn").forEach((btn) => {
+  if (typeTabs) {
+    typeTabs.querySelectorAll(".tally-type-tab-btn").forEach((btn) => {
       btn.onclick = () => {
         state.activeTallyType = btn.dataset.type;
         renderTallySheet(project);
@@ -4035,16 +4025,14 @@ export const renderTallySheet = (project) => {
     });
   }
 
-  // 5. データのフィルタリング（全階層部材・継手の維持）
-  const displayItems = allTallyItems.filter((item) => {
-    // 共通部材 (targetLevels が空) はどの階層でも表示
+  // 5. 表示データのフィルタリング（全階層部材の維持）
+  const displayItems = allItems.filter((item) => {
     const isCommon = !item.targetLevels || item.targetLevels.length === 0;
     const matchLevel =
       state.activeTallyLevel === "all" ||
       !item.isMember ||
       isCommon ||
       item.targetLevels.includes(state.activeTallyLevel);
-    // 種別フィルターの判定
     const matchType =
       state.activeTallyType === "all" ||
       getJointFilterId(item.joint) === state.activeTallyType;
@@ -4053,12 +4041,12 @@ export const renderTallySheet = (project) => {
 
   if (displayItems.length === 0) {
     tallySheetContainer.innerHTML =
-      '<p class="text-gray-500 p-8 text-center bg-slate-50 dark:bg-slate-800 rounded-xl border-2 border-dashed border-slate-200">表示条件に合う部材がありません。</p>';
+      '<p class="text-gray-500 p-12 text-center bg-slate-50 dark:bg-slate-800 rounded-xl border-2 border-dashed font-bold">表示条件に合う部材がありません。</p>';
     if (resultsCard) resultsCard.classList.add("hidden");
     return;
   }
 
-  // 6. ロケーション(行)のフィルタリング（★ご提示いただいたコードを反映）
+  // 6. ロケーション(行)のフィルタリング（PH階対応）
   let locations = [];
   if (project.mode === "advanced") {
     project.customLevels.forEach((lvl) => {
@@ -4093,88 +4081,91 @@ export const renderTallySheet = (project) => {
 
   const locks = project.tallyLocks || {};
 
-  // --- テーブル構築 ---
-  const lockHeaderRow = displayItems
-    .map(
-      (item) => `
-    <td class="px-2 py-1 text-center border" style="background-color: ${item.joint.color || "#e2e8f0"}33">
-      <input type="checkbox" class="tally-lock-checkbox h-4 w-4" data-id="${item.id}" ${locks[item.id] ? "checked" : ""}>
-    </td>`,
-    )
+  // --- 【UI修正】ヘッダー部分の色分け適用 ---
+  const lockRow = displayItems
+    .map((item) => {
+      const color = item.joint.color || "#e2e8f0";
+      return `<td class="px-2 py-1 text-center border border-slate-300 dark:border-slate-600" style="background-color: ${color}44">
+              <input type="checkbox" class="tally-lock-checkbox h-4 w-4" data-id="${item.id}" ${locks[item.id] ? "checked" : ""}>
+            </td>`;
+    })
     .join("");
 
-  const headers = displayItems
-    .map(
-      (item) => `
-    <th class="px-2 py-3 text-center border min-w-32 break-all text-slate-800 dark:text-slate-100" style="background-color: ${item.joint.color || "#f1f5f9"}">
-      ${item.name}
-    </th>`,
-    )
+  const headerRow = displayItems
+    .map((item) => {
+      const color = item.joint.color || "#f1f5f9";
+      return `<th class="px-2 py-3 text-center border border-slate-300 dark:border-slate-600 min-w-32 break-all text-slate-800 dark:text-slate-100" style="background-color: ${color}">
+              ${item.name}
+            </th>`;
+    })
     .join("");
 
-  const boltSizeHeaders = displayItems
+  const sizeRow = displayItems
     .map((item) => {
       const j = item.joint;
+      const color = item.joint.color || "#f1f5f9";
       let text =
         j.isComplexSpl && j.webInputs
           ? j.webInputs.map((w) => w.size).join(",<br>")
           : [j.flangeSize, j.webSize].filter(Boolean).join(",<br>");
-      return `<th class="px-2 py-2 text-center border min-w-32 text-[10px] leading-tight bg-slate-50 dark:bg-slate-800 text-slate-500">${text || "-"}</th>`;
+      return `<th class="px-2 py-2 text-center border border-slate-300 dark:border-slate-600 min-w-32 text-[10px] leading-tight text-slate-600 dark:text-slate-300" style="background-color: ${color}cc">
+              ${text || "-"}
+            </th>`;
     })
     .join("");
 
-  const bodyRows = locations
+  const bodyHtml = locations
     .map(
       (loc) => `
     <tr class="tally-row">
-      <td class="px-2 py-3 font-bold sticky left-0 z-10 border bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100">${loc.label}</td>
+      <td class="px-4 py-3 font-bold sticky left-0 z-10 border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100">${loc.label}</td>
       ${displayItems
-        .map(
-          (item) => `
-        <td class="p-0 border border-slate-200 dark:border-slate-700 ${locks[item.id] ? "bg-slate-100 dark:bg-slate-900/50" : ""}">
-          <input type="text" inputmode="numeric" data-location="${loc.id}" data-id="${item.id}" 
-                 class="tally-input w-full bg-transparent border-transparent py-3 text-center text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-yellow-500" value="${project.tally?.[loc.id]?.[item.id] || ""}" ${locks[item.id] ? "disabled" : ""}>
-        </td>`,
-        )
+        .map((item) => {
+          const val = project.tally?.[loc.id]?.[item.id] ?? "";
+          return `<td class="p-0 border border-slate-200 dark:border-slate-700 ${locks[item.id] ? "bg-slate-100 dark:bg-slate-900/50" : ""}">
+                  <input type="text" inputmode="numeric" data-location="${loc.id}" data-id="${item.id}" 
+                         class="tally-input w-full bg-transparent border-transparent py-3 text-center text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-yellow-500" value="${val}" ${locks[item.id] ? "disabled" : ""}>
+                </td>`;
+        })
         .join("")}
-      <td class="row-total px-2 py-2 text-center font-bold text-blue-800 dark:text-blue-300 sticky right-0 border bg-slate-50 dark:bg-slate-900"></td>
+      <td class="row-total px-2 py-2 text-center font-bold sticky right-0 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-blue-700 dark:text-blue-400"></td>
     </tr>`,
     )
     .join("");
 
   tallySheetContainer.innerHTML = `
     <div class="overflow-x-auto custom-scrollbar">
-      <table class="table-fixed text-sm border-collapse">
+      <table class="table-fixed text-sm border-collapse w-full">
         <thead class="sticky top-0 z-20">
           <tr class="bg-slate-100 dark:bg-slate-700">
-            <th class="px-2 py-3 sticky left-0 z-30 align-bottom border border-slate-300 dark:border-slate-600 bg-slate-100 dark:bg-slate-700" rowspan="3">階層 / 工区</th>
-            ${lockHeaderRow}
-            <th class="px-2 py-3 sticky right-0 align-middle font-bold border border-slate-300 dark:border-slate-600 bg-slate-100 dark:bg-slate-700" rowspan="3">合計</th>
+            <th class="px-4 py-3 sticky left-0 z-30 bg-slate-100 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 text-xs align-bottom" rowspan="3">階層 / 工区</th>
+            ${lockRow}
+            <th class="sticky right-0 bg-slate-100 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 font-bold align-middle" rowspan="3">合計</th>
           </tr>
-          <tr>${headers}</tr>
-          <tr>${boltSizeHeaders}</tr>
+          <tr>${headerRow}</tr>
+          <tr>${sizeRow}</tr>
         </thead>
-        <tbody>${bodyRows}</tbody>
+        <tbody>${bodyHtml}</tbody>
         <tfoot class="font-bold sticky bottom-0 bg-orange-50 dark:bg-slate-900">
           <tr>
-            <td class="px-2 py-2 sticky left-0 z-10 border border-orange-400 dark:border-orange-700">列合計</td>
+            <td class="px-4 py-2 sticky left-0 z-10 border border-orange-400 dark:border-orange-700 text-orange-800 dark:text-orange-400">列合計</td>
             ${displayItems.map((item) => `<td data-id="${item.id}" class="col-total px-2 py-2 text-center border border-orange-400 dark:border-orange-700"></td>`).join("")}
-            <td class="grand-total px-2 py-2 text-center sticky right-0 border border-orange-400 dark:border-orange-700"></td>
+            <td class="grand-total px-2 py-2 text-center sticky right-0 border border-orange-400 dark:border-orange-700 text-orange-900 dark:text-orange-300"></td>
           </tr>
         </tfoot>
       </table>
     </div>`;
 
   if (tallyCard) {
-    tallyCard.id = "anchor-tally-input";
     tallyCard.classList.remove("hidden");
+    tallyCard.id = "anchor-tally-input";
     tallyCard.setAttribute("data-section-title", "箇所数入力");
     tallyCard.classList.add("scroll-mt-24");
   }
   if (resultsCard) resultsCard.classList.remove("hidden");
-
   updateTallySheetCalculations(project);
 };
+
 /**
  * 集計結果（Results）画面を描画する
  */
@@ -4185,24 +4176,22 @@ export const renderResults = (project) => {
   if (resultsCardContent) resultsCardContent.innerHTML = "";
   if (!resultsCard) return;
 
-  // 描画更新のため一時的に隠す
   resultsCard.classList.add("hidden");
-
   if (!project) return;
 
-  // 1. 全データでの集計計算を実行（ calculator.js のロジックを使用）
+  // 1. 全データでの集計計算を実行（ calculator.js を使用）
   const { resultsByLocation } = calculateResults(project);
 
   const activeLevel = state.activeTallyLevel || "all";
   const activeType = state.activeTallyType || "all";
 
-  // --- 【重要】部材名から継手情報を逆引きするためのマップを作成 ---
-  const tallyList = getTallyList(project); //
+  // 【重要】部材名から継手情報を逆引きするためのマップを作成
+  const allTallyItems = getTallyList(project);
   const nameToJointMap = new Map(
-    tallyList.map((item) => [item.name, item.joint]),
+    allTallyItems.map((item) => [item.name, item.joint]),
   );
 
-  // 2. 表示対象のロケーションID（階層）を特定（PH階・工区に完全対応）
+  // 2. 表示対象のロケーションID（階層）を特定
   const targetLocationIds = new Set();
   if (project.mode === "advanced") {
     project.customLevels.forEach((lvl) => {
@@ -4221,14 +4210,13 @@ export const renderResults = (project) => {
       for (let s = 1; s <= project.sections; s++)
         targetLocationIds.add(`R-${s}`);
     }
-    // PH階のIDを追加
     if (project.hasPH && (activeLevel === "all" || activeLevel === "PH")) {
       for (let s = 1; s <= project.sections; s++)
         targetLocationIds.add(`PH-${s}`);
     }
   }
 
-  // 3. 種別(通常/ピン)に基づき、表示用のクローンデータを構築
+  // 3. 種別(通常/ピン)に基づき、表示用のフィルタリング済みデータを構築
   const filteredData = {};
   const filteredBoltSizes = new Set();
   let grandTotalBolts = 0;
@@ -4237,18 +4225,14 @@ export const renderResults = (project) => {
     if (!targetLocationIds.has(locId)) continue;
 
     filteredData[locId] = {};
-    const sizesAtLoc = resultsByLocation[locId];
-
-    for (const size in sizesAtLoc) {
-      const data = sizesAtLoc[size];
+    for (const size in resultsByLocation[locId]) {
+      const data = resultsByLocation[locId][size];
       const filteredJoints = {};
       let filteredTotal = 0;
 
       for (const [itemName, count] of Object.entries(data.joints)) {
-        // --- 【修正の核心】部材名(itemName)から継手オブジェクト(jointObj)を特定 ---
+        // 部材名から継手オブジェクトを特定して判定
         const jointObj = nameToJointMap.get(itemName);
-
-        // 判定：全種別(all) または 継手タイプとピン取り設定が一致
         const isTypeMatch =
           activeType === "all" ||
           (jointObj && getJointFilterId(jointObj) === activeType);
@@ -4270,22 +4254,15 @@ export const renderResults = (project) => {
     }
   }
 
-  const buttonsHtml = `
-    <div class="flex justify-end gap-4 mb-4">
-        <button id="export-excel-btn" class="btn bg-green-600 hover:bg-green-700 text-white text-sm font-bold flex items-center gap-2 px-4 py-2 rounded-lg shadow-sm">
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
-            Excelデータを出力
-        </button>
-    </div>`;
+  const buttonsHtml = `<div class="flex justify-end mb-4"><button id="export-excel-btn" class="btn bg-green-600 text-white text-sm font-bold flex items-center gap-2 px-4 py-2 rounded-lg"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>Excelデータを出力</button></div>`;
 
   const sortedSizes = Array.from(filteredBoltSizes).sort(boltSort);
 
   if (sortedSizes.length === 0) {
-    if (resultsCardContent) {
+    if (resultsCardContent)
       resultsCardContent.innerHTML =
         buttonsHtml +
-        '<p class="text-gray-500 p-12 text-center bg-slate-50 dark:bg-slate-800 rounded-xl border-2 border-dashed border-slate-200 dark:border-slate-700 font-bold">現在の表示条件に一致する入力データはありません。</p>';
-    }
+        '<p class="text-gray-500 p-12 text-center bg-slate-50 dark:bg-slate-800 rounded-xl border-2 border-dashed font-bold">一致するデータはありません。</p>';
     resultsCard.classList.remove("hidden");
     return;
   }
