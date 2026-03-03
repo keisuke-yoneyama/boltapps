@@ -4185,17 +4185,24 @@ export const renderResults = (project) => {
   if (resultsCardContent) resultsCardContent.innerHTML = "";
   if (!resultsCard) return;
 
+  // 描画更新のため一時的に隠す
   resultsCard.classList.add("hidden");
 
   if (!project) return;
 
-  // 1. 全データでの集計計算を実行
+  // 1. 全データでの集計計算を実行（ calculator.js のロジックを使用）
   const { resultsByLocation } = calculateResults(project);
 
   const activeLevel = state.activeTallyLevel || "all";
   const activeType = state.activeTallyType || "all";
 
-  // 2. 表示対象のロケーションID（階層）を特定（★ご提示いただいたコードと整合）
+  // --- 【重要】部材名から継手情報を逆引きするためのマップを作成 ---
+  const tallyList = getTallyList(project); //
+  const nameToJointMap = new Map(
+    tallyList.map((item) => [item.name, item.joint]),
+  );
+
+  // 2. 表示対象のロケーションID（階層）を特定（PH階・工区に完全対応）
   const targetLocationIds = new Set();
   if (project.mode === "advanced") {
     project.customLevels.forEach((lvl) => {
@@ -4214,13 +4221,14 @@ export const renderResults = (project) => {
       for (let s = 1; s <= project.sections; s++)
         targetLocationIds.add(`R-${s}`);
     }
+    // PH階のIDを追加
     if (project.hasPH && (activeLevel === "all" || activeLevel === "PH")) {
       for (let s = 1; s <= project.sections; s++)
         targetLocationIds.add(`PH-${s}`);
     }
   }
 
-  // 3. 表示用のクローンデータを構築（種別フィルターの連動を修正）
+  // 3. 種別(通常/ピン)に基づき、表示用のクローンデータを構築
   const filteredData = {};
   const filteredBoltSizes = new Set();
   let grandTotalBolts = 0;
@@ -4236,17 +4244,17 @@ export const renderResults = (project) => {
       const filteredJoints = {};
       let filteredTotal = 0;
 
-      for (const [jointName, count] of Object.entries(data.joints)) {
-        const jointObj = project.joints.find(
-          (j) => j.name.trim() === jointName.trim(),
-        );
+      for (const [itemName, count] of Object.entries(data.joints)) {
+        // --- 【修正の核心】部材名(itemName)から継手オブジェクト(jointObj)を特定 ---
+        const jointObj = nameToJointMap.get(itemName);
 
-        // 判定：全種別 または フィルタIDが一致
-        if (
+        // 判定：全種別(all) または 継手タイプとピン取り設定が一致
+        const isTypeMatch =
           activeType === "all" ||
-          (jointObj && getJointFilterId(jointObj) === activeType)
-        ) {
-          filteredJoints[jointName] = count;
+          (jointObj && getJointFilterId(jointObj) === activeType);
+
+        if (isTypeMatch) {
+          filteredJoints[itemName] = count;
           filteredTotal += count;
         }
       }
@@ -4264,7 +4272,7 @@ export const renderResults = (project) => {
 
   const buttonsHtml = `
     <div class="flex justify-end gap-4 mb-4">
-        <button id="export-excel-btn" class="btn bg-green-600 hover:bg-green-700 text-white text-sm font-bold flex items-center gap-2 px-4 py-2 rounded-lg">
+        <button id="export-excel-btn" class="btn bg-green-600 hover:bg-green-700 text-white text-sm font-bold flex items-center gap-2 px-4 py-2 rounded-lg shadow-sm">
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
             Excelデータを出力
         </button>
@@ -4276,15 +4284,14 @@ export const renderResults = (project) => {
     if (resultsCardContent) {
       resultsCardContent.innerHTML =
         buttonsHtml +
-        '<p class="text-gray-500 p-12 text-center bg-slate-50 dark:bg-slate-800 rounded-xl border-2 border-dashed font-bold">絞り込み条件に一致する入力データはありません。</p>';
+        '<p class="text-gray-500 p-12 text-center bg-slate-50 dark:bg-slate-800 rounded-xl border-2 border-dashed border-slate-200 dark:border-slate-700 font-bold">現在の表示条件に一致する入力データはありません。</p>';
     }
     resultsCard.classList.remove("hidden");
     return;
   }
 
-  // --- テーブル1：フロア工区別 (filteredDataを使用) ---
+  // --- テーブル1：フロア工区別テーブルの構築 ---
   let floorColumns = [];
-  // (階層のカラム生成は locations と同じロジックを再利用)
   if (project.mode === "advanced") {
     project.customLevels.forEach((lvl) => {
       if (activeLevel !== "all" && activeLevel !== lvl) return;
@@ -4343,7 +4350,7 @@ export const renderResults = (project) => {
                 <thead class="bg-slate-200 dark:bg-slate-700 text-xs">
                     <tr>
                         <th class="px-2 py-3 sticky left-0 bg-slate-200 dark:bg-slate-700 z-10 border border-slate-300 dark:border-slate-600 min-w-[120px]">ボルトサイズ</th>
-                        ${floorColumns.map((col) => `<th class="px-2 py-3 text-center border border-slate-300 dark:border-slate-600 ${col.isTotal ? "bg-blue-100 dark:bg-blue-900/50 text-blue-800" : ""}">${col.label}</th>`).join("")}
+                        ${floorColumns.map((col) => `<th class="px-2 py-3 text-center border border-slate-300 dark:border-slate-600 ${col.isTotal ? "bg-blue-100 dark:bg-blue-900/50 text-blue-800 dark:text-blue-200" : ""}">${col.label}</th>`).join("")}
                         <th class="px-2 py-3 text-center sticky right-0 bg-yellow-300 dark:bg-yellow-800 text-yellow-900 dark:text-yellow-100 border border-yellow-400 font-bold">総合計</th>
                     </tr>
                 </thead>
