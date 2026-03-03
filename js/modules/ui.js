@@ -177,60 +177,56 @@ const getJointFilterLabel = (filterId) => {
   return isPin ? `${label}(ピン)` : label;
 };
 /**
- * 継手の種別とピン取り設定から、カテゴリカラー（昼/夜対応）を返却する
- * renderJointsList() のセクションカラー定義に基づき、透過なしのソリッドカラーを設定
+ * 継手のカテゴリカラー（昼/夜完全対応）
  */
 const getJointCategoryColorClasses = (joint) => {
   if (!joint) return "bg-slate-200 text-slate-800 dark:bg-slate-700 dark:text-slate-200";
   const t = joint.type;
   const p = joint.isPinJoint;
 
-  // 種別ごとに昼(Light)と夜(Dark)のクラスを定義
+  // ダークモード時の視認性を高めるため、彩度を落としたソリッドカラーを適用
   if (t === "girder") {
     return p 
-      ? "bg-cyan-200 text-cyan-900 border-cyan-300 dark:bg-cyan-900 dark:text-cyan-100 dark:border-cyan-700" 
-      : "bg-blue-200 text-blue-900 border-blue-300 dark:bg-blue-900 dark:text-blue-100 dark:border-blue-700";
+      ? "bg-cyan-200 text-cyan-900 border-cyan-300 dark:bg-cyan-800 dark:text-cyan-100 dark:border-cyan-600" 
+      : "bg-blue-200 text-blue-900 border-blue-300 dark:bg-blue-800 dark:text-blue-100 dark:border-blue-600";
   }
   if (t === "beam") {
     return p 
-      ? "bg-teal-200 text-teal-900 border-teal-300 dark:bg-teal-900 dark:text-teal-100 dark:border-teal-700" 
-      : "bg-green-200 text-green-900 border-green-300 dark:bg-green-900 dark:text-green-100 dark:border-green-700";
+      ? "bg-teal-200 text-teal-900 border-teal-300 dark:bg-teal-800 dark:text-teal-100 dark:border-teal-600" 
+      : "bg-green-200 text-green-900 border-green-300 dark:bg-emerald-800 dark:text-emerald-100 dark:border-emerald-600";
   }
-  if (t === "column") return "bg-red-200 text-red-900 border-red-300 dark:bg-red-900 dark:text-red-100 dark:border-red-700";
+  if (t === "column") return "bg-red-200 text-red-900 border-red-300 dark:bg-red-900/80 dark:text-red-50 dark:border-red-700";
   if (t === "stud") {
     return p 
-      ? "bg-purple-200 text-purple-900 border-purple-300 dark:bg-purple-900 dark:text-purple-100 dark:border-purple-700" 
-      : "bg-indigo-200 text-indigo-900 border-indigo-300 dark:bg-indigo-900 dark:text-indigo-100 dark:border-indigo-700";
+      ? "bg-purple-200 text-purple-900 border-purple-300 dark:bg-purple-800 dark:text-purple-100 dark:border-purple-600" 
+      : "bg-indigo-200 text-indigo-900 border-indigo-300 dark:bg-indigo-800 dark:text-indigo-100 dark:border-indigo-600";
   }
-  if (t === "wall_girt") return "bg-slate-200 text-slate-900 border-slate-300 dark:bg-slate-700 dark:text-slate-200 dark:border-slate-600";
-  if (t === "roof_purlin") return "bg-orange-200 text-orange-900 border-orange-300 dark:bg-orange-900 dark:text-orange-100 dark:border-orange-700";
+  if (t === "wall_girt") return "bg-slate-300 text-slate-900 border-slate-400 dark:bg-slate-600 dark:text-slate-100 dark:border-slate-500";
+  if (t === "roof_purlin") return "bg-orange-200 text-orange-900 border-orange-300 dark:bg-orange-800 dark:text-orange-100 dark:border-orange-600";
   
-  return "bg-amber-200 text-amber-900 border-amber-300 dark:bg-amber-900 dark:text-amber-100 dark:border-amber-700"; // other
+  return "bg-amber-200 text-amber-900 border-amber-300 dark:bg-amber-700 dark:text-amber-100 dark:border-amber-600";
 };
-
 /**
- * 継手の構成に基づき「継手名：n本」のペアを動的に生成する（ツールチップ用）
+ * 継手の構成に基づき「名称：n本」のペアを動的に生成する（ツールチップ用）
  */
 const getBoltTooltipText = (joint) => {
   if (!joint) return "";
   let lines = [];
-  
   const name = joint.name || "名称未設定";
 
+  // 胴縁(wall_girt)と母屋(roof_purlin)はピン取りと同様の表記（部位名を付けない）にする
+  const isSimpleJoint = joint.isPinJoint || joint.type === "wall_girt" || joint.type === "roof_purlin";
+
   if (joint.isComplexSpl && joint.webInputs) {
-    // 複合スプライスの場合は各入力行を動的にループ
     joint.webInputs.forEach((w) => {
-      if (w.count > 0) {
-        // webInputs内に独自の名称があればそれを使う、なければ継手名を使用
-        const label = w.name || name;
-        lines.push(`${label}：${w.count}本`);
-      }
+      if (w.count > 0) lines.push(`${w.name || name}：${w.count}本`);
     });
-  } else if (joint.isPinJoint) {
-    // ピン接合の場合
-    if (joint.webCount > 0) lines.push(`${name}：${joint.webCount}本`);
+  } else if (isSimpleJoint) {
+    // 胴縁・母屋・ピン：部位名を付けず「継手名：本数」のみ表示
+    const totalCount = (joint.webCount || 0) + (joint.flangeCount || 0);
+    if (totalCount > 0) lines.push(`${name}：${totalCount}本`);
   } else {
-    // 剛接合（通常）の場合：フランジとウェブそれぞれのペアを動的に追加
+    // 剛接合の大梁・小梁など：部位名(F/W)を付けて区別
     if (joint.flangeCount > 0) lines.push(`${name}(F)：${joint.flangeCount}本`);
     if (joint.webCount > 0) lines.push(`${name}(W)：${joint.webCount}本`);
   }
@@ -4041,14 +4037,12 @@ export const renderTallySheet = (project) => {
 
   if (!tallySheetContainer || !floorTabs) return;
 
-  // 1. 状態の初期化
   if (!state.activeTallyLevel) state.activeTallyLevel = "all";
   if (!state.activeTallyType) state.activeTallyType = "all";
 
-  // 2. データの取得
   const allItems = getTallyList(project);
 
-  // 3. 階層タブの生成 (ナイトモード対応)
+  // 1. 階層タブ生成
   const levels = getProjectLevels(project);
   let floorHtml = `<button class="tally-tab-btn px-4 py-1.5 rounded-full text-sm font-bold border transition-all ${
     state.activeTallyLevel === "all" 
@@ -4066,7 +4060,7 @@ export const renderTallySheet = (project) => {
   });
   floorTabs.innerHTML = floorHtml;
 
-  // 4. 種別タブの生成 (ナイトモード対応)
+  // 2. 種別タブ生成
   const uniqueFilterIds = [...new Set(allItems.map(item => getJointFilterId(item.joint)))].sort();
   let typeHtml = `<button class="tally-type-tab-btn px-4 py-1.5 rounded-full text-sm font-bold border transition-all ${
     state.activeTallyType === "all" 
@@ -4094,7 +4088,7 @@ export const renderTallySheet = (project) => {
     });
   }
 
-  // 5. 表示データのフィルタリング
+  // 3. 表示データのフィルタリング
   const displayItems = allItems.filter(item => {
     const isCommon = !item.targetLevels || item.targetLevels.length === 0;
     const matchLevel = state.activeTallyLevel === "all" || !item.isMember || isCommon || item.targetLevels.includes(state.activeTallyLevel);
@@ -4108,7 +4102,7 @@ export const renderTallySheet = (project) => {
     return;
   }
 
-  // 6. ロケーション(行)のフィルタリング
+  // 4. ロケーション生成
   let locations = [];
   if (project.mode === "advanced") {
     project.customLevels.forEach((lvl) => {
@@ -4130,21 +4124,28 @@ export const renderTallySheet = (project) => {
 
   const locks = project.tallyLocks || {};
 
-  // --- テーブル構築：ヘッダーの色分け・ツールチップ ---
+  // --- テーブル構築：ヘッダーの色・バッジ語尾・ロゴ追加 ---
   const lockRow = displayItems.map(item => {
     const colorClass = getJointCategoryColorClasses(item.joint);
     return `<td class="px-2 py-1 text-center border ${colorClass}">
-              <input type="checkbox" class="tally-lock-checkbox h-4 w-4 rounded" data-id="${item.id}" ${locks[item.id] ? "checked" : ""}>
+              <input type="checkbox" class="tally-lock-checkbox h-4 w-4 rounded cursor-pointer" data-id="${item.id}" ${locks[item.id] ? "checked" : ""}>
             </td>`;
   }).join("");
 
   const headerRow = displayItems.map(item => {
     const colorClass = getJointCategoryColorClasses(item.joint);
     const badgeColor = item.joint.color || '#cbd5e1';
-    return `<th class="px-2 py-3 text-center border min-w-32 break-all font-bold ${colorClass}">
-              <div class="flex items-center justify-center gap-2">
-                <span class="flex-shrink-0 w-2.5 h-2.5 rounded-full border border-black/10 dark:border-white/20 shadow-sm" style="background-color: ${badgeColor}"></span>
+    
+    // 部材カウントが有効な場合のロゴ (📋 アイコンを使用)
+    const memberCountLogo = item.joint.countAsMember 
+      ? `<span class="inline-flex items-center justify-center w-5 h-5 ml-1 bg-white/20 dark:bg-black/20 rounded text-[10px] shadow-inner" title="部材カウント対象">📋</span>` 
+      : '';
+
+    return `<th class="px-4 py-3 text-center border min-w-40 whitespace-nowrap font-bold ${colorClass}">
+              <div class="flex items-center justify-center gap-1.5">
                 <span>${item.name}</span>
+                <span class="flex-shrink-0 w-2.5 h-2.5 rounded-full border border-black/10 shadow-sm" style="background-color: ${badgeColor}"></span>
+                ${memberCountLogo}
               </div>
             </th>`;
   }).join("");
@@ -4153,10 +4154,9 @@ export const renderTallySheet = (project) => {
     const j = item.joint;
     const colorClass = getJointCategoryColorClasses(j);
     const tooltipText = getBoltTooltipText(j);
-    let sizeDisplay = j.isComplexSpl && j.webInputs ? j.webInputs.map(w => w.size).join(",<br>") : [j.flangeSize, j.webSize].filter(Boolean).join(",<br>");
+    let sizeDisplay = j.isComplexSpl && j.webInputs ? j.webInputs.map(w => w.size).join(", ") : [j.flangeSize, j.webSize].filter(Boolean).join(", ");
     
-    // title属性に加え、モバイル用の data 属性を付与
-    return `<th class="px-2 py-2 text-center border min-w-32 text-[10px] leading-tight font-medium cursor-help transition-opacity hover:opacity-80 bolt-info-trigger ${colorClass}" 
+    return `<th class="px-2 py-2 text-center border min-w-40 text-[10px] leading-tight font-medium cursor-help whitespace-nowrap bolt-info-trigger ${colorClass}" 
                 title="${tooltipText}" data-tooltip-content="${tooltipText}">
               ${sizeDisplay || "-"}
             </th>`;
@@ -4164,46 +4164,46 @@ export const renderTallySheet = (project) => {
 
   const bodyHtml = locations.map(loc => `
     <tr class="tally-row group">
-      <td class="px-4 py-3 font-bold sticky left-0 z-10 border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 group-hover:bg-slate-50 dark:group-hover:bg-slate-700/50">${loc.label}</td>
+      <td class="px-4 py-3 font-bold sticky left-0 z-10 border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 whitespace-nowrap">${loc.label}</td>
       ${displayItems.map(item => {
         const val = project.tally?.[loc.id]?.[item.id] ?? "";
-        return `<td class="p-0 border border-slate-200 dark:border-slate-700 ${locks[item.id] ? 'bg-slate-100 dark:bg-slate-900/40' : 'group-hover:bg-slate-50/50 dark:group-hover:bg-slate-700/20'}">
+        return `<td class="p-0 border border-slate-200 dark:border-slate-700 ${locks[item.id] ? 'bg-slate-100 dark:bg-slate-900/40' : 'group-hover:bg-slate-50 dark:group-hover:bg-slate-800/40'}">
                   <input type="text" inputmode="numeric" data-location="${loc.id}" data-id="${item.id}" 
-                         class="tally-input w-full bg-transparent border-transparent py-3 text-center text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-yellow-500 transition-all" value="${val}" ${locks[item.id] ? "disabled" : ""}>
+                         class="tally-input w-full bg-transparent border-transparent py-3 text-center text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-yellow-500" value="${val}" ${locks[item.id] ? "disabled" : ""}>
                 </td>`;
       }).join("")}
-      <td class="row-total px-2 py-2 text-center font-bold sticky right-0 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-blue-700 dark:text-blue-400"></td>
+      <td class="row-total px-4 py-2 text-center font-bold sticky right-0 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-blue-700 dark:text-blue-400 whitespace-nowrap"></td>
     </tr>`).join("");
 
   tallySheetContainer.innerHTML = `
     <div class="overflow-x-auto custom-scrollbar">
       <table class="table-fixed text-sm border-collapse w-full">
         <thead class="sticky top-0 z-20">
-          <tr class="bg-slate-100 dark:bg-slate-700">
-            <th class="px-4 py-3 sticky left-0 z-30 bg-slate-100 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 text-xs align-bottom" rowspan="3">階層 / 工区</th>
+          <tr class="bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400">
+            <th class="px-4 py-3 sticky left-0 z-30 bg-slate-100 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 text-xs align-bottom whitespace-nowrap" rowspan="3">階層 / 工区</th>
             ${lockRow}
-            <th class="sticky right-0 bg-slate-100 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 font-bold align-middle" rowspan="3">合計</th>
+            <th class="sticky right-0 bg-slate-100 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 font-bold align-middle whitespace-nowrap" rowspan="3">合計</th>
           </tr>
           <tr>${headerRow}</tr>
           <tr>${sizeRow}</tr>
         </thead>
         <tbody>${bodyHtml}</tbody>
         <tfoot class="font-bold sticky bottom-0 bg-orange-50 dark:bg-slate-900/90 backdrop-blur-sm">
-          <tr>
+          <tr class="whitespace-nowrap">
             <td class="px-4 py-2 sticky left-0 z-10 border border-orange-400 dark:border-orange-700 text-orange-800 dark:text-orange-400">列合計</td>
             ${displayItems.map(item => `<td data-id="${item.id}" class="col-total px-2 py-2 text-center border border-orange-400 dark:border-orange-700 text-orange-900 dark:text-orange-300"></td>`).join("")}
-            <td class="grand-total px-2 py-2 text-center sticky right-0 border border-orange-400 dark:border-orange-700 text-orange-900 dark:text-orange-300"></td>
+            <td class="grand-total px-4 py-2 text-center sticky right-0 border border-orange-400 dark:border-orange-700 text-orange-900 dark:text-orange-300"></td>
           </tr>
         </tfoot>
       </table>
     </div>`;
 
-  // モバイルタップ時のヒント表示イベント
+  // モバイル対応用タップイベント
   tallySheetContainer.querySelectorAll(".bolt-info-trigger").forEach(el => {
     el.onclick = () => {
       const content = el.dataset.tooltipContent;
       if (content && window.innerWidth < 768) {
-        showToast(content.replace(/\n/g, " / "), 3000);
+        showToast(content.replace(/\n/g, " | "), 3000);
       }
     };
   });
