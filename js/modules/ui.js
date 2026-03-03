@@ -176,7 +176,23 @@ const getJointFilterLabel = (filterId) => {
   const label = baseMap[baseType] || baseType;
   return isPin ? `${label}(ピン)` : label;
 };
+/**
+ * 継手の種別とピン取り設定から、共通のカテゴリカラークラスを返却する
+ * (renderJointsList の sections 定義に基づいています)
+ */
+const getJointCategoryColorClasses = (joint) => {
+  if (!joint) return "bg-slate-200 text-slate-800";
+  const t = joint.type;
+  const p = joint.isPinJoint;
 
+  if (t === "girder") return p ? "bg-cyan-200 text-cyan-900 border-cyan-300" : "bg-blue-200 text-blue-900 border-blue-300";
+  if (t === "beam") return p ? "bg-teal-200 text-teal-900 border-teal-300" : "bg-green-200 text-green-900 border-green-300";
+  if (t === "column") return "bg-red-200 text-red-900 border-red-300";
+  if (t === "stud") return p ? "bg-purple-200 text-purple-900 border-purple-300" : "bg-indigo-200 text-indigo-900 border-indigo-300";
+  if (t === "wall_girt") return "bg-gray-200 text-gray-900 border-gray-300";
+  if (t === "roof_purlin") return "bg-orange-200 text-orange-900 border-orange-300";
+  return "bg-amber-200 text-amber-900 border-amber-300"; // other
+};
 export const openModal = (modalElement) => {
   if (!modalElement) return;
 
@@ -3967,7 +3983,7 @@ export const renderShopTempBoltResults = (project) => {
             </div>`;
 };
 /**
- * 箇所数入力シート（Tally Sheet）を描画する
+ * 数量入力シート（Tally Sheet）を描画する
  */
 export const renderTallySheet = (project) => {
   if (!project) return;
@@ -3984,12 +4000,12 @@ export const renderTallySheet = (project) => {
   if (!state.activeTallyLevel) state.activeTallyLevel = "all";
   if (!state.activeTallyType) state.activeTallyType = "all";
 
-  // 2. データの取得（calculator.js の既存ロジックを使用）
+  // 2. データの取得
   const allItems = getTallyList(project);
 
   // 3. 階層タブの生成
   const levels = getProjectLevels(project);
-  let floorHtml = `<button class="tally-tab-btn px-4 py-1.5 rounded-full text-sm font-bold border transition-all ${state.activeTallyLevel === "all" ? "bg-blue-600 text-white border-blue-600 shadow-md" : "bg-white dark:bg-slate-800 text-slate-600 border-slate-300 dark:border-slate-600 hover:bg-slate-100"}" data-level="all">全表示</button>`;
+  let floorHtml = `<button class="tally-tab-btn px-4 py-1.5 rounded-full text-sm font-bold border transition-all ${state.activeTallyLevel === "all" ? "bg-blue-600 text-white border-blue-600 shadow-md" : "bg-white dark:bg-slate-800 text-slate-600 border-slate-300 dark:border-slate-600"}" data-level="all">全表示</button>`;
   levels.forEach(lvl => {
     const active = state.activeTallyLevel === lvl.id;
     floorHtml += `<button class="tally-tab-btn px-4 py-1.5 rounded-full text-sm font-bold border transition-all ${active ? "bg-blue-600 text-white border-blue-600 shadow-md" : "bg-white dark:bg-slate-800 text-slate-600 border-slate-300"}" data-level="${lvl.id}">${lvl.label}</button>`;
@@ -4015,7 +4031,7 @@ export const renderTallySheet = (project) => {
     });
   }
 
-  // 5. 表示データのフィルタリング
+  // 5. 表示データのフィルタリング（共通部材の維持）
   const displayItems = allItems.filter(item => {
     const isCommon = !item.targetLevels || item.targetLevels.length === 0;
     const matchLevel = state.activeTallyLevel === "all" || !item.isMember || isCommon || item.targetLevels.includes(state.activeTallyLevel);
@@ -4029,7 +4045,7 @@ export const renderTallySheet = (project) => {
     return;
   }
 
-  // 6. ロケーション(行)のフィルタリング
+  // 6. ロケーション(行)のフィルタリング（PH階対応）
   let locations = [];
   if (project.mode === "advanced") {
     project.customLevels.forEach((lvl) => {
@@ -4051,20 +4067,20 @@ export const renderTallySheet = (project) => {
 
   const locks = project.tallyLocks || {};
 
-  // --- 【UI修正】1段目〜3段目をソリッドな継手カラーで統一し、名称横にバッジを追加 ---
+  // --- 【UI修正】全段をカテゴリカラーで統一し、名称横にバッジを追加 ---
   const lockRow = displayItems.map(item => {
-    const color = item.joint.color || '#e2e8f0';
-    return `<td class="px-2 py-1 text-center border border-slate-300 dark:border-slate-600" style="background-color: ${color}">
+    const colorClass = getJointCategoryColorClasses(item.joint);
+    return `<td class="px-2 py-1 text-center border ${colorClass}">
               <input type="checkbox" class="tally-lock-checkbox h-4 w-4 rounded" data-id="${item.id}" ${locks[item.id] ? "checked" : ""}>
             </td>`;
   }).join("");
 
   const headerRow = displayItems.map(item => {
-    const color = item.joint.color || '#f1f5f9';
-    // 名称の横にカラーバッジ（ドット）を配置
-    return `<th class="px-2 py-3 text-center border border-slate-300 dark:border-slate-600 min-w-32 break-all text-slate-800 dark:text-slate-100 font-bold" style="background-color: ${color}">
+    const colorClass = getJointCategoryColorClasses(item.joint);
+    const badgeColor = item.joint.color || '#e2e8f0'; // カラーピッカーの色
+    return `<th class="px-2 py-3 text-center border min-w-32 break-all font-bold ${colorClass}">
               <div class="flex items-center justify-center gap-2">
-                <span class="flex-shrink-0 w-2.5 h-2.5 rounded-full border border-black/20 shadow-sm" style="background-color: ${color}"></span>
+                <span class="flex-shrink-0 w-2.5 h-2.5 rounded-full border border-black/20 shadow-sm" style="background-color: ${badgeColor}"></span>
                 <span>${item.name}</span>
               </div>
             </th>`;
@@ -4072,9 +4088,9 @@ export const renderTallySheet = (project) => {
 
   const sizeRow = displayItems.map(item => {
     const j = item.joint;
-    const color = item.joint.color || '#f1f5f9';
+    const colorClass = getJointCategoryColorClasses(j);
     let text = j.isComplexSpl && j.webInputs ? j.webInputs.map(w => w.size).join(",<br>") : [j.flangeSize, j.webSize].filter(Boolean).join(",<br>");
-    return `<th class="px-2 py-2 text-center border border-slate-300 dark:border-slate-600 min-w-32 text-[10px] leading-tight text-slate-800 dark:text-slate-100 font-medium" style="background-color: ${color}">
+    return `<th class="px-2 py-2 text-center border min-w-32 text-[10px] leading-tight font-medium ${colorClass}">
               ${text || "-"}
             </th>`;
   }).join("");
@@ -4137,44 +4153,37 @@ export const renderResults = (project) => {
   resultsCard.classList.add("hidden");
   if (!project) return;
 
-  // 1. 全データでの集計計算を実行（ calculator.js を使用）
+  // 1. 全データでの集計計算を実行（元データは保護）
   const { resultsByLocation } = calculateResults(project);
-
+  
   const activeLevel = state.activeTallyLevel || "all";
   const activeType = state.activeTallyType || "all";
 
-  // 【重要】部材名から継手情報を逆引きするためのマップを作成
+  // --- 【重要】部材名から継手情報を逆引きするためのマップを作成 ---
   const allTallyItems = getTallyList(project);
-  const nameToJointMap = new Map(
-    allTallyItems.map((item) => [item.name, item.joint]),
-  );
+  const nameToJointMap = new Map(allTallyItems.map(item => [item.name, item.joint]));
 
-  // 2. 表示対象のロケーションID（階層）を特定
+  // 2. 表示対象のロケーションID（階層）を特定（PH対応）
   const targetLocationIds = new Set();
   if (project.mode === "advanced") {
-    project.customLevels.forEach((lvl) => {
+    project.customLevels.forEach(lvl => {
       if (activeLevel !== "all" && activeLevel !== lvl) return;
-      project.customAreas.forEach((area) =>
-        targetLocationIds.add(`${lvl}-${area}`),
-      );
+      project.customAreas.forEach(area => targetLocationIds.add(`${lvl}-${area}`));
     });
   } else {
     for (let f = 2; f <= project.floors; f++) {
       if (activeLevel !== "all" && activeLevel !== f.toString()) continue;
-      for (let s = 1; s <= project.sections; s++)
-        targetLocationIds.add(`${f}-${s}`);
+      for (let s = 1; s <= project.sections; s++) targetLocationIds.add(`${f}-${s}`);
     }
     if (activeLevel === "all" || activeLevel === "R") {
-      for (let s = 1; s <= project.sections; s++)
-        targetLocationIds.add(`R-${s}`);
+      for (let s = 1; s <= project.sections; s++) targetLocationIds.add(`R-${s}`);
     }
     if (project.hasPH && (activeLevel === "all" || activeLevel === "PH")) {
-      for (let s = 1; s <= project.sections; s++)
-        targetLocationIds.add(`PH-${s}`);
+      for (let s = 1; s <= project.sections; s++) targetLocationIds.add(`PH-${s}`);
     }
   }
 
-  // 3. 種別(通常/ピン)に基づき、表示用のフィルタリング済みデータを構築
+  // 3. 表示用のクローンデータを構築（フィルタリング）
   const filteredData = {};
   const filteredBoltSizes = new Set();
   let grandTotalBolts = 0;
@@ -4183,18 +4192,18 @@ export const renderResults = (project) => {
     if (!targetLocationIds.has(locId)) continue;
 
     filteredData[locId] = {};
-    for (const size in resultsByLocation[locId]) {
-      const data = resultsByLocation[locId][size];
+    const sizesAtLoc = resultsByLocation[locId];
+
+    for (const size in sizesAtLoc) {
+      const data = sizesAtLoc[size];
       const filteredJoints = {};
       let filteredTotal = 0;
 
       for (const [itemName, count] of Object.entries(data.joints)) {
-        // 部材名から継手オブジェクトを特定して判定
+        // 部材名から継手オブジェクトを特定
         const jointObj = nameToJointMap.get(itemName);
-        const isTypeMatch =
-          activeType === "all" ||
-          (jointObj && getJointFilterId(jointObj) === activeType);
-
+        const isTypeMatch = (activeType === "all") || (jointObj && getJointFilterId(jointObj) === activeType);
+        
         if (isTypeMatch) {
           filteredJoints[itemName] = count;
           filteredTotal += count;
@@ -4202,75 +4211,44 @@ export const renderResults = (project) => {
       }
 
       if (filteredTotal > 0) {
-        filteredData[locId][size] = {
-          total: filteredTotal,
-          joints: filteredJoints,
-        };
+        filteredData[locId][size] = { total: filteredTotal, joints: filteredJoints };
         filteredBoltSizes.add(size);
         grandTotalBolts += filteredTotal;
       }
     }
   }
 
-  const buttonsHtml = `<div class="flex justify-end mb-4"><button id="export-excel-btn" class="btn bg-green-600 text-white text-sm font-bold flex items-center gap-2 px-4 py-2 rounded-lg"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>Excelデータを出力</button></div>`;
+  const buttonsHtml = `<div class="flex justify-end mb-4"><button id="export-excel-btn" class="btn bg-green-600 text-white text-sm font-bold flex items-center gap-2 px-4 py-2 rounded-lg shadow-sm"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>Excelデータを出力</button></div>`;
 
   const sortedSizes = Array.from(filteredBoltSizes).sort(boltSort);
 
   if (sortedSizes.length === 0) {
-    if (resultsCardContent)
-      resultsCardContent.innerHTML =
-        buttonsHtml +
-        '<p class="text-gray-500 p-12 text-center bg-slate-50 dark:bg-slate-800 rounded-xl border-2 border-dashed font-bold">一致するデータはありません。</p>';
+    if (resultsCardContent) resultsCardContent.innerHTML = buttonsHtml + '<p class="text-gray-500 p-12 text-center bg-slate-50 dark:bg-slate-800 rounded-xl border-2 border-dashed font-bold">一致するデータはありません。</p>';
     resultsCard.classList.remove("hidden");
     return;
   }
 
-  // --- テーブル1：フロア工区別テーブルの構築 ---
+  // --- テーブル1：フロア別 ---
   let floorColumns = [];
   if (project.mode === "advanced") {
-    project.customLevels.forEach((lvl) => {
+    project.customLevels.forEach(lvl => {
       if (activeLevel !== "all" && activeLevel !== lvl) return;
-      project.customAreas.forEach((area) =>
-        floorColumns.push({ id: `${lvl}-${area}`, label: `${lvl}-${area}` }),
-      );
-      floorColumns.push({
-        id: `${lvl}_total`,
-        label: `${lvl} 合計`,
-        isTotal: true,
-        level: lvl,
-      });
+      project.customAreas.forEach(area => floorColumns.push({ id: `${lvl}-${area}`, label: `${lvl}-${area}` }));
+      floorColumns.push({ id: `${lvl}_total`, label: `${lvl} 合計`, isTotal: true, level: lvl });
     });
   } else {
     for (let f = 2; f <= project.floors; f++) {
       if (activeLevel !== "all" && activeLevel !== f.toString()) continue;
-      for (let s = 1; s <= project.sections; s++)
-        floorColumns.push({ id: `${f}-${s}`, label: `${f}F-${s}` });
-      floorColumns.push({
-        id: `${f}F_total`,
-        label: `${f}F 合計`,
-        isTotal: true,
-        floor: f,
-      });
+      for (let s = 1; s <= project.sections; s++) floorColumns.push({ id: `${f}-${s}`, label: `${f}F-${s}` });
+      floorColumns.push({ id: `${f}F_total`, label: `${f}F 合計`, isTotal: true, floor: f });
     }
     if (activeLevel === "all" || activeLevel === "R") {
-      for (let s = 1; s <= project.sections; s++)
-        floorColumns.push({ id: `R-${s}`, label: `RF-${s}` });
-      floorColumns.push({
-        id: `R_total`,
-        label: `RF 合計`,
-        isTotal: true,
-        floor: "R",
-      });
+      for (let s = 1; s <= project.sections; s++) floorColumns.push({ id: `R-${s}`, label: `RF-${s}` });
+      floorColumns.push({ id: `R_total`, label: `RF 合計`, isTotal: true, floor: "R" });
     }
     if (project.hasPH && (activeLevel === "all" || activeLevel === "PH")) {
-      for (let s = 1; s <= project.sections; s++)
-        floorColumns.push({ id: `PH-${s}`, label: `PH-${s}` });
-      floorColumns.push({
-        id: `PH_total`,
-        label: `PH 合計`,
-        isTotal: true,
-        floor: "PH",
-      });
+      for (let s = 1; s <= project.sections; s++) floorColumns.push({ id: `PH-${s}`, label: `PH-${s}` });
+      floorColumns.push({ id: `PH_total`, label: `PH 合計`, isTotal: true, floor: "PH" });
     }
   }
 
@@ -4285,7 +4263,7 @@ export const renderResults = (project) => {
                 <thead class="bg-slate-200 dark:bg-slate-700 text-xs">
                     <tr>
                         <th class="px-2 py-3 sticky left-0 bg-slate-200 dark:bg-slate-700 z-10 border border-slate-300 dark:border-slate-600 min-w-[120px]">ボルトサイズ</th>
-                        ${floorColumns.map((col) => `<th class="px-2 py-3 text-center border border-slate-300 dark:border-slate-600 ${col.isTotal ? "bg-blue-100 dark:bg-blue-900/50 text-blue-800 dark:text-blue-200" : ""}">${col.label}</th>`).join("")}
+                        ${floorColumns.map(col => `<th class="px-2 py-3 text-center border border-slate-300 dark:border-slate-600 ${col.isTotal ? 'bg-blue-100 dark:bg-blue-900/50 text-blue-800' : ''}">${col.label}</th>`).join("")}
                         <th class="px-2 py-3 text-center sticky right-0 bg-yellow-300 dark:bg-yellow-800 text-yellow-900 dark:text-yellow-100 border border-yellow-400 font-bold">総合計</th>
                     </tr>
                 </thead>
@@ -4294,27 +4272,19 @@ export const renderResults = (project) => {
   sortedSizes.forEach((size) => {
     let rowTotal = 0;
     const rowTotalJoints = {};
-    floorTableHtml += `<tr class="hover:bg-slate-50 dark:hover:bg-slate-700/50">
-      <td class="px-2 py-2 font-bold sticky left-0 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 break-all">${size}</td>`;
+    floorTableHtml += `<tr class="hover:bg-slate-50 dark:hover:bg-slate-700/50"><td class="px-2 py-2 font-bold sticky left-0 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 break-all">${size}</td>`;
 
     floorColumns.forEach((col) => {
       let cellValue = 0;
       let jointData = {};
       if (col.isTotal) {
-        const areas =
-          project.mode === "advanced"
-            ? project.customAreas
-            : Array.from({ length: project.sections }, (_, i) => i + 1);
-        areas.forEach((area) => {
-          const id =
-            project.mode === "advanced"
-              ? `${col.level}-${area}`
-              : `${col.floor}-${area}`;
+        const areas = project.mode === "advanced" ? project.customAreas : Array.from({ length: project.sections }, (_, i) => i + 1);
+        areas.forEach(area => {
+          const id = project.mode === "advanced" ? `${col.level}-${area}` : `${col.floor}-${area}`;
           const d = filteredData[id]?.[size];
           if (d) {
             cellValue += d.total;
-            for (const [n, c] of Object.entries(d.joints))
-              jointData[n] = (jointData[n] || 0) + c;
+            for (const [n, c] of Object.entries(d.joints)) jointData[n] = (jointData[n] || 0) + c;
           }
         });
       } else {
@@ -4322,25 +4292,18 @@ export const renderResults = (project) => {
         cellValue = d?.total || 0;
         if (d?.joints) jointData = d.joints;
       }
-
+      
       if (!col.isTotal) {
         rowTotal += cellValue;
-        for (const [n, c] of Object.entries(jointData))
-          rowTotalJoints[n] = (rowTotalJoints[n] || 0) + c;
+        for (const [n, c] of Object.entries(jointData)) rowTotalJoints[n] = (rowTotalJoints[n] || 0) + c;
       }
-
-      const detailsAttr =
-        Object.keys(jointData).length > 0
-          ? `data-details='${JSON.stringify(jointData)}'`
-          : "";
-      floorTableHtml += `<td class="px-2 py-2 text-center border border-slate-200 dark:border-slate-700 ${col.isTotal ? "bg-blue-50 dark:bg-blue-900/20 font-bold" : ""} has-details cursor-pointer hover:bg-yellow-100 dark:hover:bg-yellow-800/50" ${detailsAttr}>${cellValue > 0 ? cellValue.toLocaleString() : "-"}</td>`;
+      
+      const detailsAttr = Object.keys(jointData).length > 0 ? `data-details='${JSON.stringify(jointData)}'` : "";
+      floorTableHtml += `<td class="px-2 py-2 text-center border border-slate-200 dark:border-slate-700 ${col.isTotal ? 'bg-blue-50 dark:bg-blue-900/20 font-bold' : ''} has-details cursor-pointer hover:bg-yellow-100 dark:hover:bg-yellow-800/50" ${detailsAttr}>${cellValue > 0 ? cellValue.toLocaleString() : "-"}</td>`;
     });
 
-    const rowTotalDetailsAttr =
-      Object.keys(rowTotalJoints).length > 0
-        ? `data-details='${JSON.stringify(rowTotalJoints)}'`
-        : "";
-    floorTableHtml += `<td class="px-2 py-2 text-center font-bold sticky right-0 bg-yellow-100 dark:bg-yellow-900/40 border border-yellow-200 dark:border-yellow-800 has-details cursor-pointer" ${rowTotalDetailsAttr}>${rowTotal > 0 ? rowTotal.toLocaleString() : "-"}</td></tr>`;
+    const rowTotalDetailsAttr = Object.keys(rowTotalJoints).length > 0 ? `data-details='${JSON.stringify(rowTotalJoints)}'` : "";
+    floorTableHtml += `<td class="px-2 py-2 text-center font-bold sticky right-0 bg-yellow-100 dark:bg-yellow-900/40 border border-yellow-200 dark:border-yellow-800 has-details cursor-pointer hover:bg-yellow-200 dark:hover:bg-yellow-700/50" ${rowTotalDetailsAttr}>${rowTotal > 0 ? rowTotal.toLocaleString() : "-"}</td></tr>`;
   });
   floorTableHtml += `</tbody></table></div></div>`;
 
@@ -4348,11 +4311,9 @@ export const renderResults = (project) => {
   const tempBoltsHtml = renderTempBoltResults(project);
 
   if (resultsCardContent) {
-    resultsCardContent.innerHTML =
-      buttonsHtml + floorTableHtml + orderDetailsContainer + tempBoltsHtml;
+    resultsCardContent.innerHTML = buttonsHtml + floorTableHtml + orderDetailsContainer + tempBoltsHtml;
   }
 
-  // 注文明細にもフィルタリング済みデータを渡す
   const container = document.getElementById("order-details-container");
   if (container) renderOrderDetails(container, project, filteredData);
 
