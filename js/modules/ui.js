@@ -4178,8 +4178,7 @@ export const renderResults = (project) => {
 
   if (!project) return;
 
-  // 1. 全データでの集計計算を実行
-  // ここで project.tally の元データは一切書き換えず、計算結果のみを使用します
+  // 1. 全データでの集計計算を実行（元データ project.tally は絶対に書き換えない）
   const { resultsByLocation } = calculateResults(project);
 
   const activeLevel = state.activeTallyLevel || "all";
@@ -4210,13 +4209,12 @@ export const renderResults = (project) => {
     }
   }
 
-  // 3. 全種別・全ピン取りオプションに対応したフィルタリング
+  // 3. 表示用のフィルタリング済みデータを構築
   const filteredData = {};
   const filteredBoltSizes = new Set();
   let grandTotalBolts = 0;
 
   for (const locId in resultsByLocation) {
-    // 階層フィルターの適用
     if (!targetLocationIds.has(locId)) continue;
 
     filteredData[locId] = {};
@@ -4228,12 +4226,12 @@ export const renderResults = (project) => {
       let filteredTotal = 0;
 
       for (const [jointName, count] of Object.entries(data.joints)) {
-        // 継手オブジェクトをマスターリストから検索
+        // 継手マスターからオブジェクトを検索
         const jointObj = project.joints.find(
           (j) => j.name.trim() === jointName.trim(),
         );
 
-        // 判定：全表示(all) または IDが一致(例: beam_pin === beam_pin)
+        // フィルタリング判定：全表示 または 種別/ピン取りの一致
         if (activeType === "all") {
           filteredJoints[jointName] = count;
           filteredTotal += count;
@@ -4245,7 +4243,6 @@ export const renderResults = (project) => {
         }
       }
 
-      // フィルタリング後の本数が1本以上ある場合のみ、表示データセットに追加
       if (filteredTotal > 0) {
         filteredData[locId][size] = {
           total: filteredTotal,
@@ -4257,7 +4254,9 @@ export const renderResults = (project) => {
     }
   }
 
-  // ボタンエリアの生成（再計算ボタンは削除済み）
+  const sortedSizes = Array.from(filteredBoltSizes).sort(boltSort);
+
+  // ボタン類（Excel出力）
   const buttonsHtml = `
     <div class="flex justify-end gap-4 mb-4">
         <button id="export-excel-btn" class="btn bg-green-600 hover:bg-green-700 text-white text-sm font-bold flex items-center gap-2 px-4 py-2 rounded-lg shadow-sm">
@@ -4266,20 +4265,17 @@ export const renderResults = (project) => {
         </button>
     </div>`;
 
-  // 該当データがない場合
-  if (filteredBoltSizes.size === 0) {
+  if (sortedSizes.length === 0) {
     if (resultsCardContent) {
       resultsCardContent.innerHTML =
         buttonsHtml +
-        '<p class="text-gray-500 p-12 text-center bg-slate-50 dark:bg-slate-800 rounded-xl border-2 border-dashed border-slate-200 dark:border-slate-700 font-bold">選択された条件に一致する入力データはありません。</p>';
+        '<p class="text-gray-500 p-12 text-center bg-slate-50 dark:bg-slate-800 rounded-xl border-2 border-dashed border-slate-200 dark:border-slate-700 font-bold">集計データがありません。</p>';
     }
     resultsCard.classList.remove("hidden");
     return;
   }
 
-  const sortedSizes = Array.from(filteredBoltSizes).sort(boltSort);
-
-  // --- テーブル1：フロア工区別テーブル構築 ---
+  // テーブル構築ロジック（Table 1: フロア別）
   let floorColumns = [];
   if (project.mode === "advanced") {
     project.customLevels.forEach((lvl) => {
@@ -4336,7 +4332,7 @@ export const renderResults = (project) => {
         </div>
         <div class="overflow-x-auto custom-scrollbar">
             <table class="w-auto text-sm border-collapse">
-                <thead class="bg-slate-200 dark:bg-slate-700 text-xs">
+                <thead class="bg-slate-200 dark:bg-slate-700 text-xs text-slate-700 dark:text-slate-300">
                     <tr>
                         <th class="px-2 py-3 sticky left-0 bg-slate-200 dark:bg-slate-700 z-10 border border-slate-300 dark:border-slate-600">ボルトサイズ</th>
                         ${floorColumns.map((col) => `<th class="px-2 py-3 text-center border border-slate-300 dark:border-slate-600 ${col.isTotal ? "bg-blue-100 dark:bg-blue-900/50 text-blue-800 dark:text-blue-200" : ""}">${col.label}</th>`).join("")}
@@ -4397,7 +4393,7 @@ export const renderResults = (project) => {
   });
   floorTableHtml += `</tbody></table></div></div>`;
 
-  // --- テーブル2：工区別集計テーブル構築 ---
+  // --- テーブル2：工区別集計構築 ---
   let sectionColumns = [];
   if (project.mode === "advanced") {
     project.customAreas.forEach((area) =>
@@ -4450,7 +4446,7 @@ export const renderResults = (project) => {
   sortedSizes.forEach((size) => {
     let rowTotal = 0;
     const rowTotalJoints = {};
-    sectionTableHtml += `<tr class="hover:bg-slate-50 dark:hover:bg-slate-700/50"><td class="px-2 py-2 font-bold sticky left-0 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700">${size}</td>`;
+    sectionTableHtml += `<tr><td class="px-2 py-2 font-bold sticky left-0 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700">${size}</td>`;
 
     sectionColumns.forEach((col) => {
       const d = resultsBySection[col.id]?.[size];
@@ -4474,7 +4470,6 @@ export const renderResults = (project) => {
   });
   sectionTableHtml += `</tbody></table></div></div>`;
 
-  // 注文明細等のコンテナ生成
   const orderDetailsContainer = `<div id="order-details-container" data-section-title="本ボルト注文明細" data-section-color="pink" class="scroll-mt-24 mt-12"></div>`;
   const tempBoltsHtml = renderTempBoltResults(project);
 
@@ -4487,7 +4482,6 @@ export const renderResults = (project) => {
       tempBoltsHtml;
   }
 
-  // 注文明細の描画（フィルタリング済みデータを渡す）
   const container = document.getElementById("order-details-container");
   if (container) {
     renderOrderDetails(container, project, filteredData);
