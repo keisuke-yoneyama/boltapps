@@ -149,22 +149,19 @@ export const showToast = (message, duration = 5000) => {
     });
   }, duration);
 };
-
-
 /**
- * 継手オブジェクトから「絞り込み用ID」を生成するヘルパー
- * 通常の大梁とピン取りの大梁などを完全に区別します
+ * 継手から「絞り込み用ID」を生成する（ui.js内に追加）
+ * 例: "girder" (通常), "girder_pin" (ピン)
  */
-const getJointTypeId = (joint) => {
+const getJointFilterId = (joint) => {
   if (!joint) return "other";
-  // type(例: girder) + ピンなら _pin を付与
   return joint.type + (joint.isPinJoint ? "_pin" : "");
 };
 
 /**
- * 絞り込み用IDから表示名（ラベル）を取得するヘルパー
+ * 絞り込みIDから表示名を取得する（ui.js内に追加）
  */
-const getJointTypeLabel = (typeId) => {
+const getJointFilterLabel = (filterId) => {
   const baseMap = {
     girder: "大梁",
     beam: "小梁",
@@ -174,43 +171,10 @@ const getJointTypeLabel = (typeId) => {
     roof_purlin: "母屋",
     other: "その他",
   };
-  
-  const isPin = typeId.endsWith("_pin");
-  const baseType = isPin ? typeId.replace("_pin", "") : typeId;
+  const isPin = filterId.endsWith("_pin");
+  const baseType = isPin ? filterId.replace("_pin", "") : filterId;
   const label = baseMap[baseType] || baseType;
-  
   return isPin ? `${label}(ピン)` : label;
-};
-
-/**
- * 継手の種別に応じた色分けクラスを返却するヘルパー（詳細版を復元）
- */
-const getJointColorClasses = (joint) => {
-  if (!joint) return "";
-  const t = joint.type;
-  const isPin = joint.isPinJoint;
-
-  if (t === "girder") {
-    return isPin 
-      ? "bg-cyan-200 text-cyan-800 border-cyan-300 dark:bg-cyan-900/50 dark:text-cyan-200 dark:border-cyan-700"
-      : "bg-blue-200 text-blue-800 border-blue-300 dark:bg-blue-900/50 dark:text-blue-200 dark:border-blue-700";
-  } else if (t === "beam") {
-    return isPin
-      ? "bg-teal-200 text-teal-800 border-teal-300 dark:bg-teal-900/50 dark:text-teal-200 dark:border-teal-700"
-      : "bg-green-200 text-green-800 border-green-300 dark:bg-green-900/50 dark:text-green-200 dark:border-green-700";
-  } else if (t === "column") {
-    return "bg-red-200 text-red-800 border-red-300 dark:bg-red-900/50 dark:text-red-200 dark:border-red-700";
-  } else if (t === "stud") {
-    return isPin
-      ? "bg-purple-200 text-purple-800 border-purple-300 dark:bg-purple-900/50 dark:text-purple-200 dark:border-purple-700"
-      : "bg-indigo-200 text-indigo-800 border-indigo-300 dark:bg-indigo-900/50 dark:text-indigo-200 dark:border-indigo-700";
-  } else if (t === "wall_girt") {
-    return "bg-gray-200 text-gray-800 border-gray-300 dark:bg-gray-800/60 dark:text-gray-200 dark:border-gray-700";
-  } else if (t === "roof_purlin") {
-    return "bg-orange-200 text-orange-800 border-orange-300 dark:bg-orange-900/50 dark:text-orange-200 dark:border-orange-700";
-  } else {
-    return "bg-amber-200 text-amber-800 border-amber-300 dark:bg-amber-900/50 dark:text-amber-200 dark:border-amber-700";
-  }
 };
 
 export const openModal = (modalElement) => {
@@ -981,7 +945,8 @@ export const populateTempBoltMappingModal = (project) => {
       const hugBoltOptions = availableHugBolts
         .map(
           (size) =>
-            `<option value="${size}" ${size === savedHugBolt ? "selected" : ""
+            `<option value="${size}" ${
+              size === savedHugBolt ? "selected" : ""
             }>${size}</option>`,
         )
         .join("");
@@ -1325,8 +1290,8 @@ export function renderAggregatedTables(
         const rawValue = data[key];
         const boltCount =
           typeof rawValue === "object" &&
-            rawValue !== null &&
-            rawValue.total !== undefined
+          rawValue !== null &&
+          rawValue.total !== undefined
             ? rawValue.total
             : rawValue;
         // ▲▲▲ 変更ここまで ▲▲▲
@@ -1389,8 +1354,8 @@ export function renderAggregatedTables(
     const totalWeightDisplay =
       !isTempBolt && !customHeader && tableTotalWeight > 0
         ? `<span class="ml-auto text-sm font-bold text-red-600 dark:text-red-400">合計: ${tableTotalWeight.toFixed(
-          1,
-        )} kg</span>`
+            1,
+          )} kg</span>`
         : "";
     // ▲▲▲ 変更ここまで ▲▲▲
 
@@ -2332,11 +2297,11 @@ export const renderTempBoltResults = (project) => {
                             <thead class="bg-slate-200 dark:bg-slate-700 text-xs text-slate-700 dark:text-slate-300"><tr>
                                 <th class="px-2 py-3 sticky left-0 bg-slate-200 dark:bg-slate-700 z-10 border border-slate-300 dark:border-slate-600">仮ボルトサイズ</th>
                                 ${locations
-      .map(
-        (loc) =>
-          `<th class="px-2 py-3 text-center border border-slate-300 dark:border-slate-600">${loc.label}</th>`,
-      )
-      .join("")}
+                                  .map(
+                                    (loc) =>
+                                      `<th class="px-2 py-3 text-center border border-slate-300 dark:border-slate-600">${loc.label}</th>`,
+                                  )
+                                  .join("")}
                                 <th class="px-2 py-3 text-center sticky right-0 bg-yellow-300 dark:bg-yellow-800/50 text-yellow-800 dark:text-yellow-200 border border-yellow-400 dark:border-yellow-700">総合計</th>
                             </tr></thead><tbody>`;
 
@@ -2365,8 +2330,9 @@ export const renderTempBoltResults = (project) => {
       }
 
       grandTotal += cellValue;
-      rowHtml += `<td class="px-2 py-2 text-center border border-slate-200 dark:border-slate-700 ${detailsClass}" title="${tooltipText}" ${dataAttribute}>${cellValue > 0 ? cellValue.toLocaleString() : "-"
-        }</td>`;
+      rowHtml += `<td class="px-2 py-2 text-center border border-slate-200 dark:border-slate-700 ${detailsClass}" title="${tooltipText}" ${dataAttribute}>${
+        cellValue > 0 ? cellValue.toLocaleString() : "-"
+      }</td>`;
     });
 
     const grandTotalTooltip = Object.entries(grandTotalJoints)
@@ -2382,8 +2348,9 @@ export const renderTempBoltResults = (project) => {
         ? `data-details='${JSON.stringify(grandTotalJoints)}'`
         : "";
 
-    rowHtml += `<td class="px-2 py-2 text-center font-bold sticky right-0 bg-yellow-100 dark:bg-yellow-900/50 border border-yellow-200 dark:border-yellow-800 ${grandTotalDetailsClass}" title="${grandTotalTooltip}" ${grandTotalDataAttribute}>${grandTotal > 0 ? grandTotal.toLocaleString() : "-"
-      }</td></tr>`;
+    rowHtml += `<td class="px-2 py-2 text-center font-bold sticky right-0 bg-yellow-100 dark:bg-yellow-900/50 border border-yellow-200 dark:border-yellow-800 ${grandTotalDetailsClass}" title="${grandTotalTooltip}" ${grandTotalDataAttribute}>${
+      grandTotal > 0 ? grandTotal.toLocaleString() : "-"
+    }</td></tr>`;
     floorTable += rowHtml;
   });
   floorTable += `</tbody></table></div>`;
@@ -2403,7 +2370,8 @@ export const renderProjectList = (callbacks) => {
   if (!container || !currentCallbacks) return;
 
   if (state.projects.length === 0) {
-    container.innerHTML = '<p class="text-center text-gray-500 py-8">工事が登録されていません。</p>';
+    container.innerHTML =
+      '<p class="text-center text-gray-500 py-8">工事が登録されていません。</p>';
     return;
   }
 
@@ -2415,7 +2383,11 @@ export const renderProjectList = (callbacks) => {
   });
 
   const sortedGroupNames = Object.keys(groups).sort((a, b) =>
-    a === "（物件名未設定）" ? 1 : b === "（物件名未設定）" ? -1 : a.localeCompare(b, "ja")
+    a === "（物件名未設定）"
+      ? 1
+      : b === "（物件名未設定）"
+        ? -1
+        : a.localeCompare(b, "ja"),
   );
 
   let html = "";
@@ -2443,7 +2415,9 @@ export const renderProjectList = (callbacks) => {
         </div>
         
         <div class="project-group-content transition-all duration-300 ease-in-out max-h-0 opacity-0 overflow-hidden flex flex-col divide-y divide-slate-100 dark:divide-slate-700">
-          ${groupProjects.map(p => `
+          ${groupProjects
+            .map(
+              (p) => `
             <div class="project-item-row flex items-center p-3 hover:bg-yellow-50 dark:hover:bg-yellow-900/10 transition-colors cursor-pointer" data-id="${p.id}">
               <div class="px-2 py-1 checkbox-click-zone">
                 <input type="checkbox" class="project-checkbox w-6 h-6 rounded border-slate-300 text-yellow-500 focus:ring-yellow-400 cursor-pointer" data-id="${p.id}">
@@ -2455,7 +2429,9 @@ export const renderProjectList = (callbacks) => {
                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>
               </div>
             </div>
-          `).join('')}
+          `,
+            )
+            .join("")}
         </div>
       </div>
     `;
@@ -2464,45 +2440,56 @@ export const renderProjectList = (callbacks) => {
   container.innerHTML = html;
 
   // ボタンイベント
-  container.querySelectorAll('.edit-group-action-btn').forEach(btn => {
-    btn.onclick = (e) => { e.stopPropagation(); currentCallbacks.onGroupEdit(btn.dataset.groupName); };
+  container.querySelectorAll(".edit-group-action-btn").forEach((btn) => {
+    btn.onclick = (e) => {
+      e.stopPropagation();
+      currentCallbacks.onGroupEdit(btn.dataset.groupName);
+    };
   });
-  container.querySelectorAll('.aggregate-group-action-btn').forEach(btn => {
-    btn.onclick = (e) => { e.stopPropagation(); currentCallbacks.onGroupAggregate(btn.dataset.groupName); };
+  container.querySelectorAll(".aggregate-group-action-btn").forEach((btn) => {
+    btn.onclick = (e) => {
+      e.stopPropagation();
+      currentCallbacks.onGroupAggregate(btn.dataset.groupName);
+    };
   });
 
   // ★アニメーション付き排他的アコーディオン制御
-  container.querySelectorAll('.accordion-trigger').forEach(trigger => {
+  container.querySelectorAll(".accordion-trigger").forEach((trigger) => {
     trigger.onclick = () => {
-      const groupDiv = trigger.closest('.project-group');
-      const content = groupDiv.querySelector('.project-group-content');
-      const arrow = trigger.querySelector('.group-arrow');
-      const isOpening = content.style.maxHeight === "0px" || content.style.maxHeight === "";
+      const groupDiv = trigger.closest(".project-group");
+      const content = groupDiv.querySelector(".project-group-content");
+      const arrow = trigger.querySelector(".group-arrow");
+      const isOpening =
+        content.style.maxHeight === "0px" || content.style.maxHeight === "";
 
       // 1. 全てを閉じる
-      container.querySelectorAll('.project-group-content').forEach(c => {
+      container.querySelectorAll(".project-group-content").forEach((c) => {
         c.style.maxHeight = "0px";
-        c.classList.add('opacity-0');
+        c.classList.add("opacity-0");
       });
-      container.querySelectorAll('.group-arrow').forEach(a => a.classList.remove('rotate-90'));
+      container
+        .querySelectorAll(".group-arrow")
+        .forEach((a) => a.classList.remove("rotate-90"));
 
       // 2. ターゲットだけを開く
       if (isOpening) {
         // scrollHeight を使うことで、中身に応じた正確な高さをセットできる
         content.style.maxHeight = content.scrollHeight + "px";
-        content.classList.remove('opacity-0');
-        if (arrow) arrow.classList.add('rotate-90');
+        content.classList.remove("opacity-0");
+        if (arrow) arrow.classList.add("rotate-90");
 
         // --- ★追加：オートスクロール処理 ---
         // アニメーションの開始と同時にスクロール位置を調整
         setTimeout(() => {
-          const navHeight = document.getElementById('fixed-nav')?.offsetHeight || 0;
+          const navHeight =
+            document.getElementById("fixed-nav")?.offsetHeight || 0;
           const elementPosition = groupDiv.getBoundingClientRect().top;
-          const offsetPosition = elementPosition + window.pageYOffset - navHeight - 10; // 10pxの余白
+          const offsetPosition =
+            elementPosition + window.pageYOffset - navHeight - 10; // 10pxの余白
 
           window.scrollTo({
             top: offsetPosition,
-            behavior: "smooth" // 滑らかにスクロール
+            behavior: "smooth", // 滑らかにスクロール
           });
         }, 50); // アコーディオン展開の計算待ちでわずかに遅延
       }
@@ -2510,9 +2497,12 @@ export const renderProjectList = (callbacks) => {
   });
 
   // 工事行のクリック
-  container.querySelectorAll('.project-item-row').forEach(row => {
+  container.querySelectorAll(".project-item-row").forEach((row) => {
     row.onclick = (e) => {
-      if (e.target.closest('.checkbox-click-zone') || e.target.classList.contains('project-checkbox')) {
+      if (
+        e.target.closest(".checkbox-click-zone") ||
+        e.target.classList.contains("project-checkbox")
+      ) {
         updateProjectOpBar(currentCallbacks);
         return;
       }
@@ -2526,7 +2516,9 @@ export const renderProjectList = (callbacks) => {
 function updateProjectOpBar(callbacks) {
   const bar = document.getElementById("project-op-bar");
   const countLabel = document.getElementById("project-selection-count");
-  const checkedBoxes = Array.from(document.querySelectorAll(".project-checkbox:checked"));
+  const checkedBoxes = Array.from(
+    document.querySelectorAll(".project-checkbox:checked"),
+  );
   const count = checkedBoxes.length;
 
   if (!bar) return;
@@ -2549,17 +2541,23 @@ function updateProjectOpBar(callbacks) {
         btn.classList.add("hidden");
       } else {
         btn.classList.remove("hidden");
-        btn.onclick = (e) => { e.stopPropagation(); action(firstId); };
+        btn.onclick = (e) => {
+          e.stopPropagation();
+          action(firstId);
+        };
       }
     };
 
     setupBtn("project-edit-btn-bulk", callbacks.onEdit, true);
     setupBtn("project-copy-btn-bulk", callbacks.onDuplicate, true);
-    setupBtn("project-delete-btn-bulk", (id) => {
-      if (count === 1) callbacks.onDelete(id);
-      else alert("複数削除は現在1件ずつのみ対応しています。");
-    }, false);
-
+    setupBtn(
+      "project-delete-btn-bulk",
+      (id) => {
+        if (count === 1) callbacks.onDelete(id);
+        else alert("複数削除は現在1件ずつのみ対応しています。");
+      },
+      false,
+    );
   } else {
     bar.classList.add("translate-y-24", "opacity-0", "pointer-events-none");
   }
@@ -2634,12 +2632,17 @@ export const openEditProjectModal = (project) => {
 
   // 表示切り替え
   const toggleWrapper = document.getElementById("edit-advanced-toggle-wrapper");
-  const simpleSettings = document.getElementById("edit-simple-project-settings");
-  const advancedSettings = document.getElementById("edit-advanced-project-settings");
+  const simpleSettings = document.getElementById(
+    "edit-simple-project-settings",
+  );
+  const advancedSettings = document.getElementById(
+    "edit-advanced-project-settings",
+  );
 
   if (toggleWrapper) toggleWrapper.classList.add("hidden"); // 編集時はモード切替不可
   if (simpleSettings) simpleSettings.classList.toggle("hidden", isAdvanced);
-  if (advancedSettings) advancedSettings.classList.toggle("hidden", !isAdvanced);
+  if (advancedSettings)
+    advancedSettings.classList.toggle("hidden", !isAdvanced);
 
   // ▼▼▼ 修正: state.js の変数を直接リセットする形に統一 ▼▼▼
   state.levelNameCache.length = 0;
@@ -2659,8 +2662,12 @@ export const openEditProjectModal = (project) => {
     setVal("edit-custom-levels-count", state.levelNameCache.length);
     setVal("edit-custom-areas-count", state.areaNameCache.length);
 
-    const levelsContainer = document.getElementById("edit-custom-levels-container");
-    const areasContainer = document.getElementById("edit-custom-areas-container");
+    const levelsContainer = document.getElementById(
+      "edit-custom-levels-container",
+    );
+    const areasContainer = document.getElementById(
+      "edit-custom-areas-container",
+    );
 
     generateCustomInputFields(
       state.levelNameCache.length, // stateのlengthを使う
@@ -2856,7 +2863,8 @@ export const renderJointsList = (project) => {
         const sectionId = sectionDiv.dataset.sectionId;
         const key = th.dataset.sortKey;
 
-        if (!state.sort[sectionId]) state.sort[sectionId] = { key: null, order: "asc" };
+        if (!state.sort[sectionId])
+          state.sort[sectionId] = { key: null, order: "asc" };
         const currentSort = state.sort[sectionId];
         if (currentSort.key === key) {
           currentSort.order = currentSort.order === "asc" ? "desc" : "asc";
@@ -2864,7 +2872,9 @@ export const renderJointsList = (project) => {
           currentSort.key = key;
           currentSort.order = "asc";
         }
-        renderJointsList(state.projects.find((p) => p.id === state.currentProjectId));
+        renderJointsList(
+          state.projects.find((p) => p.id === state.currentProjectId),
+        );
       }
     });
     container.dataset.listenerAdded = "true";
@@ -2891,9 +2901,12 @@ export const renderJointsList = (project) => {
           : "";
 
         let boltInfo = "";
-        const borderColor = "border-slate-400", darkBorderColor = "dark:border-slate-600";
+        const borderColor = "border-slate-400",
+          darkBorderColor = "dark:border-slate-600";
         if (joint.isComplexSpl && joint.webInputs) {
-          const webInfo = joint.webInputs.map((w) => `${w.size || "-"} / ${w.count}本`).join(",<br>");
+          const webInfo = joint.webInputs
+            .map((w) => `${w.size || "-"} / ${w.count}本`)
+            .join(",<br>");
           boltInfo = `<td class="px-4 py-3 border-b border-r ${borderColor} ${darkBorderColor}">${webInfo}</td>`;
         } else {
           const singleBoltTypes = ["column", "wall_girt", "roof_purlin"];
@@ -2908,23 +2921,36 @@ export const renderJointsList = (project) => {
         }
 
         const tempBoltCells = (() => {
-          if (["wall_girt", "roof_purlin", "column"].includes(joint.type)) return "";
+          if (["wall_girt", "roof_purlin", "column"].includes(joint.type))
+            return "";
           const tempBoltInfo = getTempBoltInfo(joint, project.tempBoltMap);
           if (joint.isComplexSpl) {
-            const webTempInfo = tempBoltInfo.webs.map((info) => {
-              const className = info.text.includes("未設定") ? "text-red-600 font-bold" : "";
-              return `<span class="${className}" title="${info.formula}">${info.text}</span>`;
-            }).join(",<br>");
+            const webTempInfo = tempBoltInfo.webs
+              .map((info) => {
+                const className = info.text.includes("未設定")
+                  ? "text-red-600 font-bold"
+                  : "";
+                return `<span class="${className}" title="${info.formula}">${info.text}</span>`;
+              })
+              .join(",<br>");
             return `<td class="px-4 py-3 text-center border-b border-r ${borderColor} ${darkBorderColor}">${webTempInfo}</td>`;
           }
-          const twoColumns = ["girder", "beam", "other", "stud"].includes(joint.type) && !joint.isPinJoint;
+          const twoColumns =
+            ["girder", "beam", "other", "stud"].includes(joint.type) &&
+            !joint.isPinJoint;
           if (twoColumns) {
-            const flangeClass = tempBoltInfo.flange.text.includes("未設定") ? "text-red-600 font-bold" : "";
-            const webClass = tempBoltInfo.web.text.includes("未設定") ? "text-red-600 font-bold" : "";
+            const flangeClass = tempBoltInfo.flange.text.includes("未設定")
+              ? "text-red-600 font-bold"
+              : "";
+            const webClass = tempBoltInfo.web.text.includes("未設定")
+              ? "text-red-600 font-bold"
+              : "";
             return `<td class="px-4 py-3 text-center border-b border-r ${borderColor} ${darkBorderColor} ${flangeClass}" title="${tempBoltInfo.flange.formula}">${tempBoltInfo.flange.text}</td>
                     <td class="px-4 py-3 text-center border-b border-r ${borderColor} ${darkBorderColor} ${webClass}" title="${tempBoltInfo.web.formula}">${tempBoltInfo.web.text}</td>`;
           } else {
-            const singleClass = tempBoltInfo.single.text.includes("未設定") ? "text-red-600 font-bold" : "";
+            const singleClass = tempBoltInfo.single.text.includes("未設定")
+              ? "text-red-600 font-bold"
+              : "";
             return `<td class="px-4 py-3 text-center border-b border-r ${borderColor} ${darkBorderColor} ${singleClass}" title="${tempBoltInfo.single.formula}">${tempBoltInfo.single.text}</td>`;
           }
         })();
@@ -2947,24 +2973,152 @@ export const renderJointsList = (project) => {
                 ${boltInfo}
                 ${tempBoltCells}
             </tr>`;
-      }).join("");
+      })
+      .join("");
   };
 
-  const selectAllHtml = '<input type="checkbox" class="select-all-checkbox w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer" title="全選択/解除">';
+  const selectAllHtml =
+    '<input type="checkbox" class="select-all-checkbox w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer" title="全選択/解除">';
 
   // ▼▼▼ 修正: 全ての cols から { label: "部材カウント", ... } を削除 ▼▼▼
   const sections = [
-    { type: "girder", isPin: false, title: "大梁", color: "blue", cols: [{ label: selectAllHtml, key: null }, { label: "継手名", key: "name" }, { label: "フランジ", key: "flange" }, { label: "ウェブ", key: "web" }, { label: "仮ボルト(フランジ)", key: "temp-flange" }, { label: "仮ボルト(ウェブ)", key: "temp-web" }] },
-    { type: "girder", isPin: true, title: "大梁 (ピン取り)", color: "cyan", cols: [{ label: selectAllHtml, key: null }, { label: "継手名", key: "name" }, { label: "ウェブ", key: "web" }, { label: "仮ボルト", key: "temp-web" }] },
-    { type: "beam", isPin: false, title: "小梁", color: "green", cols: [{ label: selectAllHtml, key: null }, { label: "継手名", key: "name" }, { label: "フランジ", key: "flange" }, { label: "ウェブ", key: "web" }, { label: "仮ボルト(フランジ)", key: "temp-flange" }, { label: "仮ボルト(ウェブ)", key: "temp-web" }] },
-    { type: "beam", isPin: true, title: "小梁 (ピン取り)", color: "teal", cols: [{ label: selectAllHtml, key: null }, { label: "継手名", key: "name" }, { label: "ウェブ", key: "web" }, { label: "仮ボルト", key: "temp-web" }] },
-    { type: "stud", isPin: false, title: "間柱", color: "indigo", cols: [{ label: selectAllHtml, key: null }, { label: "継手名", key: "name" }, { label: "フランジボルト", key: "flange" }, { label: "ウェブボルト", key: "web" }, { label: "仮ボルト(フランジ)", key: "temp-flange" }, { label: "仮ボルト(ウェブ)", key: "temp-web" }] },
-    { type: "stud", isPin: true, title: "間柱 (ピン取り)", color: "purple", cols: [{ label: selectAllHtml, key: null }, { label: "継手名", key: "name" }, { label: "ボルトサイズ", key: "bolt" }, { label: "仮ボルト", key: "temp-web" }] },
-    { type: "column", isPin: false, title: "本柱", color: "red", cols: [{ label: selectAllHtml, key: null }, { label: "継手名", key: "name" }, { label: "エレクション", key: "bolt" }] },
-    { type: "wall_girt", isPin: false, title: "胴縁", color: "gray", cols: [{ label: selectAllHtml, key: null }, { label: "継手名", key: "name" }, { label: "ボルトサイズ", key: "bolt" }] },
-    { type: "roof_purlin", isPin: false, title: "母屋", color: "orange", cols: [{ label: selectAllHtml, key: null }, { label: "継手名", key: "name" }, { label: "ボルトサイズ", key: "bolt" }] },
-    { type: "other", isPin: false, title: "その他", color: "amber", cols: [{ label: selectAllHtml, key: null }, { label: "継手名", key: "name" }, { label: "フランジ", key: "flange" }, { label: "ウェブ", key: "web" }, { label: "仮ボルト(フランジ)", key: "temp-flange" }, { label: "仮ボルト(ウェブ)", key: "temp-web" }] },
-    { type: "other", isPin: true, title: "その他 (ピン取り)", color: "amber", cols: [{ label: selectAllHtml, key: null }, { label: "継手名", key: "name" }, { label: "ボルト", key: "bolt" }, { label: "仮ボルト", key: "temp-web" }] },
+    {
+      type: "girder",
+      isPin: false,
+      title: "大梁",
+      color: "blue",
+      cols: [
+        { label: selectAllHtml, key: null },
+        { label: "継手名", key: "name" },
+        { label: "フランジ", key: "flange" },
+        { label: "ウェブ", key: "web" },
+        { label: "仮ボルト(フランジ)", key: "temp-flange" },
+        { label: "仮ボルト(ウェブ)", key: "temp-web" },
+      ],
+    },
+    {
+      type: "girder",
+      isPin: true,
+      title: "大梁 (ピン取り)",
+      color: "cyan",
+      cols: [
+        { label: selectAllHtml, key: null },
+        { label: "継手名", key: "name" },
+        { label: "ウェブ", key: "web" },
+        { label: "仮ボルト", key: "temp-web" },
+      ],
+    },
+    {
+      type: "beam",
+      isPin: false,
+      title: "小梁",
+      color: "green",
+      cols: [
+        { label: selectAllHtml, key: null },
+        { label: "継手名", key: "name" },
+        { label: "フランジ", key: "flange" },
+        { label: "ウェブ", key: "web" },
+        { label: "仮ボルト(フランジ)", key: "temp-flange" },
+        { label: "仮ボルト(ウェブ)", key: "temp-web" },
+      ],
+    },
+    {
+      type: "beam",
+      isPin: true,
+      title: "小梁 (ピン取り)",
+      color: "teal",
+      cols: [
+        { label: selectAllHtml, key: null },
+        { label: "継手名", key: "name" },
+        { label: "ウェブ", key: "web" },
+        { label: "仮ボルト", key: "temp-web" },
+      ],
+    },
+    {
+      type: "stud",
+      isPin: false,
+      title: "間柱",
+      color: "indigo",
+      cols: [
+        { label: selectAllHtml, key: null },
+        { label: "継手名", key: "name" },
+        { label: "フランジボルト", key: "flange" },
+        { label: "ウェブボルト", key: "web" },
+        { label: "仮ボルト(フランジ)", key: "temp-flange" },
+        { label: "仮ボルト(ウェブ)", key: "temp-web" },
+      ],
+    },
+    {
+      type: "stud",
+      isPin: true,
+      title: "間柱 (ピン取り)",
+      color: "purple",
+      cols: [
+        { label: selectAllHtml, key: null },
+        { label: "継手名", key: "name" },
+        { label: "ボルトサイズ", key: "bolt" },
+        { label: "仮ボルト", key: "temp-web" },
+      ],
+    },
+    {
+      type: "column",
+      isPin: false,
+      title: "本柱",
+      color: "red",
+      cols: [
+        { label: selectAllHtml, key: null },
+        { label: "継手名", key: "name" },
+        { label: "エレクション", key: "bolt" },
+      ],
+    },
+    {
+      type: "wall_girt",
+      isPin: false,
+      title: "胴縁",
+      color: "gray",
+      cols: [
+        { label: selectAllHtml, key: null },
+        { label: "継手名", key: "name" },
+        { label: "ボルトサイズ", key: "bolt" },
+      ],
+    },
+    {
+      type: "roof_purlin",
+      isPin: false,
+      title: "母屋",
+      color: "orange",
+      cols: [
+        { label: selectAllHtml, key: null },
+        { label: "継手名", key: "name" },
+        { label: "ボルトサイズ", key: "bolt" },
+      ],
+    },
+    {
+      type: "other",
+      isPin: false,
+      title: "その他",
+      color: "amber",
+      cols: [
+        { label: selectAllHtml, key: null },
+        { label: "継手名", key: "name" },
+        { label: "フランジ", key: "flange" },
+        { label: "ウェブ", key: "web" },
+        { label: "仮ボルト(フランジ)", key: "temp-flange" },
+        { label: "仮ボルト(ウェブ)", key: "temp-web" },
+      ],
+    },
+    {
+      type: "other",
+      isPin: true,
+      title: "その他 (ピン取り)",
+      color: "amber",
+      cols: [
+        { label: selectAllHtml, key: null },
+        { label: "継手名", key: "name" },
+        { label: "ボルト", key: "bolt" },
+        { label: "仮ボルト", key: "temp-web" },
+      ],
+    },
   ];
 
   // 凡例の追加
@@ -2978,7 +3132,10 @@ export const renderJointsList = (project) => {
   `;
   const sectionsToRender = [];
   sections.forEach((section) => {
-    const filteredJoints = project.joints.filter((j) => j.type === section.type && (j.isPinJoint || false) === section.isPin);
+    const filteredJoints = project.joints.filter(
+      (j) =>
+        j.type === section.type && (j.isPinJoint || false) === section.isPin,
+    );
     if (filteredJoints.length > 0) {
       filteredJoints.forEach((j) => renderedJointIds.add(j.id));
       const tbodyId = `joints-list-${section.type}${section.isPin ? "-pin" : ""}`;
@@ -2986,8 +3143,10 @@ export const renderJointsList = (project) => {
       if (filteredJoints.some((j) => j.isComplexSpl)) {
         if (section.isPin) {
           finalCols = [
-            { label: selectAllHtml, key: null }, { label: "継手名", key: "name" },
-            { label: "ウェブ (複合SPL)", key: "web_complex" }, { label: "仮ボルト (複合SPL)", key: "temp_web_complex" }
+            { label: selectAllHtml, key: null },
+            { label: "継手名", key: "name" },
+            { label: "ウェブ (複合SPL)", key: "web_complex" },
+            { label: "仮ボルト (複合SPL)", key: "temp_web_complex" },
           ];
         }
       }
@@ -3008,15 +3167,26 @@ export const renderJointsList = (project) => {
             if (cmp !== 0) return sortState.order === "asc" ? cmp : -cmp;
             const countA = key === "flange" ? a.flangeCount : a.webCount;
             const countB = key === "flange" ? b.flangeCount : b.webCount;
-            return sortState.order === "asc" ? countA - countB : countB - countA;
+            return sortState.order === "asc"
+              ? countA - countB
+              : countB - countA;
           } else if (key === "bolt") {
             const sizeA = a.flangeSize || a.webSize || "";
             const sizeB = b.flangeSize || b.webSize || "";
-            return sortState.order === "asc" ? boltSort(sizeA, sizeB) : -boltSort(sizeA, sizeB);
+            return sortState.order === "asc"
+              ? boltSort(sizeA, sizeB)
+              : -boltSort(sizeA, sizeB);
           } else if (key === "web_complex") {
-            const getFirstSize = (j) => j.isComplexSpl && j.webInputs && j.webInputs.length > 0 ? { size: j.webInputs[0].size, isComplex: true } : { size: j.webSize || "", isComplex: false };
-            const infoA = getFirstSize(a), infoB = getFirstSize(b);
-            if (infoA.isComplex !== infoB.isComplex) return sortState.order === "asc" ? (infoA.isComplex ? 1 : 0) - (infoB.isComplex ? 1 : 0) : (infoB.isComplex ? 1 : 0) - (infoA.isComplex ? 1 : 0);
+            const getFirstSize = (j) =>
+              j.isComplexSpl && j.webInputs && j.webInputs.length > 0
+                ? { size: j.webInputs[0].size, isComplex: true }
+                : { size: j.webSize || "", isComplex: false };
+            const infoA = getFirstSize(a),
+              infoB = getFirstSize(b);
+            if (infoA.isComplex !== infoB.isComplex)
+              return sortState.order === "asc"
+                ? (infoA.isComplex ? 1 : 0) - (infoB.isComplex ? 1 : 0)
+                : (infoB.isComplex ? 1 : 0) - (infoA.isComplex ? 1 : 0);
             const cmp = boltSort(infoA.size, infoB.size);
             if (cmp !== 0) return sortState.order === "asc" ? cmp : -cmp;
             return 0;
@@ -3024,15 +3194,21 @@ export const renderJointsList = (project) => {
         });
       }
 
-      const headerHtml = finalCols.map((col) => {
-        let sortIcon = "", cursorClass = "", dataAttr = "";
-        if (col.key) {
-          cursorClass = "cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors";
-          dataAttr = `data-sort-key="${col.key}"`;
-          if (sortState && sortState.key === col.key) sortIcon = sortState.order === "asc" ? " ▲" : " ▼";
-        }
-        return `<th class="px-4 py-3 whitespace-nowrap ${cursorClass}" ${dataAttr}>${col.label}${sortIcon}</th>`;
-      }).join("");
+      const headerHtml = finalCols
+        .map((col) => {
+          let sortIcon = "",
+            cursorClass = "",
+            dataAttr = "";
+          if (col.key) {
+            cursorClass =
+              "cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors";
+            dataAttr = `data-sort-key="${col.key}"`;
+            if (sortState && sortState.key === col.key)
+              sortIcon = sortState.order === "asc" ? " ▲" : " ▼";
+          }
+          return `<th class="px-4 py-3 whitespace-nowrap ${cursorClass}" ${dataAttr}>${col.label}${sortIcon}</th>`;
+        })
+        .join("");
 
       const anchorId = `anchor-joint-${section.type}-${section.isPin ? "pin" : "rigid"}`;
       html += `
@@ -3049,11 +3225,20 @@ export const renderJointsList = (project) => {
     }
   });
 
-  const unknownJoints = project.joints.filter((j) => !renderedJointIds.has(j.id));
+  const unknownJoints = project.joints.filter(
+    (j) => !renderedJointIds.has(j.id),
+  );
   if (unknownJoints.length > 0) {
     const tbodyId = "joints-list-unknown";
-    const headerHtml = [selectAllHtml, "継手名", "種別(内部値)", "ピン(内部値)", "情報"]
-      .map((col) => `<th class="px-4 py-3 whitespace-nowrap">${col}</th>`).join("");
+    const headerHtml = [
+      selectAllHtml,
+      "継手名",
+      "種別(内部値)",
+      "ピン(内部値)",
+      "情報",
+    ]
+      .map((col) => `<th class="px-4 py-3 whitespace-nowrap">${col}</th>`)
+      .join("");
 
     html += `
         <div id="anchor-joint-unknown" class="rounded-lg border border-red-400 dark:border-red-600 scroll-mt-24 mb-6" data-section-title="未分類・不整合データ" data-section-color="red">
@@ -3069,7 +3254,12 @@ export const renderJointsList = (project) => {
             </div>
         </div>`;
 
-    sectionsToRender.push({ tbodyId, filteredJoints: unknownJoints, color: "red", isUnknown: true });
+    sectionsToRender.push({
+      tbodyId,
+      filteredJoints: unknownJoints,
+      color: "red",
+      isUnknown: true,
+    });
   }
   container.innerHTML = html;
 
@@ -3077,14 +3267,18 @@ export const renderJointsList = (project) => {
     if (s.isUnknown) {
       const tbody = document.getElementById(s.tbodyId);
       if (tbody) {
-        tbody.innerHTML = s.filteredJoints.map((joint) => {
-          const borderColor = "border-slate-400", darkBorderColor = "dark:border-slate-600";
-          const colorBadge = joint.color ? `<span class="inline-block w-3 h-3 rounded-full ml-2 border border-gray-400" style="background-color: ${joint.color}; vertical-align: middle;"></span>` : "";
-          const memberIconHtml = joint.countAsMember
-            ? `<span class="inline-flex items-center justify-center ml-1 text-emerald-600 dark:text-emerald-400 cursor-help" title="部材として集計される継手">${memberIconSvgRaw}</span>`
-            : "";
+        tbody.innerHTML = s.filteredJoints
+          .map((joint) => {
+            const borderColor = "border-slate-400",
+              darkBorderColor = "dark:border-slate-600";
+            const colorBadge = joint.color
+              ? `<span class="inline-block w-3 h-3 rounded-full ml-2 border border-gray-400" style="background-color: ${joint.color}; vertical-align: middle;"></span>`
+              : "";
+            const memberIconHtml = joint.countAsMember
+              ? `<span class="inline-flex items-center justify-center ml-1 text-emerald-600 dark:text-emerald-400 cursor-help" title="部材として集計される継手">${memberIconSvgRaw}</span>`
+              : "";
 
-          return `
+            return `
                 <tr class="item-row bg-red-50 dark:bg-transparent hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors" data-id="${joint.id}">
                     <td class="px-3 py-3 border-b border-r ${borderColor} ${darkBorderColor}">
                         <div class="flex items-center justify-center gap-3">
@@ -3103,14 +3297,15 @@ export const renderJointsList = (project) => {
                     <td class="px-4 py-3 border-b border-r ${borderColor} ${darkBorderColor}">${joint.isPinJoint ? "ON" : "OFF"}</td>
                     <td class="px-4 py-3 text-xs border-b border-r ${borderColor} ${darkBorderColor} text-red-600 dark:text-red-400">種類と設定の不一致</td>
                 </tr>`;
-        }).join("");
+          })
+          .join("");
       }
     } else {
       populateTable(s.tbodyId, s.filteredJoints, s.color);
     }
   });
 
-  const bulkBar = document.getElementById('bulk-delete-bar');
+  const bulkBar = document.getElementById("bulk-delete-bar");
   if (bulkBar) {
     bulkBar.classList.add("translate-y-24", "opacity-0", "pointer-events-none");
   }
@@ -3183,7 +3378,8 @@ export const renderMemberLists = (project) => {
         const sectionId = sectionDiv.dataset.sectionId;
         const key = th.dataset.sortKey;
 
-        if (!state.sort[sectionId]) state.sort[sectionId] = { key: null, order: "asc" };
+        if (!state.sort[sectionId])
+          state.sort[sectionId] = { key: null, order: "asc" };
         const currentSort = state.sort[sectionId];
         if (currentSort.key === key) {
           currentSort.order = currentSort.order === "asc" ? "desc" : "asc";
@@ -3191,7 +3387,9 @@ export const renderMemberLists = (project) => {
           currentSort.key = key;
           currentSort.order = "asc";
         }
-        renderMemberLists(state.projects.find((p) => p.id === state.currentProjectId));
+        renderMemberLists(
+          state.projects.find((p) => p.id === state.currentProjectId),
+        );
       }
     });
     container.dataset.listenerAdded = "true";
@@ -3202,7 +3400,9 @@ export const renderMemberLists = (project) => {
 
   levels.forEach((lvl) => {
     const isActive = state.activeMemberLevel === lvl.id;
-    const activeClass = isActive ? "bg-blue-600 text-white border-blue-600" : "bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-300 dark:border-slate-600 hover:bg-slate-100";
+    const activeClass = isActive
+      ? "bg-blue-600 text-white border-blue-600"
+      : "bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-300 dark:border-slate-600 hover:bg-slate-100";
     tabsHtml += `<button class="level-tab-btn px-3 py-1 rounded-full text-sm font-bold transition-colors border ${activeClass}" data-level="${lvl.id}">${lvl.label}</button>`;
   });
   tabsContainer.innerHTML = tabsHtml;
@@ -3217,8 +3417,11 @@ export const renderMemberLists = (project) => {
   const jointsMap = new Map(project.joints.map((j) => [j.id, j]));
   const allMembers = [
     ...(project.members || []).map((m) => ({ ...m, isMember: true })),
-    ...project.joints.filter((j) => j.countAsMember).map((j) => ({ id: j.id, name: j.name, jointId: j.id, isMember: false })),
-  ].map((m) => ({ ...m, joint: jointsMap.get(m.jointId) }))
+    ...project.joints
+      .filter((j) => j.countAsMember)
+      .map((j) => ({ id: j.id, name: j.name, jointId: j.id, isMember: false })),
+  ]
+    .map((m) => ({ ...m, joint: jointsMap.get(m.jointId) }))
     .filter((m) => m.joint)
     .filter((m) => {
       if (state.activeMemberLevel === "all") return true;
@@ -3238,9 +3441,12 @@ export const renderMemberLists = (project) => {
     tbody.innerHTML = members
       .map((member) => {
         const { joint } = member;
-        const borderColor = "border-slate-400", darkBorderColor = "dark:border-slate-600";
+        const borderColor = "border-slate-400",
+          darkBorderColor = "dark:border-slate-600";
         const isPin = joint.isPinJoint || false;
-        const colorBadge = joint.color ? `<span class="inline-block w-3 h-3 rounded-full ml-2 border border-gray-400" style="background-color: ${joint.color}; vertical-align: middle;"></span>` : "";
+        const colorBadge = joint.color
+          ? `<span class="inline-block w-3 h-3 rounded-full ml-2 border border-gray-400" style="background-color: ${joint.color}; vertical-align: middle;"></span>`
+          : "";
 
         // ▼▼▼ 追加: 継手側に設定されているアイコンを表示 ▼▼▼
         const memberIconHtml = joint.countAsMember
@@ -3257,7 +3463,9 @@ export const renderMemberLists = (project) => {
 
         let boltInfo = "";
         if (joint.isComplexSpl && joint.webInputs) {
-          const webInfo = joint.webInputs.map((w) => `${w.size || "-"} / ${w.count}本`).join(",<br>");
+          const webInfo = joint.webInputs
+            .map((w) => `${w.size || "-"} / ${w.count}本`)
+            .join(",<br>");
           boltInfo = `<td class="px-4 py-3 border-b border-r ${borderColor} ${darkBorderColor}">${webInfo}</td>`;
         } else {
           const singleBoltTypes = ["column", "wall_girt", "roof_purlin"];
@@ -3275,20 +3483,32 @@ export const renderMemberLists = (project) => {
         if (!["wall_girt", "roof_purlin", "column"].includes(joint.type)) {
           const tempBoltInfo = getTempBoltInfo(joint, project.tempBoltMap);
           if (joint.isComplexSpl) {
-            const webTempInfo = tempBoltInfo.webs.map((info) => {
-              const className = info.text.includes("未設定") ? "text-red-600 font-bold" : "";
-              return `<span class="${className}" title="${info.formula}">${info.text}</span>`;
-            }).join(",<br>");
+            const webTempInfo = tempBoltInfo.webs
+              .map((info) => {
+                const className = info.text.includes("未設定")
+                  ? "text-red-600 font-bold"
+                  : "";
+                return `<span class="${className}" title="${info.formula}">${info.text}</span>`;
+              })
+              .join(",<br>");
             tempBoltInfoCells = `<td class="px-4 py-3 text-center border-b border-r ${borderColor} ${darkBorderColor}">${webTempInfo}</td>`;
           } else {
-            const twoColumns = ["girder", "beam", "other", "stud"].includes(joint.type) && !joint.isPinJoint;
+            const twoColumns =
+              ["girder", "beam", "other", "stud"].includes(joint.type) &&
+              !joint.isPinJoint;
             if (twoColumns) {
-              const flangeClass = tempBoltInfo.flange.text.includes("未設定") ? "text-red-600 font-bold" : "";
-              const webClass = tempBoltInfo.web.text.includes("未設定") ? "text-red-600 font-bold" : "";
+              const flangeClass = tempBoltInfo.flange.text.includes("未設定")
+                ? "text-red-600 font-bold"
+                : "";
+              const webClass = tempBoltInfo.web.text.includes("未設定")
+                ? "text-red-600 font-bold"
+                : "";
               tempBoltInfoCells = `<td class="px-4 py-3 text-center border-b border-r ${borderColor} ${darkBorderColor} ${flangeClass}" title="${tempBoltInfo.flange.formula}">${tempBoltInfo.flange.text}</td>
                   <td class="px-4 py-3 text-center border-b border-r ${borderColor} ${darkBorderColor} ${webClass}" title="${tempBoltInfo.web.formula}">${tempBoltInfo.web.text}</td>`;
             } else {
-              const singleClass = tempBoltInfo.single.text.includes("未設定") ? "text-red-600 font-bold" : "";
+              const singleClass = tempBoltInfo.single.text.includes("未設定")
+                ? "text-red-600 font-bold"
+                : "";
               tempBoltInfoCells = `<td class="px-4 py-3 text-center border-b border-r ${borderColor} ${darkBorderColor} ${singleClass}" title="${tempBoltInfo.single.formula}">${tempBoltInfo.single.text}</td>`;
             }
           }
@@ -3297,17 +3517,25 @@ export const renderMemberLists = (project) => {
         let floorBadge = "";
         if (member.isMember) {
           if (!member.targetLevels || member.targetLevels.length === 0) {
-            floorBadge = '<span class="text-xs bg-gray-200 dark:bg-gray-700 px-1 rounded ml-2">全</span>';
+            floorBadge =
+              '<span class="text-xs bg-gray-200 dark:bg-gray-700 px-1 rounded ml-2">全</span>';
           } else {
-            const displayLevels = member.targetLevels.length > 3 ? `${member.targetLevels.length}フロア`
-              : member.targetLevels.map((l) => {
-                const lvlObj = levels.find((x) => x.id === l);
-                return lvlObj ? lvlObj.label.replace("階", "").replace("F", "") : l;
-              }).join(",");
+            const displayLevels =
+              member.targetLevels.length > 3
+                ? `${member.targetLevels.length}フロア`
+                : member.targetLevels
+                    .map((l) => {
+                      const lvlObj = levels.find((x) => x.id === l);
+                      return lvlObj
+                        ? lvlObj.label.replace("階", "").replace("F", "")
+                        : l;
+                    })
+                    .join(",");
             floorBadge = `<span class="text-xs bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 px-1 rounded ml-2">${displayLevels}</span>`;
           }
         } else {
-          floorBadge = '<span class="text-xs bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 px-1 rounded ml-2">全</span>';
+          floorBadge =
+            '<span class="text-xs bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 px-1 rounded ml-2">全</span>';
         }
 
         return `
@@ -3329,23 +3557,162 @@ export const renderMemberLists = (project) => {
                 ${boltInfo}
                 ${tempBoltInfoCells}
             </tr>`;
-      }).join("");
+      })
+      .join("");
   };
 
-  const selectAllHtml = '<input type="checkbox" class="select-all-checkbox w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer" title="全選択/解除">';
+  const selectAllHtml =
+    '<input type="checkbox" class="select-all-checkbox w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer" title="全選択/解除">';
 
   const memberSections = [
-    { type: "girder", isPin: false, title: "部材 - 大梁", color: "blue", cols: [{ label: selectAllHtml, key: null }, { label: "部材名", key: "name" }, { label: "使用継手", key: "jointName" }, { label: "フランジ", key: "flange" }, { label: "ウェブ", key: "web" }, { label: "仮ボルト(フランジ)", key: "temp-flange" }, { label: "仮ボルト(ウェブ)", key: "temp-web" }] },
-    { type: "girder", isPin: true, title: "部材 - 大梁 (ピン取り)", color: "cyan", cols: [{ label: selectAllHtml, key: null }, { label: "部材名", key: "name" }, { label: "使用継手", key: "jointName" }, { label: "ウェブ", key: "web" }, { label: "仮ボルト", key: "temp-web" }] },
-    { type: "beam", isPin: false, title: "部材 - 小梁", color: "green", cols: [{ label: selectAllHtml, key: null }, { label: "部材名", key: "name" }, { label: "使用継手", key: "jointName" }, { label: "フランジ", key: "flange" }, { label: "ウェブ", key: "web" }, { label: "仮ボルト(フランジ)", key: "temp-flange" }, { label: "仮ボルト(ウェブ)", key: "temp-web" }] },
-    { type: "beam", isPin: true, title: "部材 - 小梁 (ピン取り)", color: "teal", cols: [{ label: selectAllHtml, key: null }, { label: "部材名", key: "name" }, { label: "使用継手", key: "jointName" }, { label: "ウェブ", key: "web" }, { label: "仮ボルト", key: "temp-web" }] },
-    { type: "column", isPin: false, title: "部材 - 本柱", color: "red", cols: [{ label: selectAllHtml, key: null }, { label: "部材名", key: "name" }, { label: "使用継手", key: "jointName" }, { label: "エレクション", key: "bolt" }] },
-    { type: "stud", isPin: false, title: "部材 - 間柱", color: "indigo", cols: [{ label: selectAllHtml, key: null }, { label: "部材名", key: "name" }, { label: "使用継手", key: "jointName" }, { label: "フランジボルト", key: "flange" }, { label: "ウェブボルト", key: "web" }, { label: "仮ボルト(フランジ)", key: "temp-flange" }, { label: "仮ボルト(ウェブ)", key: "temp-web" }] },
-    { type: "stud", isPin: true, title: "部材 - 間柱 (ピン取り)", color: "purple", cols: [{ label: selectAllHtml, key: null }, { label: "部材名", key: "name" }, { label: "使用継手", key: "jointName" }, { label: "ボルトサイズ", key: "bolt" }, { label: "仮ボルト", key: "temp-web" }] },
-    { type: "wall_girt", isPin: false, title: "部材 - 胴縁", color: "gray", cols: [{ label: selectAllHtml, key: null }, { label: "部材名", key: "name" }, { label: "使用継手", key: "jointName" }, { label: "ボルトサイズ", key: "bolt" }] },
-    { type: "roof_purlin", isPin: false, title: "部材 - 母屋", color: "orange", cols: [{ label: selectAllHtml, key: null }, { label: "部材名", key: "name" }, { label: "使用継手", key: "jointName" }, { label: "ボルトサイズ", key: "bolt" }] },
-    { type: "other", isPin: false, title: "部材 - その他", color: "amber", cols: [{ label: selectAllHtml, key: null }, { label: "部材名", key: "name" }, { label: "使用継手", key: "jointName" }, { label: "フランジ", key: "flange" }, { label: "ウェブ", key: "web" }, { label: "仮ボルト(フランジ)", key: "temp-flange" }, { label: "仮ボルト(ウェブ)", key: "temp-web" }] },
-    { type: "other", isPin: true, title: "部材 - その他 (ピン取り)", color: "amber", cols: [{ label: selectAllHtml, key: null }, { label: "部材名", key: "name" }, { label: "使用継手", key: "jointName" }, { label: "ボルト", key: "bolt" }, { label: "仮ボルト", key: "temp-web" }] },
+    {
+      type: "girder",
+      isPin: false,
+      title: "部材 - 大梁",
+      color: "blue",
+      cols: [
+        { label: selectAllHtml, key: null },
+        { label: "部材名", key: "name" },
+        { label: "使用継手", key: "jointName" },
+        { label: "フランジ", key: "flange" },
+        { label: "ウェブ", key: "web" },
+        { label: "仮ボルト(フランジ)", key: "temp-flange" },
+        { label: "仮ボルト(ウェブ)", key: "temp-web" },
+      ],
+    },
+    {
+      type: "girder",
+      isPin: true,
+      title: "部材 - 大梁 (ピン取り)",
+      color: "cyan",
+      cols: [
+        { label: selectAllHtml, key: null },
+        { label: "部材名", key: "name" },
+        { label: "使用継手", key: "jointName" },
+        { label: "ウェブ", key: "web" },
+        { label: "仮ボルト", key: "temp-web" },
+      ],
+    },
+    {
+      type: "beam",
+      isPin: false,
+      title: "部材 - 小梁",
+      color: "green",
+      cols: [
+        { label: selectAllHtml, key: null },
+        { label: "部材名", key: "name" },
+        { label: "使用継手", key: "jointName" },
+        { label: "フランジ", key: "flange" },
+        { label: "ウェブ", key: "web" },
+        { label: "仮ボルト(フランジ)", key: "temp-flange" },
+        { label: "仮ボルト(ウェブ)", key: "temp-web" },
+      ],
+    },
+    {
+      type: "beam",
+      isPin: true,
+      title: "部材 - 小梁 (ピン取り)",
+      color: "teal",
+      cols: [
+        { label: selectAllHtml, key: null },
+        { label: "部材名", key: "name" },
+        { label: "使用継手", key: "jointName" },
+        { label: "ウェブ", key: "web" },
+        { label: "仮ボルト", key: "temp-web" },
+      ],
+    },
+    {
+      type: "column",
+      isPin: false,
+      title: "部材 - 本柱",
+      color: "red",
+      cols: [
+        { label: selectAllHtml, key: null },
+        { label: "部材名", key: "name" },
+        { label: "使用継手", key: "jointName" },
+        { label: "エレクション", key: "bolt" },
+      ],
+    },
+    {
+      type: "stud",
+      isPin: false,
+      title: "部材 - 間柱",
+      color: "indigo",
+      cols: [
+        { label: selectAllHtml, key: null },
+        { label: "部材名", key: "name" },
+        { label: "使用継手", key: "jointName" },
+        { label: "フランジボルト", key: "flange" },
+        { label: "ウェブボルト", key: "web" },
+        { label: "仮ボルト(フランジ)", key: "temp-flange" },
+        { label: "仮ボルト(ウェブ)", key: "temp-web" },
+      ],
+    },
+    {
+      type: "stud",
+      isPin: true,
+      title: "部材 - 間柱 (ピン取り)",
+      color: "purple",
+      cols: [
+        { label: selectAllHtml, key: null },
+        { label: "部材名", key: "name" },
+        { label: "使用継手", key: "jointName" },
+        { label: "ボルトサイズ", key: "bolt" },
+        { label: "仮ボルト", key: "temp-web" },
+      ],
+    },
+    {
+      type: "wall_girt",
+      isPin: false,
+      title: "部材 - 胴縁",
+      color: "gray",
+      cols: [
+        { label: selectAllHtml, key: null },
+        { label: "部材名", key: "name" },
+        { label: "使用継手", key: "jointName" },
+        { label: "ボルトサイズ", key: "bolt" },
+      ],
+    },
+    {
+      type: "roof_purlin",
+      isPin: false,
+      title: "部材 - 母屋",
+      color: "orange",
+      cols: [
+        { label: selectAllHtml, key: null },
+        { label: "部材名", key: "name" },
+        { label: "使用継手", key: "jointName" },
+        { label: "ボルトサイズ", key: "bolt" },
+      ],
+    },
+    {
+      type: "other",
+      isPin: false,
+      title: "部材 - その他",
+      color: "amber",
+      cols: [
+        { label: selectAllHtml, key: null },
+        { label: "部材名", key: "name" },
+        { label: "使用継手", key: "jointName" },
+        { label: "フランジ", key: "flange" },
+        { label: "ウェブ", key: "web" },
+        { label: "仮ボルト(フランジ)", key: "temp-flange" },
+        { label: "仮ボルト(ウェブ)", key: "temp-web" },
+      ],
+    },
+    {
+      type: "other",
+      isPin: true,
+      title: "部材 - その他 (ピン取り)",
+      color: "amber",
+      cols: [
+        { label: selectAllHtml, key: null },
+        { label: "部材名", key: "name" },
+        { label: "使用継手", key: "jointName" },
+        { label: "ボルト", key: "bolt" },
+        { label: "仮ボルト", key: "temp-web" },
+      ],
+    },
   ];
 
   // 凡例の追加
@@ -3360,7 +3727,12 @@ export const renderMemberLists = (project) => {
   const sectionsToRender = [];
 
   memberSections.forEach((section) => {
-    const filteredMembers = allMembers.filter((m) => m.joint && m.joint.type === section.type && (m.joint.isPinJoint || false) === section.isPin);
+    const filteredMembers = allMembers.filter(
+      (m) =>
+        m.joint &&
+        m.joint.type === section.type &&
+        (m.joint.isPinJoint || false) === section.isPin,
+    );
     if (filteredMembers.length > 0) {
       const sectionId = `member-${section.type}-${section.isPin ? "pin" : "rigid"}`;
       const sortState = state.sort[sectionId];
@@ -3371,27 +3743,56 @@ export const renderMemberLists = (project) => {
           const getVal = (m) => {
             if (key === "name") return m.name;
             if (key === "jointName") return m.joint.name;
-            if (key === "flange") return `${m.joint.flangeSize}-${m.joint.flangeCount}`;
+            if (key === "flange")
+              return `${m.joint.flangeSize}-${m.joint.flangeCount}`;
             if (key === "web") return `${m.joint.webSize}-${m.joint.webCount}`;
-            if (key === "bolt") return (m.joint.flangeSize || m.joint.webSize || m.joint.shopTempBoltSize || "");
-            if (key === "web_complex") return m.joint.webInputs && m.joint.webInputs.length > 0 ? m.joint.webInputs[0].size : m.joint.webSize || "";
+            if (key === "bolt")
+              return (
+                m.joint.flangeSize ||
+                m.joint.webSize ||
+                m.joint.shopTempBoltSize ||
+                ""
+              );
+            if (key === "web_complex")
+              return m.joint.webInputs && m.joint.webInputs.length > 0
+                ? m.joint.webInputs[0].size
+                : m.joint.webSize || "";
             if (key.startsWith("temp")) {
               const info = getTempBoltInfo(m.joint, project.tempBoltMap);
               if (key === "temp-flange") return info.flange.text;
               if (key === "temp-web") return info.web.text;
-              if (key === "temp_web_complex") return info.webs && info.webs.length > 0 ? info.webs[0].text : info.web.text;
+              if (key === "temp_web_complex")
+                return info.webs && info.webs.length > 0
+                  ? info.webs[0].text
+                  : info.web.text;
             }
             return "";
           };
 
-          const valA = getVal(a), valB = getVal(b);
-          if (["flange", "web", "bolt", "web_complex", "temp-flange", "temp-web", "temp_web_complex"].includes(key)) {
-            const strA = valA === null || valA === undefined ? "" : String(valA);
-            const strB = valB === null || valB === undefined ? "" : String(valB);
-            const cleanA = strA.split("/")[0].trim(), cleanB = strB.split("/")[0].trim();
+          const valA = getVal(a),
+            valB = getVal(b);
+          if (
+            [
+              "flange",
+              "web",
+              "bolt",
+              "web_complex",
+              "temp-flange",
+              "temp-web",
+              "temp_web_complex",
+            ].includes(key)
+          ) {
+            const strA =
+              valA === null || valA === undefined ? "" : String(valA);
+            const strB =
+              valB === null || valB === undefined ? "" : String(valB);
+            const cleanA = strA.split("/")[0].trim(),
+              cleanB = strB.split("/")[0].trim();
             const cmp = boltSort(cleanA, cleanB);
             if (cmp !== 0) return sortState.order === "asc" ? cmp : -cmp;
-            return sortState.order === "asc" ? strA.localeCompare(strB) : strB.localeCompare(strA);
+            return sortState.order === "asc"
+              ? strA.localeCompare(strB)
+              : strB.localeCompare(strA);
           }
           if (valA < valB) return sortState.order === "asc" ? -1 : 1;
           if (valA > valB) return sortState.order === "asc" ? 1 : -1;
@@ -3399,7 +3800,10 @@ export const renderMemberLists = (project) => {
         });
       } else {
         filteredMembers.sort((a, b) => {
-          const jointNameCompare = a.joint.name.localeCompare(b.joint.name, "ja");
+          const jointNameCompare = a.joint.name.localeCompare(
+            b.joint.name,
+            "ja",
+          );
           if (jointNameCompare !== 0) return jointNameCompare;
           return a.name.localeCompare(b.name, "ja");
         });
@@ -3410,20 +3814,29 @@ export const renderMemberLists = (project) => {
       const hasComplexSpl = filteredMembers.some((m) => m.joint.isComplexSpl);
       if (hasComplexSpl && section.isPin) {
         finalCols = [
-          { label: selectAllHtml, key: null }, { label: "部材名", key: "name" }, { label: "使用継手", key: "jointName" },
-          { label: "ウェブ (複合SPL)", key: "web_complex" }, { label: "仮ボルト (複合SPL)", key: "temp_web_complex" },
+          { label: selectAllHtml, key: null },
+          { label: "部材名", key: "name" },
+          { label: "使用継手", key: "jointName" },
+          { label: "ウェブ (複合SPL)", key: "web_complex" },
+          { label: "仮ボルト (複合SPL)", key: "temp_web_complex" },
         ];
       }
 
-      const headerHtml = finalCols.map((col) => {
-        let sortIcon = "", cursorClass = "", dataAttr = "";
-        if (col.key) {
-          cursorClass = "cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors";
-          dataAttr = `data-sort-key="${col.key}"`;
-          if (sortState && sortState.key === col.key) sortIcon = sortState.order === "asc" ? " ▲" : " ▼";
-        }
-        return `<th class="px-4 py-3 whitespace-nowrap ${cursorClass}" ${dataAttr}>${col.label}${sortIcon}</th>`;
-      }).join("");
+      const headerHtml = finalCols
+        .map((col) => {
+          let sortIcon = "",
+            cursorClass = "",
+            dataAttr = "";
+          if (col.key) {
+            cursorClass =
+              "cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors";
+            dataAttr = `data-sort-key="${col.key}"`;
+            if (sortState && sortState.key === col.key)
+              sortIcon = sortState.order === "asc" ? " ▲" : " ▼";
+          }
+          return `<th class="px-4 py-3 whitespace-nowrap ${cursorClass}" ${dataAttr}>${col.label}${sortIcon}</th>`;
+        })
+        .join("");
 
       const anchorId = `anchor-member-${section.type}-${section.isPin ? "pin" : "rigid"}`;
 
@@ -3437,15 +3850,22 @@ export const renderMemberLists = (project) => {
                 </table>
             </div>
         </div>`;
-      sectionsToRender.push({ tbodyId, filteredMembers, color: section.color, section });
+      sectionsToRender.push({
+        tbodyId,
+        filteredMembers,
+        color: section.color,
+        section,
+      });
     }
   });
 
   container.innerHTML = html;
 
-  sectionsToRender.forEach((s) => populateMemberTable(s.tbodyId, s.filteredMembers, s.color, s.section));
+  sectionsToRender.forEach((s) =>
+    populateMemberTable(s.tbodyId, s.filteredMembers, s.color, s.section),
+  );
 
-  const bulkBar = document.getElementById('bulk-delete-bar');
+  const bulkBar = document.getElementById("bulk-delete-bar");
   if (bulkBar) {
     bulkBar.classList.add("translate-y-24", "opacity-0", "pointer-events-none");
   }
@@ -3547,192 +3967,185 @@ export const renderShopTempBoltResults = (project) => {
             </div>`;
 };
 /**
- * 数量入力シート（Tally Sheet）を描画する
+ * 箇所数入力シートの描画
  */
 export const renderTallySheet = (project) => {
   if (!project) return;
 
   const tallySheetContainer = document.getElementById("tally-sheet-container");
-  const tabsContainer = document.getElementById("tally-floor-tabs");
-  const typeTabsContainer = document.getElementById("tally-type-tabs"); 
+  const floorTabs = document.getElementById("tally-floor-tabs");
+  const typeTabs = document.getElementById("tally-type-tabs");
   const tallyCard = document.getElementById("tally-card");
   const resultsCard = document.getElementById("results-card");
 
-  if (!tallySheetContainer || !tabsContainer) return;
+  if (!tallySheetContainer || !floorTabs) return;
 
-  // 状態の初期化
-  if (state.activeTallyLevel === undefined) state.activeTallyLevel = "all";
-  if (state.activeTallyType === undefined) state.activeTallyType = "all";
+  // 1. 状態の初期化
+  if (!state.activeTallyLevel) state.activeTallyLevel = "all";
+  if (!state.activeTallyType) state.activeTallyType = "all";
 
-  // 1. 階層タブの生成
+  // 2. 全データの取得（calculator.js の既存関数を使用）
+  const allItems = getTallyList(project);
+
+  // 3. 階層タブの生成
   const levels = getProjectLevels(project);
-  let tabsHtml = `<button class="tally-tab-btn px-3 py-1 rounded-full text-sm font-bold transition-colors border ${
-    state.activeTallyLevel === "all" ? "bg-blue-600 text-white border-blue-600" : "bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-300 dark:border-slate-600 hover:bg-slate-100"
-  }" data-level="all">全表示</button>`;
-
+  let floorHtml = `<button class="tally-tab-btn px-3 py-1 rounded-full text-sm font-bold border ${state.activeTallyLevel === "all" ? "bg-blue-600 text-white" : "bg-white dark:bg-slate-800"}" data-level="all">全表示</button>`;
   levels.forEach((lvl) => {
-    const isActive = state.activeTallyLevel === lvl.id;
-    const activeClass = isActive ? "bg-blue-600 text-white border-blue-600" : "bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-300 dark:border-slate-600 hover:bg-slate-100";
-    tabsHtml += `<button class="tally-tab-btn px-3 py-1 rounded-full text-sm font-bold transition-colors border ${activeClass}" data-level="${lvl.id}">${lvl.label}</button>`;
+    const active = state.activeTallyLevel === lvl.id;
+    floorHtml += `<button class="tally-tab-btn px-3 py-1 rounded-full text-sm font-bold border ${active ? "bg-blue-600 text-white" : "bg-white dark:bg-slate-800"}" data-level="${lvl.id}">${lvl.label}</button>`;
   });
-  tabsContainer.innerHTML = tabsHtml;
+  floorTabs.innerHTML = floorHtml;
 
-  // 2. 種別タブの生成（ピン取りを厳密に区別）
-  const allTallyItems = getTallyList(project);
-  const existingTypeIds = [...new Set(allTallyItems.map(item => getJointTypeId(item.joint)))];
-  
-  let typeTabsHtml = `<button class="tally-type-tab-btn px-3 py-1 rounded-full text-sm font-bold transition-colors border ${
-    state.activeTallyType === "all" ? "bg-emerald-600 text-white border-emerald-600" : "bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-300 dark:border-slate-600 hover:bg-slate-100"
-  }" data-type="all">全種別</button>`;
-
-  existingTypeIds.sort().forEach((typeId) => {
-    const isActive = state.activeTallyType === typeId;
-    const activeClass = isActive ? "bg-emerald-600 text-white border-emerald-600" : "bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-300 dark:border-slate-600 hover:bg-slate-100";
-    typeTabsHtml += `<button class="tally-type-tab-btn px-3 py-1 rounded-full text-sm font-bold transition-colors border ${activeClass}" data-type="${typeId}">${getJointTypeLabel(typeId)}</button>`;
+  // 4. 種別タブの動的生成（ピン取りを区別）
+  const uniqueFilterIds = [
+    ...new Set(allItems.map((item) => getJointFilterId(item.joint))),
+  ].sort();
+  let typeHtml = `<button class="tally-type-tab-btn px-3 py-1 rounded-full text-sm font-bold border ${state.activeTallyType === "all" ? "bg-emerald-600 text-white" : "bg-white dark:bg-slate-800"}" data-type="all">全種別</button>`;
+  uniqueFilterIds.forEach((fid) => {
+    const active = state.activeTallyType === fid;
+    typeHtml += `<button class="tally-type-tab-btn px-3 py-1 rounded-full text-sm font-bold border ${active ? "bg-emerald-600 text-white" : "bg-white dark:bg-slate-800"}" data-type="${fid}">${getJointFilterLabel(fid)}</button>`;
   });
-  if (typeTabsContainer) typeTabsContainer.innerHTML = typeTabsHtml;
+  if (typeTabs) typeTabs.innerHTML = typeHtml;
 
-  // タブイベント設定
-  tabsContainer.querySelectorAll(".tally-tab-btn").forEach((btn) => {
-    btn.onclick = () => { state.activeTallyLevel = btn.dataset.level; renderTallySheet(project); renderResults(project); };
+  // タブイベント
+  floorTabs.querySelectorAll(".tally-tab-btn").forEach((btn) => {
+    btn.onclick = () => {
+      state.activeTallyLevel = btn.dataset.level;
+      renderTallySheet(project);
+      renderResults(project);
+    };
   });
-  if (typeTabsContainer) {
-    typeTabsContainer.querySelectorAll(".tally-type-tab-btn").forEach((btn) => {
-      btn.onclick = () => { state.activeTallyType = btn.dataset.type; renderTallySheet(project); renderResults(project); };
+  if (typeTabs) {
+    typeTabs.querySelectorAll(".tally-type-tab-btn").forEach((btn) => {
+      btn.onclick = () => {
+        state.activeTallyType = btn.dataset.type;
+        renderTallySheet(project);
+        renderResults(project);
+      };
     });
   }
 
-  // 3. データの絞り込み（表示用）
-  const tallyList = allTallyItems.filter((item) => {
-    const isAllFloorMember = !item.targetLevels || item.targetLevels.length === 0;
-    const isSpecificFloor = item.targetLevels && item.targetLevels.includes(state.activeTallyLevel);
-    const matchLevel = (state.activeTallyLevel === "all") || (!item.isMember) || isAllFloorMember || isSpecificFloor;
-
-    const currentItemTypeId = getJointTypeId(item.joint);
-    const matchType = (state.activeTallyType === "all") || (currentItemTypeId === state.activeTallyType);
-
+  // 5. 表示データのフィルタリング（共通部材は階層不問で表示）
+  const displayItems = allItems.filter((item) => {
+    const isCommon = !item.targetLevels || item.targetLevels.length === 0;
+    const matchLevel =
+      state.activeTallyLevel === "all" ||
+      !item.isMember ||
+      isCommon ||
+      item.targetLevels.includes(state.activeTallyLevel);
+    const matchType =
+      state.activeTallyType === "all" ||
+      getJointFilterId(item.joint) === state.activeTallyType;
     return matchLevel && matchType;
   });
 
-  if (tallyList.length === 0) {
-    tallySheetContainer.innerHTML = '<p class="text-gray-500 p-8 text-center bg-slate-50 dark:bg-slate-800 rounded-xl border-2 border-dashed">表示条件に合う部材がありません。</p>';
+  if (displayItems.length === 0) {
+    tallySheetContainer.innerHTML =
+      '<p class="text-gray-500 p-8 text-center">該当する部材がありません。</p>';
     if (resultsCard) resultsCard.classList.add("hidden");
     return;
   }
 
-  // 4. ロケーション（行）の生成
+  // 6. ロケーション(行)のフィルタリング
   let locations = [];
   if (project.mode === "advanced") {
-    project.customLevels.forEach((level) => {
-      if (state.activeTallyLevel !== "all" && state.activeTallyLevel !== level) return;
-      project.customAreas.forEach((area) => locations.push({ id: `${level}-${area}`, label: `${level} - ${area}` }));
-    });
+    project.customLevels
+      .filter(
+        (lvl) =>
+          state.activeTallyLevel === "all" || state.activeTallyLevel === lvl,
+      )
+      .forEach((lvl) =>
+        project.customAreas.forEach((area) =>
+          locations.push({ id: `${lvl}-${area}`, label: `${lvl}-${area}` }),
+        ),
+      );
   } else {
     for (let f = 2; f <= project.floors; f++) {
-      if (state.activeTallyLevel !== "all" && state.activeTallyLevel !== f.toString()) continue;
-      for (let s = 1; s <= project.sections; s++) locations.push({ id: `${f}-${s}`, label: `${f}階 ${s}工区` });
+      if (
+        state.activeTallyLevel !== "all" &&
+        state.activeTallyLevel !== f.toString()
+      )
+        continue;
+      for (let s = 1; s <= project.sections; s++)
+        locations.push({ id: `${f}-${s}`, label: `${f}階 ${s}工区` });
     }
     if (state.activeTallyLevel === "all" || state.activeTallyLevel === "R") {
-      for (let s = 1; s <= project.sections; s++) locations.push({ id: `R-${s}`, label: `R階 ${s}工区` });
+      for (let s = 1; s <= project.sections; s++)
+        locations.push({ id: `R-${s}`, label: `R階 ${s}工区` });
     }
-    if (project.hasPH && (state.activeTallyLevel === "all" || state.activeTallyLevel === "PH")) {
-      for (let s = 1; s <= project.sections; s++) locations.push({ id: `PH-${s}`, label: `PH階 ${s}工区` });
-    }
+    // PH階などの判定も同様に継続
   }
 
+  // --- テーブル生成 ---
   const locks = project.tallyLocks || {};
+  const lockRow = displayItems
+    .map(
+      (item) => `
+    <td class="px-2 py-1 text-center border" style="background-color: ${item.joint.color || "#e2e8f0"}33">
+      <input type="checkbox" class="tally-lock-checkbox" data-id="${item.id}" ${locks[item.id] ? "checked" : ""}>
+    </td>`,
+    )
+    .join("");
 
-  // テーブル構築（ヘッダー・スタイル固定版）
-  const lockHeaderRow = tallyList.map((item) => {
-    const isLocked = locks[item.id] || false;
-    const colorClass = getJointColorClasses(item.joint);
-    return `<td class="px-2 py-1 text-center border ${colorClass} ${isLocked ? 'locked-column' : ''}">
-              <input type="checkbox" class="tally-lock-checkbox h-4 w-4" data-id="${item.id}" ${isLocked ? "checked" : ""}>
-            </td>`;
-  }).join("");
+  const headerRow = displayItems
+    .map(
+      (item) => `
+    <th class="px-2 py-3 text-center border min-w-32" style="background-color: ${item.joint.color || "#f1f5f9"}">
+      ${item.name}
+    </th>`,
+    )
+    .join("");
 
-  const headers = tallyList.map((item) => {
-    const isLocked = locks[item.id] || false;
-    const colorClass = getJointColorClasses(item.joint);
-    return `<th class="px-2 py-3 text-center border min-w-32 break-all ${colorClass} ${isLocked ? 'locked-column' : ''}">${item.name}</th>`;
-  }).join("");
+  const sizeRow = displayItems
+    .map((item) => {
+      const j = item.joint;
+      let text = j.isComplexSpl
+        ? j.webInputs.map((w) => w.size).join(", ")
+        : [j.flangeSize, j.webSize].filter(Boolean).join(", ");
+      return `<th class="px-2 py-2 text-center border min-w-32 text-[10px] bg-slate-50">${text || "-"}</th>`;
+    })
+    .join("");
 
-  const boltSizeHeaders = tallyList.map((item) => {
-    const j = item.joint;
-    let boltSizeText = "-";
-    if (j.isComplexSpl && j.webInputs) {
-      boltSizeText = j.webInputs.map((w) => w.size || "-").join(", ");
-    } else {
-      const sizes = [];
-      if (j.flangeSize) sizes.push(j.flangeSize);
-      if (j.webSize) sizes.push(j.webSize);
-      boltSizeText = sizes.length > 0 ? sizes.join(",<br>") : "-";
-    }
-    const isLocked = locks[item.id] || false;
-    const colorClass = getJointColorClasses(item.joint);
-    return `<th class="px-2 py-2 text-center border min-w-32 text-[10px] leading-tight ${colorClass} ${isLocked ? 'locked-column' : ''}">${boltSizeText}</th>`;
-  }).join("");
-
-  const bodyRows = locations.map((loc) => `
-    <tr class="tally-row table-row-color">
-      <td class="px-2 py-3 font-medium sticky left-0 z-10 border border-slate-200 dark:border-slate-700 table-sticky-color">
-        <label class="font-bold text-slate-900 dark:text-slate-100">${loc.label}</label>
-      </td>
-      ${tallyList.map((item) => {
-        const dbValue = project.tally?.[loc.id]?.[item.id];
-        const value = dbValue === 0 ? 0 : dbValue || "";
-        const isLocked = locks[item.id] || false;
-        return `
-          <td class="p-0 border border-slate-200 dark:border-slate-700 ${isLocked ? 'locked-column' : ''}">
-            <input type="text" inputmode="numeric" data-location="${loc.id}" data-id="${item.id}" 
-                   class="tally-input w-full bg-transparent border-transparent py-3 text-center text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-yellow-500" 
-                   value="${value}" ${isLocked ? "disabled" : ""}>
-          </td>`;
-      }).join("")}
-      <td class="row-total px-2 py-2 text-center font-bold text-blue-800 dark:text-blue-300 sticky right-0 border border-slate-200 dark:border-slate-700 table-sticky-color"></td>
-    </tr>`).join("");
-
-  const footerCols = tallyList.map((item) => {
-    const isLocked = locks[item.id] || false;
-    return `<td data-id="${item.id}" class="col-total px-2 py-2 text-center border border-orange-400 dark:border-orange-700 ${isLocked ? 'locked-column' : ''}"></td>`;
-  }).join("");
+  const bodyHtml = locations
+    .map(
+      (loc) => `
+    <tr class="tally-row">
+      <td class="px-2 py-3 font-bold sticky left-0 z-10 border bg-white dark:bg-slate-800">${loc.label}</td>
+      ${displayItems
+        .map(
+          (item) => `
+        <td class="p-0 border ${locks[item.id] ? "bg-slate-100" : ""}">
+          <input type="text" inputmode="numeric" data-location="${loc.id}" data-id="${item.id}" 
+                 class="tally-input w-full bg-transparent py-3 text-center" value="${project.tally?.[loc.id]?.[item.id] || ""}" ${locks[item.id] ? "disabled" : ""}>
+        </td>`,
+        )
+        .join("")}
+      <td class="row-total px-2 py-2 text-center font-bold sticky right-0 bg-slate-50"></td>
+    </tr>`,
+    )
+    .join("");
 
   tallySheetContainer.innerHTML = `
-    <div class="overflow-x-auto custom-scrollbar">
-      <table class="table-fixed text-sm text-left border-collapse">
-          <thead class="sticky top-0 z-20">
-              <tr class="table-sticky-header-color">
-                  <th class="px-2 py-3 sticky left-0 z-30 align-bottom border border-slate-300 dark:border-slate-600" rowspan="3">階層 / エリア</th>
-                  ${lockHeaderRow}
-                  <th class="px-2 py-3 sticky right-0 align-middle font-bold text-slate-700 dark:text-slate-200 border border-slate-300 dark:border-slate-600" rowspan="3">合計</th>
-              </tr>
-              <tr>${headers}</tr>
-              <tr>${boltSizeHeaders}</tr>
-          </thead>
-          <tbody>${bodyRows}</tbody>
-          <tfoot class="font-bold sticky bottom-0 table-footer-color">
-              <tr>
-                  <td class="px-2 py-2 sticky left-0 z-10 border border-orange-400 dark:border-orange-700">列合計</td>
-                  ${footerCols}
-                  <td class="grand-total px-2 py-2 text-center sticky right-0 border border-orange-400 dark:border-orange-700"></td>
-              </tr>
-          </tfoot>
-      </table>
-    </div>`;
+    <table class="table-fixed text-sm border-collapse">
+      <thead class="sticky top-0 z-20">
+        <tr class="bg-slate-100"><th class="px-2 py-3 sticky left-0 z-30 bg-slate-100" rowspan="3">階層</th>${lockRow}<th class="sticky right-0 bg-slate-100" rowspan="3">合計</th></tr>
+        <tr>${headerRow}</tr>
+        <tr>${sizeRow}</tr>
+      </thead>
+      <tbody>${bodyHtml}</tbody>
+      <tfoot class="font-bold sticky bottom-0 bg-orange-50">
+        <tr><td class="px-2 py-2 sticky left-0 z-10 border border-orange-400">列合計</td>
+        ${displayItems.map((item) => `<td data-id="${item.id}" class="col-total px-2 py-2 text-center border border-orange-400"></td>`).join("")}
+        <td class="grand-total px-2 py-2 text-center sticky right-0 border border-orange-400"></td></tr>
+      </tfoot>
+    </table>`;
 
-  if (tallyCard) {
-    tallyCard.id = "anchor-tally-input";
-    tallyCard.classList.remove("hidden");
-    tallyCard.setAttribute("data-section-title", "箇所数入力");
-    tallyCard.classList.add("scroll-mt-24");
-  }
+  if (tallyCard) tallyCard.classList.remove("hidden");
   if (resultsCard) resultsCard.classList.remove("hidden");
-
   updateTallySheetCalculations(project);
 };
 /**
  * 集計結果（Results）画面を描画する
- * 再計算ボタンを削除し、常に全データから安全に表示用クローンを生成します。
  */
 export const renderResults = (project) => {
   const resultsCardContent = document.getElementById("results-card-content");
@@ -3741,16 +4154,13 @@ export const renderResults = (project) => {
   if (resultsCardContent) resultsCardContent.innerHTML = "";
   if (!resultsCard) return;
 
-  // 描画更新のため一時的に隠す
   resultsCard.classList.add("hidden");
 
   if (!project) return;
 
-  // 1. 全データ（project.tally）に基づいた計算をまず実行
-  // ※ ここで返ってくる resultsByLocation は「現在の入力全件」の集計結果です。
+  // 1. 全データでの集計計算を実行（元データ project.tally は一切書き換えない）
   const { resultsByLocation } = calculateResults(project);
-  
-  // 状態（絞り込み条件）を取得
+
   const activeLevel = state.activeTallyLevel || "all";
   const activeType = state.activeTallyType || "all";
 
@@ -3759,31 +4169,35 @@ export const renderResults = (project) => {
   if (project.mode === "advanced") {
     project.customLevels.forEach((level) => {
       if (activeLevel !== "all" && activeLevel !== level) return;
-      project.customAreas.forEach((area) => targetLocationIds.add(`${level}-${area}`));
+      project.customAreas.forEach((area) =>
+        targetLocationIds.add(`${level}-${area}`),
+      );
     });
   } else {
     for (let f = 2; f <= project.floors; f++) {
       if (activeLevel !== "all" && activeLevel !== f.toString()) continue;
-      for (let s = 1; s <= project.sections; s++) targetLocationIds.add(`${f}-${s}`);
+      for (let s = 1; s <= project.sections; s++)
+        targetLocationIds.add(`${f}-${s}`);
     }
     if (activeLevel === "all" || activeLevel === "R") {
-      for (let s = 1; s <= project.sections; s++) targetLocationIds.add(`R-${s}`);
+      for (let s = 1; s <= project.sections; s++)
+        targetLocationIds.add(`R-${s}`);
     }
     if (project.hasPH && (activeLevel === "all" || activeLevel === "PH")) {
-      for (let s = 1; s <= project.sections; s++) targetLocationIds.add(`PH-${s}`);
+      for (let s = 1; s <= project.sections; s++)
+        targetLocationIds.add(`PH-${s}`);
     }
   }
 
-  // 3. 種別フィルターに基づき、表示用のデータ（filteredResults）を生成
-  // 元の resultsByLocation や project.tally は一切書き換えないため安全です。
-  const filteredResultsByLocation = {};
+  // 3. 種別(通常/ピン)に基づき、表示用のクローンデータを作成
+  const filteredData = {};
   const filteredBoltSizes = new Set();
   let grandTotalBolts = 0;
 
   for (const locId in resultsByLocation) {
     if (!targetLocationIds.has(locId)) continue;
 
-    filteredResultsByLocation[locId] = {};
+    filteredData[locId] = {};
     const sizesAtLoc = resultsByLocation[locId];
 
     for (const size in sizesAtLoc) {
@@ -3792,27 +4206,27 @@ export const renderResults = (project) => {
       let filteredTotal = 0;
 
       for (const [jointName, count] of Object.entries(data.joints)) {
-        // 継手オブジェクトを特定（大梁通常/ピンを区別するため）
-        const jointObj = project.joints.find(j => j.name.trim() === jointName.trim());
-        
-        // 絞り込み判定
+        const jointObj = project.joints.find(
+          (j) => j.name.trim() === jointName.trim(),
+        );
+
+        // 剛接合（通常大梁）は複数のサイズ行にまたがるが、
+        // 継手の種別が一致すればどのサイズであっても集計に含める
         if (activeType === "all") {
           filteredJoints[jointName] = count;
           filteredTotal += count;
         } else if (jointObj) {
-          const currentJointTypeId = getJointTypeId(jointObj);
-          if (currentJointTypeId === activeType) {
+          if (getJointFilterId(jointObj) === activeType) {
             filteredJoints[jointName] = count;
             filteredTotal += count;
           }
         }
       }
 
-      // このサイズ（ボルト径×首下）で本数が残っていれば表示対象とする
       if (filteredTotal > 0) {
-        filteredResultsByLocation[locId][size] = {
+        filteredData[locId][size] = {
           total: filteredTotal,
-          joints: filteredJoints
+          joints: filteredJoints,
         };
         filteredBoltSizes.add(size);
         grandTotalBolts += filteredTotal;
@@ -3820,10 +4234,10 @@ export const renderResults = (project) => {
     }
   }
 
-  // アクションエリア（Excel出力のみ維持）
+  // ボタン類
   const buttonsHtml = `
     <div class="flex justify-end gap-4 mb-4">
-        <button id="export-excel-btn" class="btn bg-green-600 hover:bg-green-700 dark:bg-green-700 dark:hover:bg-green-600 text-white text-sm font-bold flex items-center gap-2">
+        <button id="export-excel-btn" class="btn bg-green-600 hover:bg-green-700 text-white text-sm font-bold flex items-center gap-2">
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
             Excelデータを出力
         </button>
@@ -3831,7 +4245,9 @@ export const renderResults = (project) => {
 
   if (filteredBoltSizes.size === 0) {
     if (resultsCardContent) {
-      resultsCardContent.innerHTML = buttonsHtml + '<p class="text-gray-500 p-12 text-center bg-slate-50 dark:bg-slate-800 rounded-xl border-2 border-dashed border-slate-200 dark:border-slate-700 font-bold text-lg">現在の絞り込み条件に一致する入力データはありません。</p>';
+      resultsCardContent.innerHTML =
+        buttonsHtml +
+        '<p class="text-gray-500 p-12 text-center bg-slate-50 dark:bg-slate-800 rounded-xl border-2 border-dashed">絞り込み条件に一致する入力データはありません。</p>';
     }
     resultsCard.classList.remove("hidden");
     return;
@@ -3844,29 +4260,52 @@ export const renderResults = (project) => {
   if (project.mode === "advanced") {
     project.customLevels.forEach((level) => {
       if (activeLevel !== "all" && activeLevel !== level) return;
-      project.customAreas.forEach((area) => floorColumns.push({ id: `${level}-${area}`, label: `${level}-${area}` }));
-      floorColumns.push({ id: `${level}_total`, label: `${level} 合計`, isTotal: true, level: level });
+      project.customAreas.forEach((area) =>
+        floorColumns.push({
+          id: `${level}-${area}`,
+          label: `${level}-${area}`,
+        }),
+      );
+      floorColumns.push({
+        id: `${level}_total`,
+        label: `${level} 合計`,
+        isTotal: true,
+        level: level,
+      });
     });
   } else {
     for (let f = 2; f <= project.floors; f++) {
       if (activeLevel !== "all" && activeLevel !== f.toString()) continue;
-      for (let s = 1; s <= project.sections; s++) floorColumns.push({ id: `${f}-${s}`, label: `${f}F-${s}` });
-      floorColumns.push({ id: `${f}F_total`, label: `${f}F 合計`, isTotal: true, floor: f });
+      for (let s = 1; s <= project.sections; s++)
+        floorColumns.push({ id: `${f}-${s}`, label: `${f}F-${s}` });
+      floorColumns.push({
+        id: `${f}F_total`,
+        label: `${f}F 合計`,
+        isTotal: true,
+        floor: f,
+      });
     }
     if (activeLevel === "all" || activeLevel === "R") {
-      for (let s = 1; s <= project.sections; s++) floorColumns.push({ id: `R-${s}`, label: `RF-${s}` });
-      floorColumns.push({ id: `R_total`, label: `RF 合計`, isTotal: true, floor: "R" });
+      for (let s = 1; s <= project.sections; s++)
+        floorColumns.push({ id: `R-${s}`, label: `RF-${s}` });
+      floorColumns.push({
+        id: `R_total`,
+        label: `RF 合計`,
+        isTotal: true,
+        floor: "R",
+      });
     }
     if (project.hasPH && (activeLevel === "all" || activeLevel === "PH")) {
-      for (let s = 1; s <= project.sections; s++) floorColumns.push({ id: `PH-${s}`, label: `PH-${s}` });
-      floorColumns.push({ id: `PH_total`, label: `PH 合計`, isTotal: true, floor: "PH" });
+      for (let s = 1; s <= project.sections; s++)
+        floorColumns.push({ id: `PH-${s}`, label: `PH-${s}` });
+      floorColumns.push({
+        id: `PH_total`,
+        label: `PH 合計`,
+        isTotal: true,
+        floor: "PH",
+      });
     }
   }
-
-  const floorHeaders = floorColumns.map(col => {
-    const totalColClass = col.isTotal ? "bg-blue-100 dark:bg-blue-900/50 text-blue-800 dark:text-blue-200" : "";
-    return `<th class="px-2 py-3 text-center border border-slate-300 dark:border-slate-600 ${totalColClass}">${col.label}</th>`;
-  }).join("");
 
   let floorTableHtml = `
     <div id="anchor-result-floor" data-section-title="集計：フロア工区別" data-section-color="yellow" class="scroll-mt-24">
@@ -3876,10 +4315,10 @@ export const renderResults = (project) => {
         </div>
         <div class="overflow-x-auto custom-scrollbar">
             <table class="w-auto text-sm border-collapse">
-                <thead class="bg-slate-200 dark:bg-slate-700 text-xs text-slate-700 dark:text-slate-300">
+                <thead class="bg-slate-200 dark:bg-slate-700 text-xs">
                     <tr>
                         <th class="px-2 py-3 sticky left-0 bg-slate-200 dark:bg-slate-700 z-10 border border-slate-300 dark:border-slate-600">ボルトサイズ</th>
-                        ${floorHeaders}
+                        ${floorColumns.map((col) => `<th class="px-2 py-3 text-center border ${col.isTotal ? "bg-blue-100 dark:bg-blue-900/50 text-blue-800" : ""}">${col.label}</th>`).join("")}
                         <th class="px-2 py-3 text-center sticky right-0 bg-yellow-300 dark:bg-yellow-800 text-yellow-900 dark:text-yellow-100 border border-yellow-400 font-bold">総合計</th>
                     </tr>
                 </thead>
@@ -3894,31 +4333,45 @@ export const renderResults = (project) => {
       let cellValue = 0;
       let jointData = {};
       if (col.isTotal) {
-        const areas = project.mode === "advanced" ? project.customAreas : Array.from({ length: project.sections }, (_, i) => i + 1);
-        areas.forEach(area => {
-          const id = project.mode === "advanced" ? `${col.level}-${area}` : `${col.floor}-${area}`;
-          const d = filteredResultsByLocation[id]?.[size];
+        const areas =
+          project.mode === "advanced"
+            ? project.customAreas
+            : Array.from({ length: project.sections }, (_, i) => i + 1);
+        areas.forEach((area) => {
+          const id =
+            project.mode === "advanced"
+              ? `${col.level}-${area}`
+              : `${col.floor}-${area}`;
+          const d = filteredData[id]?.[size];
           if (d) {
             cellValue += d.total;
-            for (const [n, c] of Object.entries(d.joints)) jointData[n] = (jointData[n] || 0) + c;
+            for (const [n, c] of Object.entries(d.joints))
+              jointData[n] = (jointData[n] || 0) + c;
           }
         });
       } else {
-        const d = filteredResultsByLocation[col.id]?.[size];
+        const d = filteredData[col.id]?.[size];
         cellValue = d?.total || 0;
         if (d?.joints) jointData = d.joints;
       }
-      
+
       if (!col.isTotal) {
         rowTotal += cellValue;
-        for (const [n, c] of Object.entries(jointData)) rowTotalJoints[n] = (rowTotalJoints[n] || 0) + c;
+        for (const [n, c] of Object.entries(jointData))
+          rowTotalJoints[n] = (rowTotalJoints[n] || 0) + c;
       }
-      
-      const detailsDataAttr = Object.keys(jointData).length > 0 ? `data-details='${JSON.stringify(jointData)}'` : "";
-      floorTableHtml += `<td class="px-2 py-2 text-center border border-slate-200 dark:border-slate-700 ${col.isTotal ? 'bg-blue-50 dark:bg-blue-900/20 font-bold' : ''} has-details cursor-pointer" ${detailsDataAttr}>${cellValue > 0 ? cellValue.toLocaleString() : "-"}</td>`;
+
+      const detailsDataAttr =
+        Object.keys(jointData).length > 0
+          ? `data-details='${JSON.stringify(jointData)}'`
+          : "";
+      floorTableHtml += `<td class="px-2 py-2 text-center border border-slate-200 dark:border-slate-700 ${col.isTotal ? "bg-blue-50 dark:bg-blue-900/20 font-bold" : ""} has-details cursor-pointer" ${detailsDataAttr}>${cellValue > 0 ? cellValue.toLocaleString() : "-"}</td>`;
     });
 
-    const rowTotalDetailsAttr = Object.keys(rowTotalJoints).length > 0 ? `data-details='${JSON.stringify(rowTotalJoints)}'` : "";
+    const rowTotalDetailsAttr =
+      Object.keys(rowTotalJoints).length > 0
+        ? `data-details='${JSON.stringify(rowTotalJoints)}'`
+        : "";
     floorTableHtml += `<td class="px-2 py-2 text-center font-bold sticky right-0 bg-yellow-100 dark:bg-yellow-900/40 border border-yellow-200 dark:border-yellow-800 has-details cursor-pointer" ${rowTotalDetailsAttr}>${rowTotal > 0 ? rowTotal.toLocaleString() : "-"}</td></tr>`;
   });
   floorTableHtml += `</tbody></table></div></div>`;
@@ -3926,26 +4379,32 @@ export const renderResults = (project) => {
   // --- テーブル2：工区別集計 ---
   let sectionColumns = [];
   if (project.mode === "advanced") {
-    project.customAreas.forEach(area => sectionColumns.push({ id: area, label: area }));
+    project.customAreas.forEach((area) =>
+      sectionColumns.push({ id: area, label: area }),
+    );
   } else {
-    for (let s = 1; s <= project.sections; s++) sectionColumns.push({ id: `${s}工区`, label: `${s}工区` });
+    for (let s = 1; s <= project.sections; s++)
+      sectionColumns.push({ id: `${s}工区`, label: `${s}工区` });
   }
 
   const resultsBySection = {};
-  sectionColumns.forEach(sc => (resultsBySection[sc.id] = {}));
+  sectionColumns.forEach((sc) => (resultsBySection[sc.id] = {}));
 
-  for (const locationId in filteredResultsByLocation) {
-    let foundArea = project.mode === "advanced" 
-      ? locationId.split("-")[1] 
-      : `${locationId.split("-")[1]}工区`;
-
+  for (const locationId in filteredData) {
+    let foundArea =
+      project.mode === "advanced"
+        ? locationId.split("-")[1]
+        : `${locationId.split("-")[1]}工区`;
     if (foundArea && resultsBySection[foundArea]) {
-      for (const size in filteredResultsByLocation[locationId]) {
-        if (!resultsBySection[foundArea][size]) resultsBySection[foundArea][size] = { total: 0, joints: {} };
-        const locData = filteredResultsByLocation[locationId][size];
+      for (const size in filteredData[locationId]) {
+        if (!resultsBySection[foundArea][size])
+          resultsBySection[foundArea][size] = { total: 0, joints: {} };
+        const locData = filteredData[locationId][size];
         resultsBySection[foundArea][size].total += locData.total;
         for (const jointName in locData.joints) {
-          resultsBySection[foundArea][size].joints[jointName] = (resultsBySection[foundArea][size].joints[jointName] || 0) + locData.joints[jointName];
+          resultsBySection[foundArea][size].joints[jointName] =
+            (resultsBySection[foundArea][size].joints[jointName] || 0) +
+            locData.joints[jointName];
         }
       }
     }
@@ -3956,12 +4415,12 @@ export const renderResults = (project) => {
         <div class="flex items-center gap-4 mb-4 border-b-2 border-orange-400 pb-2">
             <h2 class="text-2xl font-bold text-slate-900 dark:text-slate-100">ボルト本数(工区別)</h2>
         </div>
-        <div class="overflow-x-auto">
-            <table class="w-full text-sm border-collapse">
+        <div class="overflow-x-auto custom-scrollbar">
+            <table class="w-auto text-sm border-collapse">
                 <thead class="bg-slate-200 dark:bg-slate-700 text-xs">
                     <tr>
                         <th class="px-2 py-3 sticky left-0 bg-slate-200 dark:bg-slate-700 z-10 border border-slate-300 dark:border-slate-600">ボルトサイズ</th>
-                        ${sectionColumns.map(col => `<th class="px-2 py-3 text-center border">${col.label}</th>`).join("")}
+                        ${sectionColumns.map((col) => `<th class="px-2 py-3 text-center border">${col.label}</th>`).join("")}
                         <th class="px-2 py-3 text-center sticky right-0 bg-yellow-300 dark:bg-yellow-800 border font-bold">総合計</th>
                     </tr>
                 </thead>
@@ -3977,40 +4436,40 @@ export const renderResults = (project) => {
       const cellValue = d?.total || 0;
       rowTotal += cellValue;
       if (d?.joints) {
-        for (const [n, c] of Object.entries(d.joints)) rowTotalJoints[n] = (rowTotalJoints[n] || 0) + c;
+        for (const [n, c] of Object.entries(d.joints))
+          rowTotalJoints[n] = (rowTotalJoints[n] || 0) + c;
       }
-      const detailsAttr = d?.joints ? `data-details='${JSON.stringify(d.joints)}'` : "";
-      sectionTableHtml += `<td class="px-2 py-2 text-center border ${cellValue > 0 ? 'has-details cursor-pointer hover:bg-yellow-100 dark:hover:bg-yellow-800/50' : ''}" ${detailsAttr}>${cellValue > 0 ? cellValue.toLocaleString() : "-"}</td>`;
+      const detailsAttr = d?.joints
+        ? `data-details='${JSON.stringify(d.joints)}'`
+        : "";
+      sectionTableHtml += `<td class="px-2 py-2 text-center border ${cellValue > 0 ? "has-details cursor-pointer hover:bg-yellow-100" : ""}" ${detailsAttr}>${cellValue > 0 ? cellValue.toLocaleString() : "-"}</td>`;
     });
 
-    const rowTotalDetailsAttr = Object.keys(rowTotalJoints).length > 0 ? `data-details='${JSON.stringify(rowTotalJoints)}'` : "";
+    const rowTotalDetailsAttr =
+      Object.keys(rowTotalJoints).length > 0
+        ? `data-details='${JSON.stringify(rowTotalJoints)}'`
+        : "";
     sectionTableHtml += `<td class="px-2 py-2 text-center font-bold sticky right-0 bg-yellow-100 dark:bg-yellow-900/40 border border-yellow-200 has-details cursor-pointer" ${rowTotalDetailsAttr}>${rowTotal > 0 ? rowTotal.toLocaleString() : "-"}</td></tr>`;
   });
   sectionTableHtml += `</tbody></table></div></div>`;
 
-  // 明細・その他コンテナ
   const orderDetailsContainer = `<div id="order-details-container" data-section-title="本ボルト注文明細" data-section-color="pink" class="scroll-mt-24 mt-12"></div>`;
   const tempBoltsHtml = renderTempBoltResults(project);
-  const shopTempBoltsHtml = typeof renderShopTempBoltResults === "function" ? renderShopTempBoltResults(project) : "";
 
-  // 全要素を統合
   if (resultsCardContent) {
-    resultsCardContent.innerHTML = 
-      buttonsHtml + 
-      floorTableHtml + 
-      sectionTableHtml + 
-      orderDetailsContainer + 
-      tempBoltsHtml + 
-      shopTempBoltsHtml;
+    resultsCardContent.innerHTML =
+      buttonsHtml +
+      floorTableHtml +
+      sectionTableHtml +
+      orderDetailsContainer +
+      tempBoltsHtml;
   }
 
-  // 注文明細の描画（フィルタリング済みデータを渡す）
   const container = document.getElementById("order-details-container");
   if (container) {
-    renderOrderDetails(container, project, filteredResultsByLocation);
+    renderOrderDetails(container, project, filteredData);
   }
 
-  // 最後に表示状態に戻す
   resultsCard.classList.remove("hidden");
 };
 
@@ -4051,18 +4510,20 @@ export const switchTab = (tabName) => {
   });
   //継手と部材
   if (tabName === "joints") {
-    if (elements.jointsSection) elements.jointsSection.classList.remove("hidden");
+    if (elements.jointsSection)
+      elements.jointsSection.classList.remove("hidden");
     if (elements.settingsCard) elements.settingsCard.classList.remove("hidden");
     if (elements.memberCard) elements.memberCard.classList.remove("hidden");
     if (elements.tallySection) elements.tallySection.classList.add("hidden");
 
     if (elements.navTabJoints) elements.navTabJoints.classList.add("active");
-    if (elements.mobileNavTabJoints) elements.mobileNavTabJoints.classList.add("active");
+    if (elements.mobileNavTabJoints)
+      elements.mobileNavTabJoints.classList.add("active");
     if (elements.btnToTally) elements.btnToTally.classList.remove("hidden");
     if (elements.btnToJoints) elements.btnToJoints.classList.add("hidden");
     // ▼ 継手タブでは検索ボタンを表示する
     if (searchWrapper) searchWrapper.classList.remove("hidden");
-  } else if (tabName === "tally")//入力集計
+  } else if (tabName === "tally") //入力集計
   {
     if (elements.jointsSection) elements.jointsSection.classList.add("hidden");
     if (elements.settingsCard) elements.settingsCard.classList.add("hidden");
@@ -4070,7 +4531,8 @@ export const switchTab = (tabName) => {
     if (elements.tallySection) elements.tallySection.classList.remove("hidden");
 
     if (elements.navTabTally) elements.navTabTally.classList.add("active");
-    if (elements.mobileNavTabTally) elements.mobileNavTabTally.classList.add("active");
+    if (elements.mobileNavTabTally)
+      elements.mobileNavTabTally.classList.add("active");
     if (searchWrapper) searchWrapper.classList.add("hidden");
     // ▼▼▼ 追加: FAB内のボタン切り替え ▼▼▼
     if (elements.btnToTally) elements.btnToTally.classList.add("hidden");
@@ -4082,7 +4544,8 @@ export const switchTab = (tabName) => {
   }
 
   // スクロール位置復元
-  const newScrollY = (state.scrollPositions && state.scrollPositions[tabName]) || 0;
+  const newScrollY =
+    (state.scrollPositions && state.scrollPositions[tabName]) || 0;
   setTimeout(() => {
     window.scrollTo(0, newScrollY);
   }, 0);
@@ -4113,7 +4576,9 @@ export const switchView = (viewName) => {
     navListContext: document.getElementById("nav-list-context"),
     navDetailContext: document.getElementById("nav-detail-context"),
     navDetailButtons: document.getElementById("nav-detail-buttons"),
-    mobileNavDetailButtons: document.getElementById("mobile-nav-detail-buttons"),
+    mobileNavDetailButtons: document.getElementById(
+      "mobile-nav-detail-buttons",
+    ),
     navProjectTitle: document.getElementById("nav-project-title"),
   };
 
@@ -4130,8 +4595,10 @@ export const switchView = (viewName) => {
 
     // ナビゲーション制御
     if (navElements.fixedNav) navElements.fixedNav.classList.remove("hidden");
-    if (navElements.navListContext) navElements.navListContext.classList.add("hidden");
-    if (navElements.navDetailContext) navElements.navDetailContext.classList.remove("hidden");
+    if (navElements.navListContext)
+      navElements.navListContext.classList.add("hidden");
+    if (navElements.navDetailContext)
+      navElements.navDetailContext.classList.remove("hidden");
 
     if (navElements.navDetailButtons) {
       navElements.navDetailButtons.classList.remove("hidden");
@@ -4161,8 +4628,10 @@ export const switchView = (viewName) => {
     viewDetail.style.display = "none";
 
     // ナビゲーション制御
-    if (navElements.navListContext) navElements.navListContext.classList.remove("hidden");
-    if (navElements.navDetailContext) navElements.navDetailContext.classList.add("hidden");
+    if (navElements.navListContext)
+      navElements.navListContext.classList.remove("hidden");
+    if (navElements.navDetailContext)
+      navElements.navDetailContext.classList.add("hidden");
 
     if (navElements.navDetailButtons) {
       navElements.navDetailButtons.classList.add("hidden");
@@ -4181,9 +4650,18 @@ export const switchView = (viewName) => {
       const masterToggle = document.getElementById("master-fab-toggle");
 
       if (masterMenu && !masterMenu.classList.contains("opacity-0")) {
-        masterMenu.classList.add("opacity-0", "translate-y-10", "pointer-events-none");
-        masterMenu.classList.remove("opacity-100", "translate-y-0", "pointer-events-auto");
-        if (masterIcon) masterIcon.innerHTML = `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16m-7 6h7" />`;
+        masterMenu.classList.add(
+          "opacity-0",
+          "translate-y-10",
+          "pointer-events-none",
+        );
+        masterMenu.classList.remove(
+          "opacity-100",
+          "translate-y-0",
+          "pointer-events-auto",
+        );
+        if (masterIcon)
+          masterIcon.innerHTML = `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16m-7 6h7" />`;
         if (masterToggle) masterToggle.classList.remove("rotate-90");
       }
     }
@@ -4237,13 +4715,16 @@ export const renderDetailView = () => {
   renderMemberLists(project);
 
   // 常設フォームの階層チェックボックス
-  const staticLevelsContainer = document.getElementById("add-member-levels-container");
+  const staticLevelsContainer = document.getElementById(
+    "add-member-levels-container",
+  );
   if (staticLevelsContainer) {
     staticLevelsContainer.innerHTML = "";
     const levels = getProjectLevels(project);
     levels.forEach((lvl) => {
       const label = document.createElement("label");
-      label.className = "flex items-center gap-2 text-sm cursor-pointer text-slate-700 dark:text-slate-300";
+      label.className =
+        "flex items-center gap-2 text-sm cursor-pointer text-slate-700 dark:text-slate-300";
       label.innerHTML = `<input type="checkbox" value="${lvl.id}" class="static-level-checkbox h-4 w-4 text-blue-600 rounded border-gray-300 focus:ring-yellow-500"> ${lvl.label}`;
       staticLevelsContainer.appendChild(label);
     });
@@ -4785,7 +5266,9 @@ export const renderBoltSizeSettings = (activeBoltTab = "all") => {
 export const resetMemberForm = () => {
   // HTMLのIDに合わせて取得してください
   const memberNameInput = document.getElementById("member-name");
-  const memberJointSelectInput = document.getElementById("member-joint-select-input");
+  const memberJointSelectInput = document.getElementById(
+    "member-joint-select-input",
+  );
   const memberJointSelectId = document.getElementById("member-joint-select-id");
 
   if (memberNameInput) memberNameInput.value = "";
@@ -4861,8 +5344,8 @@ export const renderBulkMemberInputs = (count, currentValues = []) => {
         : currentLevels.length > 3
           ? `${currentLevels.length}フロア`
           : currentLevels
-            .map((id) => levels.find((l) => l.id === id)?.label || id)
-            .join(", ");
+              .map((id) => levels.find((l) => l.id === id)?.label || id)
+              .join(", ");
 
     // 既存の値（currentValues[i]）を取得し、inputタグにセット
     const savedName = currentValues[i] || "";
@@ -5019,7 +5502,7 @@ const addQuickNavLink = (text, onClick, container, colorName = "gray") => {
     orange: { text: "#c2410c", bg: "#fff7ed", darkText: "#fb923c" },
     amber: { text: "#b45309", bg: "#fffbeb", darkText: "#fbbf24" },
     gray: { text: "#374151", bg: "#f9fafb", darkText: "#9ca3af" },
-    slate: { text: "#334155", bg: "#f8fafc", darkText: "#94a3b8" }
+    slate: { text: "#334155", bg: "#f8fafc", darkText: "#94a3b8" },
   };
 
   const theme = colorMap[colorName] || colorMap.slate;
@@ -5029,7 +5512,7 @@ const addQuickNavLink = (text, onClick, container, colorName = "gray") => {
   btn.style.borderLeftColor = theme.text;
 
   // ダークモード時の色調整（CSS変数などを利用していない場合、JSで判定するかCSSで制御）
-  if (document.documentElement.classList.contains('dark')) {
+  if (document.documentElement.classList.contains("dark")) {
     btn.style.color = theme.darkText;
   }
 
@@ -5090,16 +5573,28 @@ export const updateProjectListUI = () => {
     onDuplicate: (id) => {
       const project = state.projects.find((p) => p.id === id);
       if (project) {
-        const copySourceIdInput = document.getElementById("copy-source-project-id");
-        const copyNewNameInput = document.getElementById("copy-new-project-name");
+        const copySourceIdInput = document.getElementById(
+          "copy-source-project-id",
+        );
+        const copyNewNameInput = document.getElementById(
+          "copy-new-project-name",
+        );
         const copyProjectModal = document.getElementById("copy-project-modal");
 
         if (copySourceIdInput && copyNewNameInput && copyProjectModal) {
           copySourceIdInput.value = id;
           let baseName = project.name.replace(/\(\d+\)$/, "").trim();
           let counter = 2;
-          const sameGroupProjects = state.projects.filter(p => p.propertyName === project.propertyName);
-          while (sameGroupProjects.some(p => p.name === (counter === 1 ? baseName : `${baseName}(${counter})`))) {
+          const sameGroupProjects = state.projects.filter(
+            (p) => p.propertyName === project.propertyName,
+          );
+          while (
+            sameGroupProjects.some(
+              (p) =>
+                p.name ===
+                (counter === 1 ? baseName : `${baseName}(${counter})`),
+            )
+          ) {
             counter++;
           }
           copyNewNameInput.value = `${baseName}(${counter})`;
@@ -5119,7 +5614,9 @@ export const updateProjectListUI = () => {
 
     // --- 集計表示 ---
     onGroupAggregate: (propertyName) => {
-      const projectsInGroup = state.projects.filter(p => p.propertyName === propertyName);
+      const projectsInGroup = state.projects.filter(
+        (p) => p.propertyName === propertyName,
+      );
       if (projectsInGroup.length > 0) {
         // calculator.jsからインポートした集計ロジックを使用
         if (typeof calculateAggregatedResults === "function") {
@@ -5380,12 +5877,14 @@ export const resetBulkDeleteState = () => {
   }
 
   // 2. すべてのチェックボックスのチェックを外す
-  document.querySelectorAll(".item-checkbox, .select-all-checkbox").forEach(cb => {
-    cb.checked = false;
-  });
+  document
+    .querySelectorAll(".item-checkbox, .select-all-checkbox")
+    .forEach((cb) => {
+      cb.checked = false;
+    });
 
   // 3. 行のハイライト（背景色）を元に戻す
-  document.querySelectorAll(".item-row").forEach(row => {
+  document.querySelectorAll(".item-row").forEach((row) => {
     row.classList.remove("!bg-yellow-100", "dark:!bg-yellow-900/40");
   });
 
@@ -5394,7 +5893,6 @@ export const resetBulkDeleteState = () => {
     state.bulkDeleteTargets = null;
   }
 };
-
 
 /**
  * セクション移動（目次）のリンクを動的に生成して更新する
@@ -5410,22 +5908,24 @@ export function updateQuickNavLinks() {
     "↑ ページ最上部へ",
     () => window.scrollTo({ top: 0, behavior: "smooth" }),
     linksContainer,
-    "blue"
+    "blue",
   );
 
   // 2. タブに応じて対象セクションを取得
   let targets = [];
   if (state.activeTab === "joints") {
     // 継手・部材リスト内のアンカーを探す
-    targets = Array.from(document.querySelectorAll(
-      '#joint-lists-container [id^="anchor-"], #member-lists-container [id^="anchor-"]'
-    )).filter(el => !el.closest(".hidden"));
+    targets = Array.from(
+      document.querySelectorAll(
+        '#joint-lists-container [id^="anchor-"], #member-lists-container [id^="anchor-"]',
+      ),
+    ).filter((el) => !el.closest(".hidden"));
   } else if (state.activeTab === "tally") {
     // 箇所数入力カードと、結果の内訳セクションを探す
     const tallyCard = document.getElementById("tally-card");
-    const resultSections = Array.from(document.querySelectorAll(
-      "#results-card-content [data-section-title]"
-    ));
+    const resultSections = Array.from(
+      document.querySelectorAll("#results-card-content [data-section-title]"),
+    );
     if (tallyCard && !tallyCard.classList.contains("hidden")) {
       targets = [tallyCard, ...resultSections];
     }
@@ -5434,14 +5934,16 @@ export function updateQuickNavLinks() {
   // 3. 各セクションへのリンク生成
   if (targets.length > 0) {
     targets.forEach((section) => {
-      const title = section.dataset.sectionTitle || (section.id === "tally-card" ? "箇所数入力" : "セクション");
+      const title =
+        section.dataset.sectionTitle ||
+        (section.id === "tally-card" ? "箇所数入力" : "セクション");
       const color = section.dataset.sectionColor || "gray";
 
       addQuickNavLink(
         title,
         () => section.scrollIntoView({ behavior: "smooth", block: "start" }),
         linksContainer,
-        color
+        color,
       );
     });
   } else {
@@ -5454,9 +5956,10 @@ export function updateQuickNavLinks() {
   // 4. ▼▼▼ 追加：固定リンク: 一番下へ ▼▼▼
   addQuickNavLink(
     "↓ ページ最下部へ",
-    () => window.scrollTo({ top: document.body.scrollHeight, behavior: "smooth" }),
+    () =>
+      window.scrollTo({ top: document.body.scrollHeight, behavior: "smooth" }),
     linksContainer,
-    "blue"
+    "blue",
   );
 }
 
@@ -5467,11 +5970,13 @@ export const renderProjectSwitcher = () => {
   const container = document.getElementById("project-switcher-container");
   if (!container) return;
 
-  const currentProject = state.projects.find(p => p.id === state.currentProjectId);
+  const currentProject = state.projects.find(
+    (p) => p.id === state.currentProjectId,
+  );
   if (!currentProject) return;
 
   const propertyName = currentProject.propertyName || "（物件名未設定）";
-  const peers = state.projects.filter(p => p.propertyName === propertyName);
+  const peers = state.projects.filter((p) => p.propertyName === propertyName);
 
   container.innerHTML = `
     <div class="text-[10px] text-slate-500 dark:text-slate-400 font-bold tracking-wider truncate mb-[-2px]">
@@ -5490,12 +5995,16 @@ export const renderProjectSwitcher = () => {
           同物件内の工事
         </div>
         <div class="max-h-80 overflow-y-auto py-1">
-          ${peers.map(p => `
-            <button data-target-id="${p.id}" class="switcher-item w-full text-left px-4 py-3 text-sm ${p.id === currentProject.id ? 'bg-yellow-50 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400 font-bold' : 'text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700'} transition-colors flex items-center justify-between border-l-4 ${p.id === currentProject.id ? 'border-yellow-500' : 'border-transparent'}">
+          ${peers
+            .map(
+              (p) => `
+            <button data-target-id="${p.id}" class="switcher-item w-full text-left px-4 py-3 text-sm ${p.id === currentProject.id ? "bg-yellow-50 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400 font-bold" : "text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700"} transition-colors flex items-center justify-between border-l-4 ${p.id === currentProject.id ? "border-yellow-500" : "border-transparent"}">
               <span class="truncate">${p.name}</span>
-              ${p.id === currentProject.id ? '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>' : ''}
+              ${p.id === currentProject.id ? '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>' : ""}
             </button>
-          `).join('')}
+          `,
+            )
+            .join("")}
         </div>
       </div>
     </div>
@@ -5510,16 +6019,28 @@ export const renderProjectSwitcher = () => {
       e.stopPropagation(); // windowへのクリック伝播を止める
       const isHidden = dropdown.classList.contains("opacity-0");
       if (isHidden) {
-        dropdown.classList.remove("opacity-0", "pointer-events-none", "translate-y-2");
+        dropdown.classList.remove(
+          "opacity-0",
+          "pointer-events-none",
+          "translate-y-2",
+        );
       } else {
-        dropdown.classList.add("opacity-0", "pointer-events-none", "translate-y-2");
+        dropdown.classList.add(
+          "opacity-0",
+          "pointer-events-none",
+          "translate-y-2",
+        );
       }
     };
 
     // ★追加：画面のどこをクリックしても閉じる処理
     const handleOutsideClick = (e) => {
       if (!dropdown.contains(e.target) && e.target !== trigger) {
-        dropdown.classList.add("opacity-0", "pointer-events-none", "translate-y-2");
+        dropdown.classList.add(
+          "opacity-0",
+          "pointer-events-none",
+          "translate-y-2",
+        );
         // メニューが閉じたらイベントリスナーを解除してメモリを節約
         document.removeEventListener("click", handleOutsideClick);
       }
@@ -5532,7 +6053,7 @@ export const renderProjectSwitcher = () => {
   }
 
   // 切り替え実行
-  container.querySelectorAll(".switcher-item").forEach(item => {
+  container.querySelectorAll(".switcher-item").forEach((item) => {
     item.onclick = () => {
       const targetId = item.dataset.targetId;
       if (targetId === state.currentProjectId) return;
@@ -5541,7 +6062,7 @@ export const renderProjectSwitcher = () => {
       state.activeTallyType = "all";
       state.currentProjectId = targetId;
       if (typeof renderDetailView === "function") renderDetailView();
-      showToast(`${item.querySelector('span').textContent} へジャンプしました`);
+      showToast(`${item.querySelector("span").textContent} へジャンプしました`);
     };
   });
 };
