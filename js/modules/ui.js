@@ -3990,58 +3990,41 @@ export const renderTallySheet = (project) => {
   // 3. 階層タブの生成
   const levels = getProjectLevels(project);
   let floorHtml = `<button class="tally-tab-btn px-4 py-1.5 rounded-full text-sm font-bold border transition-all ${state.activeTallyLevel === "all" ? "bg-blue-600 text-white border-blue-600 shadow-md" : "bg-white dark:bg-slate-800 text-slate-600 border-slate-300 dark:border-slate-600 hover:bg-slate-100"}" data-level="all">全表示</button>`;
-  levels.forEach((lvl) => {
+  levels.forEach(lvl => {
     const active = state.activeTallyLevel === lvl.id;
     floorHtml += `<button class="tally-tab-btn px-4 py-1.5 rounded-full text-sm font-bold border transition-all ${active ? "bg-blue-600 text-white border-blue-600 shadow-md" : "bg-white dark:bg-slate-800 text-slate-600 border-slate-300"}" data-level="${lvl.id}">${lvl.label}</button>`;
   });
   floorTabs.innerHTML = floorHtml;
 
   // 4. 種別タブの動的生成
-  const uniqueFilterIds = [
-    ...new Set(allItems.map((item) => getJointFilterId(item.joint))),
-  ].sort();
+  const uniqueFilterIds = [...new Set(allItems.map(item => getJointFilterId(item.joint)))].sort();
   let typeHtml = `<button class="tally-type-tab-btn px-4 py-1.5 rounded-full text-sm font-bold border transition-all ${state.activeTallyType === "all" ? "bg-emerald-600 text-white border-emerald-600 shadow-md" : "bg-white dark:bg-slate-800 text-slate-600 border-slate-300"}" data-type="all">全種別</button>`;
-  uniqueFilterIds.forEach((fid) => {
+  uniqueFilterIds.forEach(fid => {
     const active = state.activeTallyType === fid;
     typeHtml += `<button class="tally-type-tab-btn px-4 py-1.5 rounded-full text-sm font-bold border transition-all ${active ? "bg-emerald-600 text-white border-emerald-600 shadow-md" : "bg-white dark:bg-slate-800 text-slate-600 border-slate-300"}" data-type="${fid}">${getJointFilterLabel(fid)}</button>`;
   });
   if (typeTabs) typeTabs.innerHTML = typeHtml;
 
   // タブイベント
-  floorTabs.querySelectorAll(".tally-tab-btn").forEach((btn) => {
-    btn.onclick = () => {
-      state.activeTallyLevel = btn.dataset.level;
-      renderTallySheet(project);
-      renderResults(project);
-    };
+  floorTabs.querySelectorAll(".tally-tab-btn").forEach(btn => {
+    btn.onclick = () => { state.activeTallyLevel = btn.dataset.level; renderTallySheet(project); renderResults(project); };
   });
   if (typeTabs) {
-    typeTabs.querySelectorAll(".tally-type-tab-btn").forEach((btn) => {
-      btn.onclick = () => {
-        state.activeTallyType = btn.dataset.type;
-        renderTallySheet(project);
-        renderResults(project);
-      };
+    typeTabs.querySelectorAll(".tally-type-tab-btn").forEach(btn => {
+      btn.onclick = () => { state.activeTallyType = btn.dataset.type; renderTallySheet(project); renderResults(project); };
     });
   }
 
   // 5. 表示データのフィルタリング
-  const displayItems = allItems.filter((item) => {
+  const displayItems = allItems.filter(item => {
     const isCommon = !item.targetLevels || item.targetLevels.length === 0;
-    const matchLevel =
-      state.activeTallyLevel === "all" ||
-      !item.isMember ||
-      isCommon ||
-      item.targetLevels.includes(state.activeTallyLevel);
-    const matchType =
-      state.activeTallyType === "all" ||
-      getJointFilterId(item.joint) === state.activeTallyType;
+    const matchLevel = state.activeTallyLevel === "all" || !item.isMember || isCommon || item.targetLevels.includes(state.activeTallyLevel);
+    const matchType = state.activeTallyType === "all" || getJointFilterId(item.joint) === state.activeTallyType;
     return matchLevel && matchType;
   });
 
   if (displayItems.length === 0) {
-    tallySheetContainer.innerHTML =
-      '<p class="text-gray-500 p-12 text-center bg-slate-50 dark:bg-slate-800 rounded-xl border-2 border-dashed font-bold">表示条件に合う部材がありません。</p>';
+    tallySheetContainer.innerHTML = '<p class="text-gray-500 p-12 text-center bg-slate-50 dark:bg-slate-800 rounded-xl border-2 border-dashed font-bold">表示条件に合う部材がありません。</p>';
     if (resultsCard) resultsCard.classList.add("hidden");
     return;
   }
@@ -4050,88 +4033,64 @@ export const renderTallySheet = (project) => {
   let locations = [];
   if (project.mode === "advanced") {
     project.customLevels.forEach((lvl) => {
-      if (state.activeTallyLevel !== "all" && state.activeTallyLevel !== lvl)
-        return;
-      project.customAreas.forEach((area) =>
-        locations.push({ id: `${lvl}-${area}`, label: `${lvl}-${area}` }),
-      );
+      if (state.activeTallyLevel !== "all" && state.activeTallyLevel !== lvl) return;
+      project.customAreas.forEach((area) => locations.push({ id: `${lvl}-${area}`, label: `${lvl}-${area}` }));
     });
   } else {
     for (let f = 2; f <= project.floors; f++) {
-      if (
-        state.activeTallyLevel !== "all" &&
-        state.activeTallyLevel !== f.toString()
-      )
-        continue;
-      for (let s = 1; s <= project.sections; s++)
-        locations.push({ id: `${f}-${s}`, label: `${f}階 ${s}工区` });
+      if (state.activeTallyLevel !== "all" && state.activeTallyLevel !== f.toString()) continue;
+      for (let s = 1; s <= project.sections; s++) locations.push({ id: `${f}-${s}`, label: `${f}階 ${s}工区` });
     }
     if (state.activeTallyLevel === "all" || state.activeTallyLevel === "R") {
-      for (let s = 1; s <= project.sections; s++)
-        locations.push({ id: `R-${s}`, label: `R階 ${s}工区` });
+      for (let s = 1; s <= project.sections; s++) locations.push({ id: `R-${s}`, label: `R階 ${s}工区` });
     }
-    if (
-      project.hasPH &&
-      (state.activeTallyLevel === "all" || state.activeTallyLevel === "PH")
-    ) {
-      for (let s = 1; s <= project.sections; s++)
-        locations.push({ id: `PH-${s}`, label: `PH階 ${s}工区` });
+    if (project.hasPH && (state.activeTallyLevel === "all" || state.activeTallyLevel === "PH")) {
+      for (let s = 1; s <= project.sections; s++) locations.push({ id: `PH-${s}`, label: `PH階 ${s}工区` });
     }
   }
 
   const locks = project.tallyLocks || {};
 
-  // --- 【UI修正】全段を継手カラーで統一 (透過度を廃止) ---
-  const lockRow = displayItems
-    .map((item) => {
-      const color = item.joint.color || "#e2e8f0";
-      return `<td class="px-2 py-1 text-center border border-slate-300 dark:border-slate-600" style="background-color: ${color}">
+  // --- 【UI修正】1段目〜3段目をソリッドな継手カラーで統一し、名称横にバッジを追加 ---
+  const lockRow = displayItems.map(item => {
+    const color = item.joint.color || '#e2e8f0';
+    return `<td class="px-2 py-1 text-center border border-slate-300 dark:border-slate-600" style="background-color: ${color}">
               <input type="checkbox" class="tally-lock-checkbox h-4 w-4 rounded" data-id="${item.id}" ${locks[item.id] ? "checked" : ""}>
             </td>`;
-    })
-    .join("");
+  }).join("");
 
-  const headerRow = displayItems
-    .map((item) => {
-      const color = item.joint.color || "#f1f5f9";
-      return `<th class="px-2 py-3 text-center border border-slate-300 dark:border-slate-600 min-w-32 break-all text-slate-800 dark:text-slate-100 font-bold" style="background-color: ${color}">
-              ${item.name}
+  const headerRow = displayItems.map(item => {
+    const color = item.joint.color || '#f1f5f9';
+    // 名称の横にカラーバッジ（ドット）を配置
+    return `<th class="px-2 py-3 text-center border border-slate-300 dark:border-slate-600 min-w-32 break-all text-slate-800 dark:text-slate-100 font-bold" style="background-color: ${color}">
+              <div class="flex items-center justify-center gap-2">
+                <span class="flex-shrink-0 w-2.5 h-2.5 rounded-full border border-black/20 shadow-sm" style="background-color: ${color}"></span>
+                <span>${item.name}</span>
+              </div>
             </th>`;
-    })
-    .join("");
+  }).join("");
 
-  const sizeRow = displayItems
-    .map((item) => {
-      const j = item.joint;
-      const color = item.joint.color || "#f1f5f9";
-      let text =
-        j.isComplexSpl && j.webInputs
-          ? j.webInputs.map((w) => w.size).join(",<br>")
-          : [j.flangeSize, j.webSize].filter(Boolean).join(",<br>");
-      return `<th class="px-2 py-2 text-center border border-slate-300 dark:border-slate-600 min-w-32 text-[10px] leading-tight text-slate-700 dark:text-slate-200" style="background-color: ${color}">
+  const sizeRow = displayItems.map(item => {
+    const j = item.joint;
+    const color = item.joint.color || '#f1f5f9';
+    let text = j.isComplexSpl && j.webInputs ? j.webInputs.map(w => w.size).join(",<br>") : [j.flangeSize, j.webSize].filter(Boolean).join(",<br>");
+    return `<th class="px-2 py-2 text-center border border-slate-300 dark:border-slate-600 min-w-32 text-[10px] leading-tight text-slate-800 dark:text-slate-100 font-medium" style="background-color: ${color}">
               ${text || "-"}
             </th>`;
-    })
-    .join("");
+  }).join("");
 
-  const bodyHtml = locations
-    .map(
-      (loc) => `
+  const bodyHtml = locations.map(loc => `
     <tr class="tally-row">
       <td class="px-4 py-3 font-bold sticky left-0 z-10 border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100">${loc.label}</td>
-      ${displayItems
-        .map((item) => {
-          const val = project.tally?.[loc.id]?.[item.id] ?? "";
-          return `<td class="p-0 border border-slate-200 dark:border-slate-700 ${locks[item.id] ? "bg-slate-100 dark:bg-slate-900/50" : ""}">
+      ${displayItems.map(item => {
+        const val = project.tally?.[loc.id]?.[item.id] ?? "";
+        return `<td class="p-0 border border-slate-200 dark:border-slate-700 ${locks[item.id] ? 'bg-slate-100 dark:bg-slate-900/50' : ''}">
                   <input type="text" inputmode="numeric" data-location="${loc.id}" data-id="${item.id}" 
                          class="tally-input w-full bg-transparent border-transparent py-3 text-center text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-yellow-500" value="${val}" ${locks[item.id] ? "disabled" : ""}>
                 </td>`;
-        })
-        .join("")}
+      }).join("")}
       <td class="row-total px-2 py-2 text-center font-bold sticky right-0 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-blue-700 dark:text-blue-400"></td>
-    </tr>`,
-    )
-    .join("");
+    </tr>`).join("");
 
   tallySheetContainer.innerHTML = `
     <div class="overflow-x-auto custom-scrollbar">
@@ -4149,7 +4108,7 @@ export const renderTallySheet = (project) => {
         <tfoot class="font-bold sticky bottom-0 bg-orange-50 dark:bg-slate-900">
           <tr>
             <td class="px-4 py-2 sticky left-0 z-10 border border-orange-400 dark:border-orange-700 text-orange-800 dark:text-orange-400">列合計</td>
-            ${displayItems.map((item) => `<td data-id="${item.id}" class="col-total px-2 py-2 text-center border border-orange-400 dark:border-orange-700"></td>`).join("")}
+            ${displayItems.map(item => `<td data-id="${item.id}" class="col-total px-2 py-2 text-center border border-orange-400 dark:border-orange-700"></td>`).join("")}
             <td class="grand-total px-2 py-2 text-center sticky right-0 border border-orange-400 dark:border-orange-700 text-orange-900 dark:text-orange-300"></td>
           </tr>
         </tfoot>
@@ -4165,7 +4124,6 @@ export const renderTallySheet = (project) => {
   if (resultsCard) resultsCard.classList.remove("hidden");
   updateTallySheetCalculations(project);
 };
-
 /**
  * 集計結果（Results）画面を描画する
  */
