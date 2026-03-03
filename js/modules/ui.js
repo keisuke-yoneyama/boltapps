@@ -36,7 +36,8 @@ const BOLT_TYPE_ORDER = [
   "Dユニ16",
 ];
 // ▼▼▼ エラー解消：部材カウント用アイコンの定義 ▼▼▼
-const memberIconSvgRaw = `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect><path d="M9 14h6"></path><path d="M9 18h6"></path><path d="M9 10h6"></path></svg>`;
+// ▼▼▼ アイコンを「3Dキューブ」に修正 ▼▼▼
+const memberIconSvgRaw = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="display: inline-block; vertical-align: middle;"><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg>`;
 // クイックナビゲーションの状態管理
 let isQuickNavOpen = false;
 // ▼▼▼ 追加: リスト描画用のコールバックを記憶する変数 ▼▼▼
@@ -4025,38 +4026,29 @@ export const renderTallySheet = (project) => {
 
   const allItems = getTallyList(project);
 
-  // 1. 階層タブ生成 (ナイトモード対応)
+  // 1. 階層・種別タブの生成 (昼夜対応)
   const levels = getProjectLevels(project);
   let floorHtml = `<button class="tally-tab-btn px-4 py-1.5 rounded-full text-sm font-bold border transition-all ${
-    state.activeTallyLevel === "all" 
-      ? "bg-blue-600 text-white border-blue-600 shadow-md" 
-      : "bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-300 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700"
+    state.activeTallyLevel === "all" ? "bg-blue-600 text-white border-blue-600 shadow-md" : "bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-300 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700"
   }" data-level="all">全表示</button>`;
 
   levels.forEach(lvl => {
     const active = state.activeTallyLevel === lvl.id;
     floorHtml += `<button class="tally-tab-btn px-4 py-1.5 rounded-full text-sm font-bold border transition-all ${
-      active 
-        ? "bg-blue-600 text-white border-blue-600 shadow-md" 
-        : "bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-300 dark:border-slate-600"
+      active ? "bg-blue-600 text-white border-blue-600 shadow-md" : "bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-300 dark:border-slate-600"
     }" data-level="${lvl.id}">${lvl.label}</button>`;
   });
   floorTabs.innerHTML = floorHtml;
 
-  // 2. 種別タブ生成 (ナイトモード対応)
   const uniqueFilterIds = [...new Set(allItems.map(item => getJointFilterId(item.joint)))].sort();
   let typeHtml = `<button class="tally-type-tab-btn px-4 py-1.5 rounded-full text-sm font-bold border transition-all ${
-    state.activeTallyType === "all" 
-      ? "bg-emerald-600 text-white border-emerald-600 shadow-md" 
-      : "bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-300 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700"
+    state.activeTallyType === "all" ? "bg-emerald-600 text-white border-emerald-600 shadow-md" : "bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-300 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700"
   }" data-type="all">全種別</button>`;
 
   uniqueFilterIds.forEach(fid => {
     const active = state.activeTallyType === fid;
     typeHtml += `<button class="tally-type-tab-btn px-4 py-1.5 rounded-full text-sm font-bold border transition-all ${
-      active 
-        ? "bg-emerald-600 text-white border-emerald-600 shadow-md" 
-        : "bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-300 dark:border-slate-600"
+      active ? "bg-emerald-600 text-white border-emerald-600 shadow-md" : "bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-300 dark:border-slate-600"
     }" data-type="${fid}">${getJointFilterLabel(fid)}</button>`;
   });
   if (typeTabs) typeTabs.innerHTML = typeHtml;
@@ -4071,7 +4063,7 @@ export const renderTallySheet = (project) => {
     });
   }
 
-  // 3. 表示データのフィルタリング
+  // 2. 表示データのフィルタリング
   const displayItems = allItems.filter(item => {
     const isCommon = !item.targetLevels || item.targetLevels.length === 0;
     const matchLevel = state.activeTallyLevel === "all" || !item.isMember || isCommon || item.targetLevels.includes(state.activeTallyLevel);
@@ -4080,12 +4072,12 @@ export const renderTallySheet = (project) => {
   });
 
   if (displayItems.length === 0) {
-    tallySheetContainer.innerHTML = '<p class="text-gray-500 p-12 text-center bg-slate-50 dark:bg-slate-800/40 rounded-xl border-2 border-dashed border-slate-200 dark:border-slate-700 font-bold">部材がありません。</p>';
+    tallySheetContainer.innerHTML = '<p class="text-gray-500 p-12 text-center bg-slate-50 dark:bg-slate-800/50 rounded-xl border-2 border-dashed border-slate-200 dark:border-slate-700 font-bold">表示条件に合う部材がありません。</p>';
     if (resultsCard) resultsCard.classList.add("hidden");
     return;
   }
 
-  // 4. ロケーション生成
+  // 3. ロケーション生成 (PH対応)
   let locations = [];
   if (project.mode === "advanced") {
     project.customLevels.forEach(lvl => {
@@ -4107,7 +4099,7 @@ export const renderTallySheet = (project) => {
 
   const locks = project.tallyLocks || {};
 
-  // --- 5. テーブル構築：カラー・バッジ・キューブアイコン語尾・横スクロール強制 ---
+  // 4. テーブルHTML生成
   const lockRow = displayItems.map(item => {
     const colorClass = getJointCategoryColorClasses(item.joint);
     return `<td class="px-2 py-1 text-center border border-slate-300 dark:border-slate-600 ${colorClass}">
@@ -4118,17 +4110,15 @@ export const renderTallySheet = (project) => {
   const headerRow = displayItems.map(item => {
     const colorClass = getJointCategoryColorClasses(item.joint);
     const badgeColor = item.joint.color || '#cbd5e1';
-    
-    // キューブアイコンを語尾に配置
-    const memberIconHtml = item.joint.countAsMember
-      ? `<span class="inline-flex items-center justify-center ml-1.5 text-emerald-700 dark:text-emerald-300" title="部材として集計">${memberIconSvgRaw}</span>`
+    const cubeIcon = item.joint.countAsMember
+      ? `<span class="inline-flex items-center justify-center ml-1.5 text-emerald-800 dark:text-emerald-300" title="部材として集計される継手">${memberIconSvgRaw}</span>`
       : "";
 
     return `<th class="px-4 py-3 text-center border border-slate-300 dark:border-slate-600 min-w-[180px] whitespace-nowrap font-bold ${colorClass}">
               <div class="flex items-center justify-center gap-1.5">
                 <span>${item.name}</span>
-                <span class="flex-shrink-0 w-3.5 h-3.5 rounded-full border border-black/20 dark:border-white/20 shadow-sm" style="background-color: ${badgeColor}"></span>
-                ${memberIconHtml}
+                <span class="flex-shrink-0 w-3 h-3 rounded-full border border-black/20 dark:border-white/20 shadow-sm" style="background-color: ${badgeColor}"></span>
+                ${cubeIcon}
               </div>
             </th>`;
   }).join("");
@@ -4139,7 +4129,6 @@ export const renderTallySheet = (project) => {
     const tooltipText = getBoltTooltipText(j);
     let sizeDisplay = j.isComplexSpl && j.webInputs ? j.webInputs.map(w => w.size).join(", ") : [j.flangeSize, j.webSize].filter(Boolean).join(", ");
     
-    // whitespace-nowrap で折り返しを物理的に禁止
     return `<th class="px-2 py-2 text-center border border-slate-300 dark:border-slate-600 min-w-[180px] text-[10px] leading-tight font-medium cursor-help whitespace-nowrap bolt-info-trigger ${colorClass}" 
                 title="${tooltipText}" data-tooltip-content="${tooltipText}">
               ${sizeDisplay || "-"}
@@ -4161,7 +4150,7 @@ export const renderTallySheet = (project) => {
 
   tallySheetContainer.innerHTML = `
     <div class="overflow-x-auto custom-scrollbar">
-      <table class="table-fixed text-sm border-collapse w-full">
+      <table class="w-max min-w-full table-fixed text-sm border-collapse">
         <thead class="sticky top-0 z-20">
           <tr class="bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400">
             <th class="px-4 py-3 sticky left-0 z-30 bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-600 text-xs align-bottom whitespace-nowrap" rowspan="3">階層 / 工区</th>
@@ -4172,7 +4161,7 @@ export const renderTallySheet = (project) => {
           <tr>${sizeRow}</tr>
         </thead>
         <tbody>${bodyHtml}</tbody>
-        <tfoot class="font-bold sticky bottom-0 bg-orange-50 dark:bg-slate-900/90 backdrop-blur-sm">
+        <tfoot class="font-bold sticky bottom-0 bg-orange-50 dark:bg-slate-900/95 backdrop-blur-sm">
           <tr class="whitespace-nowrap">
             <td class="px-4 py-2 sticky left-0 z-10 border border-orange-400 dark:border-orange-700 text-orange-800 dark:text-orange-300">列合計</td>
             ${displayItems.map(item => `<td data-id="${item.id}" class="col-total px-2 py-2 text-center border border-orange-400 dark:border-orange-700 text-orange-900 dark:text-orange-300"></td>`).join("")}
