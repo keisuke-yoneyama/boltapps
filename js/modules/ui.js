@@ -3984,7 +3984,7 @@ export const renderTallySheet = (project) => {
   if (!state.activeTallyLevel) state.activeTallyLevel = "all";
   if (!state.activeTallyType) state.activeTallyType = "all";
 
-  // 2. 全データの取得（calculator.js の既存ロジックを使用）
+  // 2. データの取得（calculator.js の既存ロジックを使用）
   const allItems = getTallyList(project);
 
   // 3. 階層タブの生成
@@ -4025,7 +4025,7 @@ export const renderTallySheet = (project) => {
     });
   }
 
-  // 5. 表示データのフィルタリング（全階層部材の維持）
+  // 5. 表示データのフィルタリング
   const displayItems = allItems.filter((item) => {
     const isCommon = !item.targetLevels || item.targetLevels.length === 0;
     const matchLevel =
@@ -4046,7 +4046,7 @@ export const renderTallySheet = (project) => {
     return;
   }
 
-  // 6. ロケーション(行)のフィルタリング（PH階対応）
+  // 6. ロケーション(行)のフィルタリング
   let locations = [];
   if (project.mode === "advanced") {
     project.customLevels.forEach((lvl) => {
@@ -4081,12 +4081,12 @@ export const renderTallySheet = (project) => {
 
   const locks = project.tallyLocks || {};
 
-  // --- 【UI修正】ヘッダー部分の色分け適用 ---
+  // --- 【UI修正】全段を継手カラーで統一 (透過度を廃止) ---
   const lockRow = displayItems
     .map((item) => {
       const color = item.joint.color || "#e2e8f0";
-      return `<td class="px-2 py-1 text-center border border-slate-300 dark:border-slate-600" style="background-color: ${color}44">
-              <input type="checkbox" class="tally-lock-checkbox h-4 w-4" data-id="${item.id}" ${locks[item.id] ? "checked" : ""}>
+      return `<td class="px-2 py-1 text-center border border-slate-300 dark:border-slate-600" style="background-color: ${color}">
+              <input type="checkbox" class="tally-lock-checkbox h-4 w-4 rounded" data-id="${item.id}" ${locks[item.id] ? "checked" : ""}>
             </td>`;
     })
     .join("");
@@ -4094,7 +4094,7 @@ export const renderTallySheet = (project) => {
   const headerRow = displayItems
     .map((item) => {
       const color = item.joint.color || "#f1f5f9";
-      return `<th class="px-2 py-3 text-center border border-slate-300 dark:border-slate-600 min-w-32 break-all text-slate-800 dark:text-slate-100" style="background-color: ${color}">
+      return `<th class="px-2 py-3 text-center border border-slate-300 dark:border-slate-600 min-w-32 break-all text-slate-800 dark:text-slate-100 font-bold" style="background-color: ${color}">
               ${item.name}
             </th>`;
     })
@@ -4108,7 +4108,7 @@ export const renderTallySheet = (project) => {
         j.isComplexSpl && j.webInputs
           ? j.webInputs.map((w) => w.size).join(",<br>")
           : [j.flangeSize, j.webSize].filter(Boolean).join(",<br>");
-      return `<th class="px-2 py-2 text-center border border-slate-300 dark:border-slate-600 min-w-32 text-[10px] leading-tight text-slate-600 dark:text-slate-300" style="background-color: ${color}cc">
+      return `<th class="px-2 py-2 text-center border border-slate-300 dark:border-slate-600 min-w-32 text-[10px] leading-tight text-slate-700 dark:text-slate-200" style="background-color: ${color}">
               ${text || "-"}
             </th>`;
     })
