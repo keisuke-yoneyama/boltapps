@@ -4025,7 +4025,7 @@ export const renderTallySheet = (project) => {
 
   const allItems = getTallyList(project);
 
-  // 1. 階層タブ生成
+  // 1. 階層タブ生成 (ナイトモード対応)
   const levels = getProjectLevels(project);
   let floorHtml = `<button class="tally-tab-btn px-4 py-1.5 rounded-full text-sm font-bold border transition-all ${
     state.activeTallyLevel === "all" 
@@ -4043,7 +4043,7 @@ export const renderTallySheet = (project) => {
   });
   floorTabs.innerHTML = floorHtml;
 
-  // 2. 種別タブ生成
+  // 2. 種別タブ生成 (ナイトモード対応)
   const uniqueFilterIds = [...new Set(allItems.map(item => getJointFilterId(item.joint)))].sort();
   let typeHtml = `<button class="tally-type-tab-btn px-4 py-1.5 rounded-full text-sm font-bold border transition-all ${
     state.activeTallyType === "all" 
@@ -4071,7 +4071,7 @@ export const renderTallySheet = (project) => {
     });
   }
 
-  // 3. データのフィルタリング
+  // 3. 表示データのフィルタリング
   const displayItems = allItems.filter(item => {
     const isCommon = !item.targetLevels || item.targetLevels.length === 0;
     const matchLevel = state.activeTallyLevel === "all" || !item.isMember || isCommon || item.targetLevels.includes(state.activeTallyLevel);
@@ -4080,12 +4080,12 @@ export const renderTallySheet = (project) => {
   });
 
   if (displayItems.length === 0) {
-    tallySheetContainer.innerHTML = '<p class="text-gray-500 p-12 text-center bg-slate-50 dark:bg-slate-800/40 rounded-xl border-2 border-dashed border-slate-200 dark:border-slate-700 font-bold">表示条件に合う部材がありません。</p>';
+    tallySheetContainer.innerHTML = '<p class="text-gray-500 p-12 text-center bg-slate-50 dark:bg-slate-800/40 rounded-xl border-2 border-dashed border-slate-200 dark:border-slate-700 font-bold">部材がありません。</p>';
     if (resultsCard) resultsCard.classList.add("hidden");
     return;
   }
 
-  // 4. ロケーション生成 (PH対応)
+  // 4. ロケーション生成
   let locations = [];
   if (project.mode === "advanced") {
     project.customLevels.forEach(lvl => {
@@ -4107,7 +4107,7 @@ export const renderTallySheet = (project) => {
 
   const locks = project.tallyLocks || {};
 
-  // --- テーブル構築：カラー・バッジ・アイコン語尾・横スクロール強制 ---
+  // --- 5. テーブル構築：カラー・バッジ・キューブアイコン語尾・横スクロール強制 ---
   const lockRow = displayItems.map(item => {
     const colorClass = getJointCategoryColorClasses(item.joint);
     return `<td class="px-2 py-1 text-center border border-slate-300 dark:border-slate-600 ${colorClass}">
@@ -4119,7 +4119,7 @@ export const renderTallySheet = (project) => {
     const colorClass = getJointCategoryColorClasses(item.joint);
     const badgeColor = item.joint.color || '#cbd5e1';
     
-    // 指定のSVGアイコンを使用し、語尾に配置
+    // キューブアイコンを語尾に配置
     const memberIconHtml = item.joint.countAsMember
       ? `<span class="inline-flex items-center justify-center ml-1.5 text-emerald-700 dark:text-emerald-300" title="部材として集計">${memberIconSvgRaw}</span>`
       : "";
@@ -4128,7 +4128,7 @@ export const renderTallySheet = (project) => {
               <div class="flex items-center justify-center gap-1.5">
                 <span>${item.name}</span>
                 <span class="flex-shrink-0 w-3.5 h-3.5 rounded-full border border-black/20 dark:border-white/20 shadow-sm" style="background-color: ${badgeColor}"></span>
-                ${memberIconSvgRaw}
+                ${memberIconHtml}
               </div>
             </th>`;
   }).join("");
@@ -4139,7 +4139,7 @@ export const renderTallySheet = (project) => {
     const tooltipText = getBoltTooltipText(j);
     let sizeDisplay = j.isComplexSpl && j.webInputs ? j.webInputs.map(w => w.size).join(", ") : [j.flangeSize, j.webSize].filter(Boolean).join(", ");
     
-    // whitespace-nowrap で折り返し禁止
+    // whitespace-nowrap で折り返しを物理的に禁止
     return `<th class="px-2 py-2 text-center border border-slate-300 dark:border-slate-600 min-w-[180px] text-[10px] leading-tight font-medium cursor-help whitespace-nowrap bolt-info-trigger ${colorClass}" 
                 title="${tooltipText}" data-tooltip-content="${tooltipText}">
               ${sizeDisplay || "-"}
@@ -4182,7 +4182,7 @@ export const renderTallySheet = (project) => {
       </table>
     </div>`;
 
-  // モバイル対応タップイベント
+  // モバイル対応用タップイベント
   tallySheetContainer.querySelectorAll(".bolt-info-trigger").forEach(el => {
     el.onclick = () => {
       const content = el.dataset.tooltipContent;
