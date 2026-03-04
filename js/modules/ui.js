@@ -611,7 +611,32 @@ export function renderColorPalette(selectedColor) {
     container.appendChild(swatch);
   });
 }
+/**
+ * 工事一覧の選択バー（操作バー）の状態を更新する
+ * どこからでも呼べるように export します
+ */
+export const updateProjectSelectionBar = () => {
+  const bar = document.getElementById("project-op-bar");
+  const countLabel = document.getElementById("project-selection-count");
+  if (!bar) return;
 
+  const checkedBoxes = document.querySelectorAll(".project-checkbox:checked");
+  const count = checkedBoxes.length;
+
+  if (count > 0) {
+    if (countLabel) countLabel.textContent = count;
+    // events.js の指定に合わせて translate-y-24 を使用
+    bar.classList.remove("translate-y-24", "opacity-0", "pointer-events-none");
+
+    // 編集・複製ボタンの出し分け
+    const editBtn = document.getElementById("project-edit-btn-bulk");
+    const copyBtn = document.getElementById("project-copy-btn-bulk");
+    if (editBtn) editBtn.classList.toggle("hidden", count !== 1);
+    if (copyBtn) copyBtn.classList.toggle("hidden", count !== 1);
+  } else {
+    bar.classList.add("translate-y-24", "opacity-0", "pointer-events-none");
+  }
+};
 /**
  * パレットの色が選択されたときのUI更新処理
  */
@@ -4699,15 +4724,14 @@ export const switchView = (viewName) => {
   // ▼▼▼ 追加：一括操作バーを隠す処理 ▼▼▼
   const bulkBar = document.getElementById("project-op-bar");
   if (bulkBar) {
-    // リスト画面かつチェックが入っている時以外は隠す
+    // ▼▼▼ 一括操作バーのクリーンアップ処理 ▼▼▼
     if (viewName !== "list") {
-      bulkBar.classList.add("translate-y-full"); // 下に隠す
-      bulkBar.classList.remove("translate-y-0");
-
-      // 全てのチェックボックスを解除する（念のため）
+      // 全てのチェックを解除
       document
         .querySelectorAll(".project-checkbox")
         .forEach((cb) => (cb.checked = false));
+      // バーを隠す（共通関数を呼ぶだけでOK）
+      updateProjectSelectionBar();
     }
   }
 };

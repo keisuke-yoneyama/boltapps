@@ -8,6 +8,7 @@ import {
   selectStaticColor,
   // toggleFab,
   // closeFabIfOutside,
+  updateProjectSelectionBar,
   openNewJointModal,
   openConfirmDeleteModal,
   openNewMemberModal,
@@ -46,7 +47,12 @@ import {
   // openCopyProjectModal,
 } from "./ui.js"; // ui.jsで作った関数を使う
 
-import { resetTempJointData, state,resetProjectEditCache,resetProjectEditNewCache } from "./state.js";
+import {
+  resetTempJointData,
+  state,
+  resetProjectEditCache,
+  resetProjectEditNewCache,
+} from "./state.js";
 
 import { updateProjectData, addProject, deleteProject } from "./db.js";
 
@@ -171,8 +177,8 @@ export function setupEventListeners() {
   setupProjectListNewEvents();
 }
 
-function setupMasterFabEvents(){
-// =========================================================
+function setupMasterFabEvents() {
+  // =========================================================
   // マスターFAB (多段展開メニュー) の制御
   // =========================================================
   const masterFabToggle = document.getElementById("master-fab-toggle");
@@ -181,18 +187,22 @@ function setupMasterFabEvents(){
 
   const triggerNav = document.getElementById("trigger-nav");
   const subMenuNav = document.getElementById("sub-menu-nav");
-  
+
   const triggerAdd = document.getElementById("trigger-add");
   const subMenuAdd = document.getElementById("sub-menu-add");
 
   const triggerQuickNav = document.getElementById("quick-nav-toggle");
-  const subMenuQuickNav = document.getElementById("quick-nav-menu"); 
+  const subMenuQuickNav = document.getElementById("quick-nav-menu");
 
   // 開いている孫メニューをすべて閉じる
   const closeAllSubMenus = () => {
-    [subMenuNav, subMenuAdd, subMenuQuickNav].forEach(menu => {
-      if(menu) {
-        menu.classList.remove("opacity-100", "translate-x-0", "pointer-events-auto");
+    [subMenuNav, subMenuAdd, subMenuQuickNav].forEach((menu) => {
+      if (menu) {
+        menu.classList.remove(
+          "opacity-100",
+          "translate-x-0",
+          "pointer-events-auto",
+        );
         menu.classList.add("opacity-0", "translate-x-4", "pointer-events-none");
       }
     });
@@ -205,15 +215,31 @@ function setupMasterFabEvents(){
       const isOpen = !masterFabMenu.classList.contains("opacity-0");
       if (isOpen) {
         // 閉じる
-        masterFabMenu.classList.add("opacity-0", "translate-y-10", "pointer-events-none");
-        masterFabMenu.classList.remove("opacity-100", "translate-y-0", "pointer-events-auto");
+        masterFabMenu.classList.add(
+          "opacity-0",
+          "translate-y-10",
+          "pointer-events-none",
+        );
+        masterFabMenu.classList.remove(
+          "opacity-100",
+          "translate-y-0",
+          "pointer-events-auto",
+        );
         masterFabIcon.innerHTML = `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16m-7 6h7" />`;
         masterFabToggle.classList.remove("rotate-90");
         closeAllSubMenus();
       } else {
         // 開く
-        masterFabMenu.classList.remove("opacity-0", "translate-y-10", "pointer-events-none");
-        masterFabMenu.classList.add("opacity-100", "translate-y-0", "pointer-events-auto");
+        masterFabMenu.classList.remove(
+          "opacity-0",
+          "translate-y-10",
+          "pointer-events-none",
+        );
+        masterFabMenu.classList.add(
+          "opacity-100",
+          "translate-y-0",
+          "pointer-events-auto",
+        );
         masterFabIcon.innerHTML = `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />`;
         masterFabToggle.classList.add("rotate-90");
       }
@@ -223,20 +249,29 @@ function setupMasterFabEvents(){
   // カテゴリボタンのクリック (アコーディオン制御)
   const toggleSubMenu = (menu, e) => {
     e.stopPropagation();
-    if(!menu) return;
+    if (!menu) return;
     const isMenuOpen = menu.classList.contains("opacity-100");
     closeAllSubMenus(); // 他のカテゴリを閉じる
     if (!isMenuOpen) {
-      menu.classList.remove("opacity-0", "translate-x-4", "pointer-events-none");
+      menu.classList.remove(
+        "opacity-0",
+        "translate-x-4",
+        "pointer-events-none",
+      );
       menu.classList.add("opacity-100", "translate-x-0", "pointer-events-auto");
     }
   };
 
-  if (triggerNav) triggerNav.addEventListener("click", (e) => toggleSubMenu(subMenuNav, e));
-  if (triggerAdd) triggerAdd.addEventListener("click", (e) => toggleSubMenu(subMenuAdd, e));
-  if (triggerQuickNav) triggerQuickNav.addEventListener("click", (e) => toggleSubMenu(subMenuQuickNav, e));
+  if (triggerNav)
+    triggerNav.addEventListener("click", (e) => toggleSubMenu(subMenuNav, e));
+  if (triggerAdd)
+    triggerAdd.addEventListener("click", (e) => toggleSubMenu(subMenuAdd, e));
+  if (triggerQuickNav)
+    triggerQuickNav.addEventListener("click", (e) =>
+      toggleSubMenu(subMenuQuickNav, e),
+    );
 
-// =========================================================
+  // =========================================================
   // 画面移動の実行 (検索窓の自動クローズ付き)
   // =========================================================
   const fabNavListBtn = document.getElementById("fab-nav-list-btn");
@@ -261,7 +296,7 @@ function setupMasterFabEvents(){
     fabNavListBtn.addEventListener("click", () => {
       closeSearchWidget(); // 検索窓を閉じる
       if (masterFabToggle && !masterFabMenu.classList.contains("opacity-0")) {
-          masterFabToggle.click(); // メニューを閉じる
+        masterFabToggle.click(); // メニューを閉じる
       }
       switchView("project-list");
     });
@@ -272,7 +307,7 @@ function setupMasterFabEvents(){
     fabNavTallyBtn.addEventListener("click", () => {
       closeSearchWidget(); // 検索窓を閉じる
       if (masterFabToggle && !masterFabMenu.classList.contains("opacity-0")) {
-          masterFabToggle.click(); // メニューを閉じる
+        masterFabToggle.click(); // メニューを閉じる
       }
       switchTab("tally");
     });
@@ -283,21 +318,20 @@ function setupMasterFabEvents(){
     fabNavJointsBtn.addEventListener("click", () => {
       closeSearchWidget(); // 検索窓を閉じる
       if (masterFabToggle && !masterFabMenu.classList.contains("opacity-0")) {
-          masterFabToggle.click(); // メニューを閉じる
+        masterFabToggle.click(); // メニューを閉じる
       }
       switchTab("joints");
     });
   }
 
   // 追加系などのアクションボタンを押した時もメニューを閉じる
-  document.querySelectorAll(".fab-action-btn").forEach(btn => {
+  document.querySelectorAll(".fab-action-btn").forEach((btn) => {
     btn.addEventListener("click", () => {
-      if(masterFabToggle && !masterFabMenu.classList.contains("opacity-0")){
-          masterFabToggle.click();
+      if (masterFabToggle && !masterFabMenu.classList.contains("opacity-0")) {
+        masterFabToggle.click();
       }
     });
   });
-
 }
 
 //登録用フローティングボタンイベント
@@ -610,12 +644,16 @@ function setupEditProjectModalEvents() {
 
           // ★ここでクリア関数を呼ぶ！
           if (typeof resetProjectEditCache === "function") {
-             resetProjectEditCache();
+            resetProjectEditCache();
           }
 
           // ▼▼▼ 追加: 次回開く時のために、DOM（入力欄）も強制的にクリアして残骸を消す ▼▼▼
-          const levelsContainer = document.getElementById("edit-custom-levels-container");
-          const areasContainer = document.getElementById("edit-custom-areas-container");
+          const levelsContainer = document.getElementById(
+            "edit-custom-levels-container",
+          );
+          const areasContainer = document.getElementById(
+            "edit-custom-areas-container",
+          );
           if (levelsContainer) levelsContainer.innerHTML = "";
           if (areasContainer) areasContainer.innerHTML = "";
           // ▲▲▲ 追加ここまで ▲▲▲
@@ -1889,6 +1927,15 @@ function setupDeleteExecutionEvents() {
       // ▼ パターン1：プロジェクト自体の削除
       if (type === "project") {
         deleteProject(id)
+          .then(() => {
+            // 削除成功後、一覧に戻る際に確実にバーを隠すための処理
+            document
+              .querySelectorAll(".project-checkbox")
+              .forEach((cb) => (cb.checked = false));
+            // ui.js から import した関数を呼ぶ
+            updateProjectSelectionBar();
+            showToast("工事を削除しました");
+          })
           .catch((err) => {
             console.error(err);
             showCustomAlert("工事の削除に失敗しました。");
@@ -1897,49 +1944,49 @@ function setupDeleteExecutionEvents() {
         return;
       }
 
-      const projectIndex = state.projects.findIndex((p) => p.id === projectId);
-      if (projectIndex === -1) {
-        closeModal(confirmDeleteModal);
-        return;
-      }
-
       // ▼▼▼ パターン3：一括削除 (新規追加) ▼▼▼
       if (type === "bulk") {
-          let joints = [...state.projects[projectIndex].joints];
-          let members = [...(state.projects[projectIndex].members || [])];
-          let deleteCount = 0;
+        let joints = [...state.projects[projectIndex].joints];
+        let members = [...(state.projects[projectIndex].members || [])];
+        let deleteCount = 0;
 
-          state.bulkDeleteTargets.forEach(target => {
-              if (target.type === 'joint') {
-                  joints = joints.filter(j => j.id !== target.id);
-                  deleteCount++;
-              } else if (target.type === 'member') {
-                  members = members.filter(m => m.id !== target.id);
-                  deleteCount++;
-              }
-          });
-
-          state.projects[projectIndex].joints = joints;
-          state.projects[projectIndex].members = members;
-          
-          showToast(`${deleteCount} 件のデータを一括削除しました。`);
-          renderDetailView();
-          
-// 削除完了後にフローティングバー全体を隠す
-          const bulkDeleteBar = document.getElementById("bulk-delete-bar");
-          if (bulkDeleteBar) {
-              bulkDeleteBar.classList.add("translate-y-24", "opacity-0", "pointer-events-none");
+        state.bulkDeleteTargets.forEach((target) => {
+          if (target.type === "joint") {
+            joints = joints.filter((j) => j.id !== target.id);
+            deleteCount++;
+          } else if (target.type === "member") {
+            members = members.filter((m) => m.id !== target.id);
+            deleteCount++;
           }
+        });
 
-          closeModal(confirmDeleteModal);
-          
-          updateProjectData(projectId, { joints, members }).catch(err => {
-              showCustomAlert("削除に失敗しました。ページをリロードして確認してください。");
-              console.error("一括削除に失敗:", err);
-          });
-          
-          state.bulkDeleteTargets = null;
-          return;
+        state.projects[projectIndex].joints = joints;
+        state.projects[projectIndex].members = members;
+
+        showToast(`${deleteCount} 件のデータを一括削除しました。`);
+        renderDetailView();
+
+        // 削除完了後にフローティングバー全体を隠す
+        const bulkDeleteBar = document.getElementById("bulk-delete-bar");
+        if (bulkDeleteBar) {
+          bulkDeleteBar.classList.add(
+            "translate-y-24",
+            "opacity-0",
+            "pointer-events-none",
+          );
+        }
+
+        closeModal(confirmDeleteModal);
+
+        updateProjectData(projectId, { joints, members }).catch((err) => {
+          showCustomAlert(
+            "削除に失敗しました。ページをリロードして確認してください。",
+          );
+          console.error("一括削除に失敗:", err);
+        });
+
+        state.bulkDeleteTargets = null;
+        return;
       }
       // ▲▲▲ パターン3 ここまで ▲▲▲
 
@@ -1948,16 +1995,24 @@ function setupDeleteExecutionEvents() {
       let deletedItemName = "";
 
       if (type === "joint") {
-        const joint = state.projects[projectIndex].joints.find((j) => j.id === id);
+        const joint = state.projects[projectIndex].joints.find(
+          (j) => j.id === id,
+        );
         if (joint) deletedItemName = joint.name;
-        const updatedJoints = state.projects[projectIndex].joints.filter((j) => j.id !== id);
+        const updatedJoints = state.projects[projectIndex].joints.filter(
+          (j) => j.id !== id,
+        );
         state.projects[projectIndex].joints = updatedJoints;
         updateData = { joints: updatedJoints };
         showToast(`継手「${deletedItemName}」を削除しました。`);
       } else if (type === "member") {
-        const member = state.projects[projectIndex].members.find((m) => m.id === id);
+        const member = state.projects[projectIndex].members.find(
+          (m) => m.id === id,
+        );
         if (member) deletedItemName = member.name;
-        const updatedMembers = (state.projects[projectIndex].members || []).filter((m) => m.id !== id);
+        const updatedMembers = (
+          state.projects[projectIndex].members || []
+        ).filter((m) => m.id !== id);
         state.projects[projectIndex].members = updatedMembers;
         updateData = { members: updatedMembers };
         showToast(`部材「${deletedItemName}」を削除しました。`);
@@ -1968,7 +2023,9 @@ function setupDeleteExecutionEvents() {
 
       if (Object.keys(updateData).length > 0) {
         updateProjectData(projectId, updateData).catch((err) => {
-          showCustomAlert("削除に失敗しました。ページをリロードして確認してください。");
+          showCustomAlert(
+            "削除に失敗しました。ページをリロードして確認してください。",
+          );
           console.error("削除に失敗:", err);
         });
       }
@@ -2432,7 +2489,9 @@ function setupAddActionEvents() {
   const addMemberBtn = document.getElementById("add-member-btn");
   const memberNameInput = document.getElementById("member-name");
   const memberJointSelectId = document.getElementById("member-joint-select-id"); // ID要確認
-  const memberJointSelectInput = document.getElementById("member-joint-select-input"); // 表示用inputがある場合
+  const memberJointSelectInput = document.getElementById(
+    "member-joint-select-input",
+  ); // 表示用inputがある場合
 
   // 1. 継手追加ボタン
   if (addJointBtn) {
@@ -3164,7 +3223,7 @@ function setupTallySheetInteractions() {
       }
     });
 
-// --- ドラッグ＆ドロップ ---
+    // --- ドラッグ＆ドロップ ---
     tallySheetContainer.addEventListener("dragstart", (e) => {
       if (e.target.classList.contains("tally-input") && !e.target.disabled) {
         dragSourceElement = e.target;
@@ -3198,7 +3257,7 @@ function setupTallySheetInteractions() {
     tallySheetContainer.addEventListener("drop", (e) => {
       e.preventDefault();
       const dropTarget = e.target;
-      
+
       // ★修正のポイント: 現在のドラッグ元をローカル変数に固定（キャプチャ）する
       const dragSource = dragSourceElement;
 
@@ -3220,9 +3279,15 @@ function setupTallySheetInteractions() {
       const targetValue = dropTarget.value || "(空)";
 
       // モーダルの準備
-      const confirmActionTitle = document.getElementById("confirm-action-title");
-      const confirmActionMessage = document.getElementById("confirm-action-message");
-      const confirmActionModal = document.getElementById("confirm-action-modal");
+      const confirmActionTitle = document.getElementById(
+        "confirm-action-title",
+      );
+      const confirmActionMessage = document.getElementById(
+        "confirm-action-message",
+      );
+      const confirmActionModal = document.getElementById(
+        "confirm-action-modal",
+      );
 
       if (confirmActionTitle) confirmActionTitle.textContent = "数値の移動確認";
       if (confirmActionMessage) {
@@ -3236,11 +3301,11 @@ function setupTallySheetInteractions() {
         if (dragSource && dropTarget) {
           dropTarget.value = dragSource.value;
           dragSource.value = "";
-          
+
           // 値の変更をシステムに通知
           dragSource.dispatchEvent(new Event("change", { bubbles: true }));
           dropTarget.dispatchEvent(new Event("change", { bubbles: true }));
-          
+
           showToast("数値を移動しました");
         }
       };
@@ -4206,13 +4271,13 @@ export function setupSearchFunctionality() {
   const nextBtn = document.getElementById("search-next-btn");
   const closeBtn = document.getElementById("search-close-btn");
   const fabTrigger = document.getElementById("fab-search-trigger");
-  
+
   const backBtn = document.getElementById("nav-back-to-list-btn");
   const mobileBackBtn = document.getElementById("mobile-nav-back-to-list-btn");
 
   if (!widget || !input) {
-      console.error("⚠️ 検索ウィジェットのHTML要素が見つかりません。");
-      return;
+    console.error("⚠️ 検索ウィジェットのHTML要素が見つかりません。");
+    return;
   }
 
   // --- 状態管理 ---
@@ -4233,8 +4298,11 @@ export function setupSearchFunctionality() {
     const jointsSection = document.getElementById("joints-section");
     if (!detailView || !jointsSection) return false;
 
-    const isDetailActive = detailView.classList.contains("active") || detailView.offsetWidth > 0;
-    const isJointsVisible = !jointsSection.classList.contains("hidden") && jointsSection.offsetWidth > 0;
+    const isDetailActive =
+      detailView.classList.contains("active") || detailView.offsetWidth > 0;
+    const isJointsVisible =
+      !jointsSection.classList.contains("hidden") &&
+      jointsSection.offsetWidth > 0;
     return isDetailActive && isJointsVisible;
   };
 
@@ -4263,8 +4331,8 @@ export function setupSearchFunctionality() {
   // FABクリック
   if (fabTrigger) {
     fabTrigger.addEventListener("click", () => {
-       if (!isSearchAllowed()) return;
-       toggleSearch();
+      if (!isSearchAllowed()) return;
+      toggleSearch();
     });
   }
 
@@ -4287,23 +4355,23 @@ export function setupSearchFunctionality() {
     document.getElementById("nav-back-to-list-btn"),
     document.getElementById("mobile-nav-back-to-list-btn"),
     document.getElementById("nav-tab-tally"),
-    document.getElementById("mobile-nav-tab-tally")
+    document.getElementById("mobile-nav-tab-tally"),
   ];
-  forceCloseBtns.forEach(btn => {
+  forceCloseBtns.forEach((btn) => {
     if (btn) btn.addEventListener("click", closeSearch);
   });
 
   const toggleViews = [
     document.getElementById("switch-view-joints"),
-    document.getElementById("switch-view-members")
+    document.getElementById("switch-view-members"),
   ];
-  toggleViews.forEach(btn => {
+  toggleViews.forEach((btn) => {
     if (btn) {
       btn.addEventListener("click", () => {
         if (isOpen) {
           setTimeout(() => {
             performSearch(input.value);
-          }, 50); 
+          }, 50);
         }
       });
     }
@@ -4325,81 +4393,85 @@ export function setupSearchFunctionality() {
 
   const performSearch = (query) => {
     clearHighlights();
-    
+
     if (!query || query.trim() === "") {
-        updateCountUI();
-        return;
+      updateCountUI();
+      return;
     }
 
     const lowerQuery = query.toLowerCase();
-    
+
     const jointsArea = document.getElementById("view-joints-area");
     const membersArea = document.getElementById("view-members-area");
-    
+
     let targetContainer = null;
     if (jointsArea && jointsArea.offsetWidth > 0) {
-        targetContainer = document.getElementById("joint-lists-container");
+      targetContainer = document.getElementById("joint-lists-container");
     } else if (membersArea && membersArea.offsetWidth > 0) {
-        targetContainer = document.getElementById("member-lists-container");
+      targetContainer = document.getElementById("member-lists-container");
     }
 
     if (!targetContainer) return;
 
-    const nameElements = targetContainer.querySelectorAll('.js-searchable-name');
-    
-    nameElements.forEach(element => {
-        const walker = document.createTreeWalker(
-            element,
-            NodeFilter.SHOW_TEXT,
-            {
-                acceptNode: (node) => {
-                    if (!node.nodeValue.trim()) return NodeFilter.FILTER_REJECT;
-                    return NodeFilter.FILTER_ACCEPT;
-                }
-            }
-        );
+    const nameElements = targetContainer.querySelectorAll(
+      ".js-searchable-name",
+    );
 
-        const textNodes = [];
-        while (walker.nextNode()) textNodes.push(walker.currentNode);
+    nameElements.forEach((element) => {
+      const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT, {
+        acceptNode: (node) => {
+          if (!node.nodeValue.trim()) return NodeFilter.FILTER_REJECT;
+          return NodeFilter.FILTER_ACCEPT;
+        },
+      });
 
-        textNodes.forEach(node => {
-            const text = node.nodeValue;
-            const index = text.toLowerCase().indexOf(lowerQuery);
-            
-            if (index !== -1) {
-                const span = document.createElement('span');
-                span.className = 'search-highlight';
-                span.textContent = text.substr(index, query.length);
-                
-                const before = document.createTextNode(text.substr(0, index));
-                const after = document.createTextNode(text.substr(index + query.length));
-                
-                const parent = node.parentNode;
-                parent.insertBefore(before, node);
-                parent.insertBefore(span, before.nextSibling);
-                parent.insertBefore(after, span.nextSibling);
-                parent.removeChild(node);
-                
-                matches.push(span);
-            }
-        });
+      const textNodes = [];
+      while (walker.nextNode()) textNodes.push(walker.currentNode);
+
+      textNodes.forEach((node) => {
+        const text = node.nodeValue;
+        const index = text.toLowerCase().indexOf(lowerQuery);
+
+        if (index !== -1) {
+          const span = document.createElement("span");
+          span.className = "search-highlight";
+          span.textContent = text.substr(index, query.length);
+
+          const before = document.createTextNode(text.substr(0, index));
+          const after = document.createTextNode(
+            text.substr(index + query.length),
+          );
+
+          const parent = node.parentNode;
+          parent.insertBefore(before, node);
+          parent.insertBefore(span, before.nextSibling);
+          parent.insertBefore(after, span.nextSibling);
+          parent.removeChild(node);
+
+          matches.push(span);
+        }
+      });
     });
 
     if (matches.length > 0) {
-        currentIndex = 0;
-        highlightCurrent();
+      currentIndex = 0;
+      highlightCurrent();
     }
-    
+
     updateCountUI();
   };
 
   // 5. ナビゲーション (次へ/前へ)
   const highlightCurrent = () => {
-    matches.forEach(m => m.classList.remove('active'));
+    matches.forEach((m) => m.classList.remove("active"));
     if (currentIndex >= 0 && currentIndex < matches.length) {
-        const current = matches[currentIndex];
-        current.classList.add('active');
-        current.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' });
+      const current = matches[currentIndex];
+      current.classList.add("active");
+      current.scrollIntoView({
+        behavior: "smooth",
+        block: "center",
+        inline: "center",
+      });
     }
     updateCountUI();
   };
@@ -4418,39 +4490,42 @@ export function setupSearchFunctionality() {
 
   const updateCountUI = () => {
     if (matches.length > 0) {
-        countDisplay.classList.remove('hidden');
-        currentSpan.textContent = currentIndex + 1;
-        totalSpan.textContent = matches.length;
-        prevBtn.disabled = false;
-        nextBtn.disabled = false;
+      countDisplay.classList.remove("hidden");
+      currentSpan.textContent = currentIndex + 1;
+      totalSpan.textContent = matches.length;
+      prevBtn.disabled = false;
+      nextBtn.disabled = false;
     } else {
-        countDisplay.classList.add('hidden');
-        prevBtn.disabled = true;
-        nextBtn.disabled = true;
+      countDisplay.classList.add("hidden");
+      prevBtn.disabled = true;
+      nextBtn.disabled = true;
     }
   };
 
   // ▼▼▼ 追加: 全角を半角に変換するヘルパー関数 ▼▼▼
   const toHalfWidth = (str) => {
-    return str.replace(/[Ａ-Ｚａ-ｚ０-９]/g, function(s) {
-        return String.fromCharCode(s.charCodeAt(0) - 0xFEE0);
-    }).replace(/[－]/g, '-').replace(/　/g, ' '); // ハイフンと全角スペースも変換
+    return str
+      .replace(/[Ａ-Ｚａ-ｚ０-９]/g, function (s) {
+        return String.fromCharCode(s.charCodeAt(0) - 0xfee0);
+      })
+      .replace(/[－]/g, "-")
+      .replace(/　/g, " "); // ハイフンと全角スペースも変換
   };
   // ▲▲▲ 追加ここまで ▲▲▲
 
   // ▼▼▼ 修正: 入力イベント（半角変換と履歴のリセット） ▼▼▼
   input.addEventListener("input", (e) => {
     // IME（日本語入力）の変換中は邪魔しない
-    if (e.isComposing) return; 
+    if (e.isComposing) return;
 
     // 全角英数字を半角に変換してカーソル位置を保持
     const originalValue = e.target.value;
     const halfWidthValue = toHalfWidth(originalValue);
-    
+
     if (originalValue !== halfWidthValue) {
-        const cursorStart = e.target.selectionStart;
-        e.target.value = halfWidthValue;
-        e.target.setSelectionRange(cursorStart, cursorStart);
+      const cursorStart = e.target.selectionStart;
+      e.target.value = halfWidthValue;
+      e.target.setSelectionRange(cursorStart, cursorStart);
     }
 
     historyIndex = -1; // 文字を入力したら履歴トラッキングをリセット
@@ -4474,41 +4549,39 @@ export function setupSearchFunctionality() {
     if (e.isComposing) return;
 
     if (e.key === "Enter") {
-        e.preventDefault();
-        
-        // 検索履歴に追加（空文字は除外、重複は最新に移動）
-        const val = input.value.trim();
-        if (val) {
-            searchHistory = searchHistory.filter(item => item !== val); // 重複削除
-            searchHistory.unshift(val); // 先頭に追加
-            if (searchHistory.length > MAX_HISTORY) searchHistory.pop(); // 10件を超えたら古いものを削除
-        }
-        historyIndex = -1; // 履歴トラッキングをリセット
+      e.preventDefault();
 
-        // 次へ・前へ実行
-        if (e.shiftKey) prevMatch();
-        else nextMatch();
-    } 
-    else if (e.key === "ArrowUp") {
-        e.preventDefault();
-        if (searchHistory.length > 0 && historyIndex < searchHistory.length - 1) {
-            if (historyIndex === -1) currentDraft = input.value; // 現在の入力を退避
-            historyIndex++;
-            input.value = searchHistory[historyIndex];
-            performSearch(input.value);
-        }
-    } 
-    else if (e.key === "ArrowDown") {
-        e.preventDefault();
-        if (historyIndex > 0) {
-            historyIndex--;
-            input.value = searchHistory[historyIndex];
-            performSearch(input.value);
-        } else if (historyIndex === 0) {
-            historyIndex = -1; // 元の入力に戻る
-            input.value = currentDraft;
-            performSearch(input.value);
-        }
+      // 検索履歴に追加（空文字は除外、重複は最新に移動）
+      const val = input.value.trim();
+      if (val) {
+        searchHistory = searchHistory.filter((item) => item !== val); // 重複削除
+        searchHistory.unshift(val); // 先頭に追加
+        if (searchHistory.length > MAX_HISTORY) searchHistory.pop(); // 10件を超えたら古いものを削除
+      }
+      historyIndex = -1; // 履歴トラッキングをリセット
+
+      // 次へ・前へ実行
+      if (e.shiftKey) prevMatch();
+      else nextMatch();
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      if (searchHistory.length > 0 && historyIndex < searchHistory.length - 1) {
+        if (historyIndex === -1) currentDraft = input.value; // 現在の入力を退避
+        historyIndex++;
+        input.value = searchHistory[historyIndex];
+        performSearch(input.value);
+      }
+    } else if (e.key === "ArrowDown") {
+      e.preventDefault();
+      if (historyIndex > 0) {
+        historyIndex--;
+        input.value = searchHistory[historyIndex];
+        performSearch(input.value);
+      } else if (historyIndex === 0) {
+        historyIndex = -1; // 元の入力に戻る
+        input.value = currentDraft;
+        performSearch(input.value);
+      }
     }
   });
   // ▲▲▲ 修正ここまで ▲▲▲
@@ -4539,17 +4612,17 @@ export function setupSearchFunctionality() {
     initialLeft = rect.left;
     initialTop = rect.top;
 
-    widget.style.right = "auto"; 
+    widget.style.right = "auto";
     widget.style.left = `${initialLeft}px`;
     widget.style.top = `${initialTop}px`;
 
     document.body.style.cursor = "move";
-    if (e.type === 'touchstart') e.preventDefault(); 
+    if (e.type === "touchstart") e.preventDefault();
   };
 
   const onDragMove = (e) => {
     if (!isDragging) return;
-    e.preventDefault(); 
+    e.preventDefault();
     const coords = getCoords(e);
     const dx = coords.x - startX;
     const dy = coords.y - startY;
@@ -4575,205 +4648,224 @@ export function setupSearchFunctionality() {
  * 一括削除（複数選択）機能のイベント設定 (フローティング対応版)
  */
 function setupBulkDeleteEvents() {
-    const bulkDeleteBar = document.getElementById("bulk-delete-bar");
-    const bulkDeleteBtn = document.getElementById("bulk-delete-btn");
-    const bulkDeleteCount = document.getElementById("bulk-delete-count");
-    
-    // UIを更新する関数
-    const updateBulkDeleteUI = () => {
-        const checkedBoxes = document.querySelectorAll(".item-checkbox:checked");
-        const count = checkedBoxes.length;
-        
-        // フローティングバーの表示切替
-        if (bulkDeleteBar && bulkDeleteCount) {
-            if (count > 0) {
-                bulkDeleteCount.textContent = count;
-                // 下からスッと表示する
-                bulkDeleteBar.classList.remove("translate-y-24", "opacity-0", "pointer-events-none");
-            } else {
-                // 隠す
-                bulkDeleteBar.classList.add("translate-y-24", "opacity-0", "pointer-events-none");
-            }
-        }
-        
-        // 行のハイライトを更新
-        document.querySelectorAll(".item-row").forEach(row => {
-            const checkbox = row.querySelector(".item-checkbox");
-            if (checkbox && checkbox.checked) {
-                row.classList.add("!bg-yellow-100", "dark:!bg-yellow-900/40");
-            } else {
-                row.classList.remove("!bg-yellow-100", "dark:!bg-yellow-900/40");
-            }
-        });
-    };
+  const bulkDeleteBar = document.getElementById("bulk-delete-bar");
+  const bulkDeleteBtn = document.getElementById("bulk-delete-btn");
+  const bulkDeleteCount = document.getElementById("bulk-delete-count");
 
-    // リストコンテナ内のクリックイベント（イベント委譲）
-    const handleCheckboxChange = (e) => {
-        if (e.target.classList.contains("select-all-checkbox")) {
-            const table = e.target.closest("table");
-            if (table) {
-                const isChecked = e.target.checked;
-                table.querySelectorAll(".item-checkbox").forEach(cb => {
-                    cb.checked = isChecked;
-                });
-            }
-            updateBulkDeleteUI();
-        }
-        else if (e.target.classList.contains("item-checkbox")) {
-            const table = e.target.closest("table");
-            if (table) {
-                const allCheckboxes = table.querySelectorAll(".item-checkbox");
-                const allChecked = Array.from(allCheckboxes).every(cb => cb.checked);
-                const selectAllCb = table.querySelector(".select-all-checkbox");
-                if (selectAllCb) selectAllCb.checked = allChecked;
-            }
-            updateBulkDeleteUI();
-        }
-    };
+  // UIを更新する関数
+  const updateBulkDeleteUI = () => {
+    const checkedBoxes = document.querySelectorAll(".item-checkbox:checked");
+    const count = checkedBoxes.length;
 
-    const jointsContainer = document.getElementById("joint-lists-container");
-    const membersContainer = document.getElementById("member-lists-container");
-    
-    if (jointsContainer) jointsContainer.addEventListener("change", handleCheckboxChange);
-    if (membersContainer) membersContainer.addEventListener("change", handleCheckboxChange);
-
-    // 一括削除ボタンがクリックされた時（確認モーダルを表示）
-    if (bulkDeleteBtn) {
-        bulkDeleteBtn.addEventListener("click", () => {
-            const checkedBoxes = document.querySelectorAll(".item-checkbox:checked");
-            if (checkedBoxes.length === 0) return;
-
-            const targets = Array.from(checkedBoxes).map(cb => ({
-                id: cb.dataset.id,
-                type: cb.dataset.type
-            }));
-
-            const confirmDeleteModal = document.getElementById("confirm-delete-modal");
-            const deleteTypeInput = document.getElementById("delete-type");
-            const confirmDeleteMessage = document.getElementById("confirm-delete-message");
-
-            if (confirmDeleteModal && deleteTypeInput && confirmDeleteMessage) {
-                deleteTypeInput.value = "bulk"; // 種類を bulk(一括) に設定
-                state.bulkDeleteTargets = targets; // 実行用に一時保存
-                
-                const jointCount = targets.filter(t => t.type === 'joint').length;
-                const memberCount = targets.filter(t => t.type === 'member').length;
-                
-                let msg = `選択された ${targets.length} 件のデータを削除しますか？<br><br>`;
-                if (jointCount > 0) msg += `<span class="text-blue-600 font-bold">・継手: ${jointCount} 件</span><br>`;
-                if (memberCount > 0) msg += `<span class="text-green-600 font-bold">・部材: ${memberCount} 件</span><br>`;
-                msg += `<br><span class="text-red-600 text-sm">※この操作は元に戻せません。</span>`;
-                
-                confirmDeleteMessage.innerHTML = msg; // HTMLとしてパースする
-                
-                // ui.js の関数を呼び出してモーダルを開く
-                const modal = document.getElementById("confirm-delete-modal");
-                if (modal) {
-                    modal.classList.remove("hidden");
-                    setTimeout(() => modal.classList.remove("opacity-0"), 10);
-                }
-            }
-        });
+    // フローティングバーの表示切替
+    if (bulkDeleteBar && bulkDeleteCount) {
+      if (count > 0) {
+        bulkDeleteCount.textContent = count;
+        // 下からスッと表示する
+        bulkDeleteBar.classList.remove(
+          "translate-y-24",
+          "opacity-0",
+          "pointer-events-none",
+        );
+      } else {
+        // 隠す
+        bulkDeleteBar.classList.add(
+          "translate-y-24",
+          "opacity-0",
+          "pointer-events-none",
+        );
+      }
     }
+
+    // 行のハイライトを更新
+    document.querySelectorAll(".item-row").forEach((row) => {
+      const checkbox = row.querySelector(".item-checkbox");
+      if (checkbox && checkbox.checked) {
+        row.classList.add("!bg-yellow-100", "dark:!bg-yellow-900/40");
+      } else {
+        row.classList.remove("!bg-yellow-100", "dark:!bg-yellow-900/40");
+      }
+    });
+  };
+
+  // リストコンテナ内のクリックイベント（イベント委譲）
+  const handleCheckboxChange = (e) => {
+    if (e.target.classList.contains("select-all-checkbox")) {
+      const table = e.target.closest("table");
+      if (table) {
+        const isChecked = e.target.checked;
+        table.querySelectorAll(".item-checkbox").forEach((cb) => {
+          cb.checked = isChecked;
+        });
+      }
+      updateBulkDeleteUI();
+    } else if (e.target.classList.contains("item-checkbox")) {
+      const table = e.target.closest("table");
+      if (table) {
+        const allCheckboxes = table.querySelectorAll(".item-checkbox");
+        const allChecked = Array.from(allCheckboxes).every((cb) => cb.checked);
+        const selectAllCb = table.querySelector(".select-all-checkbox");
+        if (selectAllCb) selectAllCb.checked = allChecked;
+      }
+      updateBulkDeleteUI();
+    }
+  };
+
+  const jointsContainer = document.getElementById("joint-lists-container");
+  const membersContainer = document.getElementById("member-lists-container");
+
+  if (jointsContainer)
+    jointsContainer.addEventListener("change", handleCheckboxChange);
+  if (membersContainer)
+    membersContainer.addEventListener("change", handleCheckboxChange);
+
+  // 一括削除ボタンがクリックされた時（確認モーダルを表示）
+  if (bulkDeleteBtn) {
+    bulkDeleteBtn.addEventListener("click", () => {
+      const checkedBoxes = document.querySelectorAll(".item-checkbox:checked");
+      if (checkedBoxes.length === 0) return;
+
+      const targets = Array.from(checkedBoxes).map((cb) => ({
+        id: cb.dataset.id,
+        type: cb.dataset.type,
+      }));
+
+      const confirmDeleteModal = document.getElementById(
+        "confirm-delete-modal",
+      );
+      const deleteTypeInput = document.getElementById("delete-type");
+      const confirmDeleteMessage = document.getElementById(
+        "confirm-delete-message",
+      );
+
+      if (confirmDeleteModal && deleteTypeInput && confirmDeleteMessage) {
+        deleteTypeInput.value = "bulk"; // 種類を bulk(一括) に設定
+        state.bulkDeleteTargets = targets; // 実行用に一時保存
+
+        const jointCount = targets.filter((t) => t.type === "joint").length;
+        const memberCount = targets.filter((t) => t.type === "member").length;
+
+        let msg = `選択された ${targets.length} 件のデータを削除しますか？<br><br>`;
+        if (jointCount > 0)
+          msg += `<span class="text-blue-600 font-bold">・継手: ${jointCount} 件</span><br>`;
+        if (memberCount > 0)
+          msg += `<span class="text-green-600 font-bold">・部材: ${memberCount} 件</span><br>`;
+        msg += `<br><span class="text-red-600 text-sm">※この操作は元に戻せません。</span>`;
+
+        confirmDeleteMessage.innerHTML = msg; // HTMLとしてパースする
+
+        // ui.js の関数を呼び出してモーダルを開く
+        const modal = document.getElementById("confirm-delete-modal");
+        if (modal) {
+          modal.classList.remove("hidden");
+          setTimeout(() => modal.classList.remove("opacity-0"), 10);
+        }
+      }
+    });
+  }
 }
 /**
  * 新しい物件一覧のイベント設定
  */
 export function setupProjectListNewEvents() {
-    const container = document.getElementById("projects-container");
-    if (!container) return;
+  const container = document.getElementById("projects-container");
+  if (!container) return;
 
-    // 1. アコーディオンの開閉とカードクリックの委譲
-    container.addEventListener("click", (e) => {
-        const header = e.target.closest(".project-group-header");
-        const row = e.target.closest(".project-item-row");
-        const checkbox = e.target.closest(".project-checkbox");
+  // 1. アコーディオンの開閉とカードクリックの委譲
+  container.addEventListener("click", (e) => {
+    const header = e.target.closest(".project-group-header");
+    const row = e.target.closest(".project-item-row");
+    const checkbox = e.target.closest(".project-checkbox");
 
-        // チェックボックスクリック時は何もしない（changeイベントで処理）
-        if (checkbox) return;
+    // チェックボックスクリック時は何もしない（changeイベントで処理）
+    if (checkbox) return;
 
-        // グループヘッダーの開閉
-        if (header) {
-            const content = header.nextElementSibling;
-            const arrow = header.querySelector(".group-arrow");
-            const isHidden = content.classList.contains("hidden");
-            
-            content.classList.toggle("hidden");
-            if (arrow) arrow.classList.toggle("rotate-90", isHidden);
-            return;
-        }
+    // グループヘッダーの開閉
+    if (header) {
+      const content = header.nextElementSibling;
+      const arrow = header.querySelector(".group-arrow");
+      const isHidden = content.classList.contains("hidden");
 
-        // 工事行のクリック（詳細へ移動）
-        if (row) {
-            const projectId = row.dataset.id;
-            state.currentProjectId = projectId;
-            switchView("detail"); // ui.js の関数
-            renderDetailView();   // ui.js の関数
-        }
+      content.classList.toggle("hidden");
+      if (arrow) arrow.classList.toggle("rotate-90", isHidden);
+      return;
+    }
+
+    // 工事行のクリック（詳細へ移動）
+    if (row) {
+      const projectId = row.dataset.id;
+      state.currentProjectId = projectId;
+      switchView("detail"); // ui.js の関数
+      renderDetailView(); // ui.js の関数
+    }
+  });
+
+  // 2. チェックボックスの監視とバーの表示
+  container.addEventListener("change", (e) => {
+    if (e.target.classList.contains("project-checkbox")) {
+      updateProjectSelectionBar(); // ui.js の関数
+    }
+  });
+
+  // // 3. バーのUI更新処理
+  // function updateProjectOpBarUI() {
+  //     const bar = document.getElementById("project-op-bar");
+  //     const countLabel = document.getElementById("project-selection-count");
+  //     const checkedBoxes = document.querySelectorAll(".project-checkbox:checked");
+  //     const count = checkedBoxes.length;
+
+  //     if (!bar) return;
+
+  //     if (count > 0) {
+  //         countLabel.textContent = count;
+  //         bar.classList.remove("translate-y-24", "opacity-0", "pointer-events-none");
+
+  //         // 編集・複製は1件の時のみ表示
+  //         const editBtn = document.getElementById("project-edit-btn-bulk");
+  //         const copyBtn = document.getElementById("project-copy-btn-bulk");
+  //         if (editBtn) editBtn.classList.toggle("hidden", count !== 1);
+  //         if (copyBtn) copyBtn.classList.toggle("hidden", count !== 1);
+  //     } else {
+  //         bar.classList.add("translate-y-24", "opacity-0", "pointer-events-none");
+  //     }
+  // }
+
+  // 4. バー内のボタン処理
+  const barEdit = document.getElementById("project-edit-btn-bulk");
+  const barCopy = document.getElementById("project-copy-btn-bulk");
+  const barDelete = document.getElementById("project-delete-btn-bulk");
+
+  if (barEdit) {
+    barEdit.addEventListener("click", () => {
+      const id = document.querySelector(".project-checkbox:checked")?.dataset
+        .id;
+      const project = state.projects.find((p) => p.id === id);
+      if (project) openEditProjectModal(project); // 既存の編集関数
     });
+  }
 
-    // 2. チェックボックスの監視とバーの表示
-    container.addEventListener("change", (e) => {
-        if (e.target.classList.contains("project-checkbox")) {
-            updateProjectOpBarUI();
-        }
+  if (barCopy) {
+    barCopy.addEventListener("click", () => {
+      const id = document.querySelector(".project-checkbox:checked")?.dataset
+        .id;
+      if (id) openCopyProjectModal(id); // 既存の複製関数
     });
+  }
 
-    // 3. バーのUI更新処理
-    function updateProjectOpBarUI() {
-        const bar = document.getElementById("project-op-bar");
-        const countLabel = document.getElementById("project-selection-count");
-        const checkedBoxes = document.querySelectorAll(".project-checkbox:checked");
-        const count = checkedBoxes.length;
+  if (barDelete) {
+    barDelete.addEventListener("click", () => {
+      const checkedBoxes = document.querySelectorAll(
+        ".project-checkbox:checked",
+      );
+      const ids = Array.from(checkedBoxes).map((cb) => cb.dataset.id);
 
-        if (!bar) return;
-
-        if (count > 0) {
-            countLabel.textContent = count;
-            bar.classList.remove("translate-y-24", "opacity-0", "pointer-events-none");
-            
-            // 編集・複製は1件の時のみ表示
-            const editBtn = document.getElementById("project-edit-btn-bulk");
-            const copyBtn = document.getElementById("project-copy-btn-bulk");
-            if (editBtn) editBtn.classList.toggle("hidden", count !== 1);
-            if (copyBtn) copyBtn.classList.toggle("hidden", count !== 1);
-        } else {
-            bar.classList.add("translate-y-24", "opacity-0", "pointer-events-none");
-        }
-    }
-
-    // 4. バー内のボタン処理
-    const barEdit = document.getElementById("project-edit-btn-bulk");
-    const barCopy = document.getElementById("project-copy-btn-bulk");
-    const barDelete = document.getElementById("project-delete-btn-bulk");
-
-    if (barEdit) {
-        barEdit.addEventListener("click", () => {
-            const id = document.querySelector(".project-checkbox:checked")?.dataset.id;
-            const project = state.projects.find(p => p.id === id);
-            if (project) openEditProjectModal(project); // 既存の編集関数
-        });
-    }
-
-    if (barCopy) {
-        barCopy.addEventListener("click", () => {
-            const id = document.querySelector(".project-checkbox:checked")?.dataset.id;
-            if (id) openCopyProjectModal(id); // 既存の複製関数
-        });
-    }
-
-    if (barDelete) {
-        barDelete.addEventListener("click", () => {
-            const checkedBoxes = document.querySelectorAll(".project-checkbox:checked");
-            const ids = Array.from(checkedBoxes).map(cb => cb.dataset.id);
-            
-            if (ids.length === 1) {
-                // 1件なら既存の削除確認を利用
-                openConfirmDeleteModal(ids[0], "project");
-            } else {
-                // 複数削除（必要であれば実装。まずは警告を出すか1件ずつ処理）
-                showCustomAlert("複数削除は現在1件ずつの対応となります。");
-            }
-        });
-    }
+      if (ids.length === 1) {
+        // 1件なら既存の削除確認を利用
+        openConfirmDeleteModal(ids[0], "project");
+      } else {
+        // 複数削除（必要であれば実装。まずは警告を出すか1件ずつ処理）
+        showCustomAlert("複数削除は現在1件ずつの対応となります。");
+      }
+    });
+  }
 }
