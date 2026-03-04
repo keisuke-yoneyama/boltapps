@@ -1511,6 +1511,14 @@ function setupProjectActionEvents() {
         updateProjectListUI();
         if (copyProjectModal) closeModal(copyProjectModal);
         showToast("工事を複製しました。");
+        // ▼▼▼ 追加：一括操作バーのリセット ▼▼▼
+        document
+          .querySelectorAll(".project-checkbox")
+          .forEach((cb) => (cb.checked = false));
+        if (typeof updateProjectSelectionBar === "function") {
+          updateProjectSelectionBar(); // ui.js の共通関数
+        }
+        // ▲▲▲ 追加ここまで ▲▲▲
       } catch (err) {
         console.error("複製エラー:", err);
         showCustomAlert(err.message || "工事の複製に失敗しました。");
@@ -1592,6 +1600,15 @@ function setupProjectActionEvents() {
         resetProjectEditCache();
 
         showToast(`工事情報を更新しました。`);
+
+        // ▼▼▼ 追加：一括操作バーのリセット ▼▼▼
+        document
+          .querySelectorAll(".project-checkbox")
+          .forEach((cb) => (cb.checked = false));
+        if (typeof updateProjectSelectionBar === "function") {
+          updateProjectSelectionBar(); // ui.js の共通関数
+        }
+        // ▲▲▲ 追加ここまで ▲▲▲
       };
 
       let updatedProjectData = { name: newName, propertyName: newPropertyName };
