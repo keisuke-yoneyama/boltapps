@@ -182,15 +182,28 @@ const getJointFilterLabel = (filterId) => {
  * カテゴリカラーの定義（ダークモード完全対応）
  */
 const getJointCategoryColorClasses = (joint) => {
-  if (!joint) return "bg-slate-200 text-slate-800 dark:bg-slate-700 dark:text-slate-200";
+  if (!joint)
+    return "bg-slate-200 text-slate-800 dark:bg-slate-700 dark:text-slate-200";
   const t = joint.type;
   const p = joint.isPinJoint;
-  if (t === "girder") return p ? "bg-cyan-200 text-cyan-900 border-cyan-300 dark:bg-cyan-900 dark:text-cyan-100" : "bg-blue-200 text-blue-900 border-blue-300 dark:bg-blue-900 dark:text-blue-100";
-  if (t === "beam") return p ? "bg-teal-200 text-teal-900 border-teal-300 dark:bg-teal-900 dark:text-teal-100" : "bg-green-200 text-green-900 border-green-300 dark:bg-emerald-900 dark:text-emerald-100";
-  if (t === "column") return "bg-red-200 text-red-900 border-red-300 dark:bg-rose-900 dark:text-rose-100";
-  if (t === "stud") return p ? "bg-purple-200 text-purple-900 border-purple-300 dark:bg-purple-900 dark:text-purple-100" : "bg-indigo-200 text-indigo-900 border-indigo-300 dark:bg-indigo-900 dark:text-indigo-100";
-  if (t === "wall_girt") return "bg-slate-200 text-slate-900 border-slate-300 dark:bg-slate-700 dark:text-slate-200";
-  if (t === "roof_purlin") return "bg-orange-200 text-orange-900 border-orange-300 dark:bg-orange-900 dark:text-orange-100";
+  if (t === "girder")
+    return p
+      ? "bg-cyan-200 text-cyan-900 border-cyan-300 dark:bg-cyan-900 dark:text-cyan-100"
+      : "bg-blue-200 text-blue-900 border-blue-300 dark:bg-blue-900 dark:text-blue-100";
+  if (t === "beam")
+    return p
+      ? "bg-teal-200 text-teal-900 border-teal-300 dark:bg-teal-900 dark:text-teal-100"
+      : "bg-green-200 text-green-900 border-green-300 dark:bg-emerald-900 dark:text-emerald-100";
+  if (t === "column")
+    return "bg-red-200 text-red-900 border-red-300 dark:bg-rose-900 dark:text-rose-100";
+  if (t === "stud")
+    return p
+      ? "bg-purple-200 text-purple-900 border-purple-300 dark:bg-purple-900 dark:text-purple-100"
+      : "bg-indigo-200 text-indigo-900 border-indigo-300 dark:bg-indigo-900 dark:text-indigo-100";
+  if (t === "wall_girt")
+    return "bg-slate-200 text-slate-900 border-slate-300 dark:bg-slate-700 dark:text-slate-200";
+  if (t === "roof_purlin")
+    return "bg-orange-200 text-orange-900 border-orange-300 dark:bg-orange-900 dark:text-orange-100";
   return "bg-amber-200 text-amber-900 border-amber-300 dark:bg-amber-900 dark:text-amber-100";
 };
 
@@ -202,7 +215,10 @@ const getBoltTooltipText = (joint) => {
   if (!joint) return "";
   let lines = [];
   const name = joint.name || "継手名未設定";
-  const isSimpleLabel = joint.isPinJoint || joint.type === "wall_girt" || joint.type === "roof_purlin";
+  const isSimpleLabel =
+    joint.isPinJoint ||
+    joint.type === "wall_girt" ||
+    joint.type === "roof_purlin";
 
   if (joint.isComplexSpl && joint.webInputs) {
     joint.webInputs.forEach((w) => {
@@ -4029,50 +4045,75 @@ export const renderTallySheet = (project) => {
   // 1. 階層・種別タブの生成 (昼夜対応)
   const levels = getProjectLevels(project);
   let floorHtml = `<button class="tally-tab-btn px-4 py-1.5 rounded-full text-sm font-bold border transition-all ${
-    state.activeTallyLevel === "all" ? "bg-blue-600 text-white border-blue-600 shadow-md" : "bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-300 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700"
+    state.activeTallyLevel === "all"
+      ? "bg-blue-600 text-white border-blue-600 shadow-md"
+      : "bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-300 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700"
   }" data-level="all">全表示</button>`;
 
-  levels.forEach(lvl => {
+  levels.forEach((lvl) => {
     const active = state.activeTallyLevel === lvl.id;
     floorHtml += `<button class="tally-tab-btn px-4 py-1.5 rounded-full text-sm font-bold border transition-all ${
-      active ? "bg-blue-600 text-white border-blue-600 shadow-md" : "bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-300 dark:border-slate-600"
+      active
+        ? "bg-blue-600 text-white border-blue-600 shadow-md"
+        : "bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-300 dark:border-slate-600"
     }" data-level="${lvl.id}">${lvl.label}</button>`;
   });
   floorTabs.innerHTML = floorHtml;
 
-  const uniqueFilterIds = [...new Set(allItems.map(item => getJointFilterId(item.joint)))].sort();
+  const uniqueFilterIds = [
+    ...new Set(allItems.map((item) => getJointFilterId(item.joint))),
+  ].sort();
   let typeHtml = `<button class="tally-type-tab-btn px-4 py-1.5 rounded-full text-sm font-bold border transition-all ${
-    state.activeTallyType === "all" ? "bg-emerald-600 text-white border-emerald-600 shadow-md" : "bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-300 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700"
+    state.activeTallyType === "all"
+      ? "bg-emerald-600 text-white border-emerald-600 shadow-md"
+      : "bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-300 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700"
   }" data-type="all">全種別</button>`;
 
-  uniqueFilterIds.forEach(fid => {
+  uniqueFilterIds.forEach((fid) => {
     const active = state.activeTallyType === fid;
     typeHtml += `<button class="tally-type-tab-btn px-4 py-1.5 rounded-full text-sm font-bold border transition-all ${
-      active ? "bg-emerald-600 text-white border-emerald-600 shadow-md" : "bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-300 dark:border-slate-600"
+      active
+        ? "bg-emerald-600 text-white border-emerald-600 shadow-md"
+        : "bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-300 dark:border-slate-600"
     }" data-type="${fid}">${getJointFilterLabel(fid)}</button>`;
   });
   if (typeTabs) typeTabs.innerHTML = typeHtml;
 
   // タブイベント
-  floorTabs.querySelectorAll(".tally-tab-btn").forEach(btn => {
-    btn.onclick = () => { state.activeTallyLevel = btn.dataset.level; renderTallySheet(project); renderResults(project); };
+  floorTabs.querySelectorAll(".tally-tab-btn").forEach((btn) => {
+    btn.onclick = () => {
+      state.activeTallyLevel = btn.dataset.level;
+      renderTallySheet(project);
+      renderResults(project);
+    };
   });
   if (typeTabs) {
-    typeTabs.querySelectorAll(".tally-type-tab-btn").forEach(btn => {
-      btn.onclick = () => { state.activeTallyType = btn.dataset.type; renderTallySheet(project); renderResults(project); };
+    typeTabs.querySelectorAll(".tally-type-tab-btn").forEach((btn) => {
+      btn.onclick = () => {
+        state.activeTallyType = btn.dataset.type;
+        renderTallySheet(project);
+        renderResults(project);
+      };
     });
   }
 
   // 2. 表示データのフィルタリング
-  const displayItems = allItems.filter(item => {
+  const displayItems = allItems.filter((item) => {
     const isCommon = !item.targetLevels || item.targetLevels.length === 0;
-    const matchLevel = state.activeTallyLevel === "all" || !item.isMember || isCommon || item.targetLevels.includes(state.activeTallyLevel);
-    const matchType = state.activeTallyType === "all" || getJointFilterId(item.joint) === state.activeTallyType;
+    const matchLevel =
+      state.activeTallyLevel === "all" ||
+      !item.isMember ||
+      isCommon ||
+      item.targetLevels.includes(state.activeTallyLevel);
+    const matchType =
+      state.activeTallyType === "all" ||
+      getJointFilterId(item.joint) === state.activeTallyType;
     return matchLevel && matchType;
   });
 
   if (displayItems.length === 0) {
-    tallySheetContainer.innerHTML = '<p class="text-gray-500 p-12 text-center bg-slate-50 dark:bg-slate-800/50 rounded-xl border-2 border-dashed border-slate-200 dark:border-slate-700 font-bold">表示条件に合う部材がありません。</p>';
+    tallySheetContainer.innerHTML =
+      '<p class="text-gray-500 p-12 text-center bg-slate-50 dark:bg-slate-800/50 rounded-xl border-2 border-dashed border-slate-200 dark:border-slate-700 font-bold">表示条件に合う部材がありません。</p>';
     if (resultsCard) resultsCard.classList.add("hidden");
     return;
   }
@@ -4080,73 +4121,101 @@ export const renderTallySheet = (project) => {
   // 3. ロケーション生成 (PH対応)
   let locations = [];
   if (project.mode === "advanced") {
-    project.customLevels.forEach(lvl => {
-      if (state.activeTallyLevel !== "all" && state.activeTallyLevel !== lvl) return;
-      project.customAreas.forEach(area => locations.push({ id: `${lvl}-${area}`, label: `${lvl}-${area}` }));
+    project.customLevels.forEach((lvl) => {
+      if (state.activeTallyLevel !== "all" && state.activeTallyLevel !== lvl)
+        return;
+      project.customAreas.forEach((area) =>
+        locations.push({ id: `${lvl}-${area}`, label: `${lvl}-${area}` }),
+      );
     });
   } else {
     for (let f = 2; f <= project.floors; f++) {
-      if (state.activeTallyLevel !== "all" && state.activeTallyLevel !== f.toString()) continue;
-      for (let s = 1; s <= project.sections; s++) locations.push({ id: `${f}-${s}`, label: `${f}階 ${s}工区` });
+      if (
+        state.activeTallyLevel !== "all" &&
+        state.activeTallyLevel !== f.toString()
+      )
+        continue;
+      for (let s = 1; s <= project.sections; s++)
+        locations.push({ id: `${f}-${s}`, label: `${f}階 ${s}工区` });
     }
     if (state.activeTallyLevel === "all" || state.activeTallyLevel === "R") {
-      for (let s = 1; s <= project.sections; s++) locations.push({ id: `R-${s}`, label: `R階 ${s}工区` });
+      for (let s = 1; s <= project.sections; s++)
+        locations.push({ id: `R-${s}`, label: `R階 ${s}工区` });
     }
-    if (project.hasPH && (state.activeTallyLevel === "all" || state.activeTallyLevel === "PH")) {
-      for (let s = 1; s <= project.sections; s++) locations.push({ id: `PH-${s}`, label: `PH階 ${s}工区` });
+    if (
+      project.hasPH &&
+      (state.activeTallyLevel === "all" || state.activeTallyLevel === "PH")
+    ) {
+      for (let s = 1; s <= project.sections; s++)
+        locations.push({ id: `PH-${s}`, label: `PH階 ${s}工区` });
     }
   }
 
   const locks = project.tallyLocks || {};
 
   // 4. テーブルHTML生成
-  const lockRow = displayItems.map(item => {
-    const colorClass = getJointCategoryColorClasses(item.joint);
-    return `<td class="px-2 py-1 text-center border border-slate-300 dark:border-slate-600 ${colorClass}">
+  const lockRow = displayItems
+    .map((item) => {
+      const colorClass = getJointCategoryColorClasses(item.joint);
+      return `<td class="px-2 py-1 text-center border border-slate-300 dark:border-slate-600 ${colorClass}">
               <input type="checkbox" class="tally-lock-checkbox h-4 w-4 rounded cursor-pointer" data-id="${item.id}" ${locks[item.id] ? "checked" : ""}>
             </td>`;
-  }).join("");
+    })
+    .join("");
 
-  const headerRow = displayItems.map(item => {
-    const colorClass = getJointCategoryColorClasses(item.joint);
-    const badgeColor = item.joint.color || '#cbd5e1';
-    const cubeIcon = item.joint.countAsMember
-      ? `<span class="inline-flex items-center justify-center ml-1.5 text-emerald-800 dark:text-emerald-300" title="部材として集計される継手">${memberIconSvgRaw}</span>`
-      : "";
+  const headerRow = displayItems
+    .map((item) => {
+      const colorClass = getJointCategoryColorClasses(item.joint);
+      const badgeColor = item.joint.color || "#cbd5e1";
+      const cubeIcon = item.joint.countAsMember
+        ? `<span class="inline-flex items-center justify-center ml-1.5 text-emerald-800 dark:text-emerald-300" title="部材として集計される継手">${memberIconSvgRaw}</span>`
+        : "";
 
-    return `<th class="px-4 py-3 text-center border border-slate-300 dark:border-slate-600 min-w-[180px] whitespace-nowrap font-bold ${colorClass}">
+      return `<th class="px-4 py-3 text-center border border-slate-300 dark:border-slate-600 min-w-[180px] whitespace-nowrap font-bold ${colorClass}">
               <div class="flex items-center justify-center gap-1.5">
                 <span>${item.name}</span>
                 <span class="flex-shrink-0 w-3 h-3 rounded-full border border-black/20 dark:border-white/20 shadow-sm" style="background-color: ${badgeColor}"></span>
                 ${cubeIcon}
               </div>
             </th>`;
-  }).join("");
+    })
+    .join("");
 
-  const sizeRow = displayItems.map(item => {
-    const j = item.joint;
-    const colorClass = getJointCategoryColorClasses(j);
-    const tooltipText = getBoltTooltipText(j);
-    let sizeDisplay = j.isComplexSpl && j.webInputs ? j.webInputs.map(w => w.size).join(", ") : [j.flangeSize, j.webSize].filter(Boolean).join(", ");
-    
-    return `<th class="px-2 py-2 text-center border border-slate-300 dark:border-slate-600 min-w-[180px] text-[10px] leading-tight font-medium cursor-help whitespace-nowrap bolt-info-trigger ${colorClass}" 
+  const sizeRow = displayItems
+    .map((item) => {
+      const j = item.joint;
+      const colorClass = getJointCategoryColorClasses(j);
+      const tooltipText = getBoltTooltipText(j);
+      let sizeDisplay =
+        j.isComplexSpl && j.webInputs
+          ? j.webInputs.map((w) => w.size).join(", ")
+          : [j.flangeSize, j.webSize].filter(Boolean).join(", ");
+
+      return `<th class="px-2 py-2 text-center border border-slate-300 dark:border-slate-600 min-w-[180px] text-[10px] leading-tight font-medium cursor-help whitespace-nowrap bolt-info-trigger ${colorClass}" 
                 title="${tooltipText}" data-tooltip-content="${tooltipText}">
               ${sizeDisplay || "-"}
             </th>`;
-  }).join("");
+    })
+    .join("");
 
-  const bodyHtml = locations.map(loc => `
+  const bodyHtml = locations
+    .map(
+      (loc) => `
     <tr class="tally-row group">
       <td class="px-4 py-3 font-bold sticky left-0 z-10 border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 whitespace-nowrap group-hover:bg-slate-50 dark:group-hover:bg-slate-700/50">${loc.label}</td>
-      ${displayItems.map(item => {
-        const val = project.tally?.[loc.id]?.[item.id] ?? "";
-        return `<td class="p-0 border border-slate-200 dark:border-slate-700 ${locks[item.id] ? 'bg-slate-100 dark:bg-slate-900/40' : 'group-hover:bg-slate-50 dark:group-hover:bg-slate-800/20'}">
+      ${displayItems
+        .map((item) => {
+          const val = project.tally?.[loc.id]?.[item.id] ?? "";
+          return `<td class="p-0 border border-slate-200 dark:border-slate-700 ${locks[item.id] ? "bg-slate-100 dark:bg-slate-900/40" : "group-hover:bg-slate-50 dark:group-hover:bg-slate-800/20"}">
                   <input type="text" inputmode="numeric" data-location="${loc.id}" data-id="${item.id}" 
                          class="tally-input w-full bg-transparent border-transparent py-3 text-center text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-yellow-500 transition-all font-medium" value="${val}" ${locks[item.id] ? "disabled" : ""}>
                 </td>`;
-      }).join("")}
+        })
+        .join("")}
       <td class="row-total px-4 py-2 text-center font-bold sticky right-0 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-blue-700 dark:text-blue-400 whitespace-nowrap"></td>
-    </tr>`).join("");
+    </tr>`,
+    )
+    .join("");
 
   tallySheetContainer.innerHTML = `
     <div class="overflow-x-auto custom-scrollbar">
@@ -4164,7 +4233,7 @@ export const renderTallySheet = (project) => {
         <tfoot class="font-bold sticky bottom-0 bg-orange-50 dark:bg-slate-900/95 backdrop-blur-sm">
           <tr class="whitespace-nowrap">
             <td class="px-4 py-2 sticky left-0 z-10 border border-orange-400 dark:border-orange-700 text-orange-800 dark:text-orange-300">列合計</td>
-            ${displayItems.map(item => `<td data-id="${item.id}" class="col-total px-2 py-2 text-center border border-orange-400 dark:border-orange-700 text-orange-900 dark:text-orange-300"></td>`).join("")}
+            ${displayItems.map((item) => `<td data-id="${item.id}" class="col-total px-2 py-2 text-center border border-orange-400 dark:border-orange-700 text-orange-900 dark:text-orange-300"></td>`).join("")}
             <td class="grand-total px-4 py-2 text-center sticky right-0 border border-orange-400 dark:border-orange-700 text-orange-900 dark:text-orange-300"></td>
           </tr>
         </tfoot>
@@ -4172,7 +4241,7 @@ export const renderTallySheet = (project) => {
     </div>`;
 
   // モバイル対応用タップイベント
-  tallySheetContainer.querySelectorAll(".bolt-info-trigger").forEach(el => {
+  tallySheetContainer.querySelectorAll(".bolt-info-trigger").forEach((el) => {
     el.onclick = () => {
       const content = el.dataset.tooltipContent;
       if (content && window.innerWidth < 768) {
@@ -4208,24 +4277,31 @@ export const renderResults = (project) => {
   const activeType = state.activeTallyType || "all";
 
   const allTallyItems = getTallyList(project);
-  const nameToJointMap = new Map(allTallyItems.map(item => [item.name, item.joint]));
+  const nameToJointMap = new Map(
+    allTallyItems.map((item) => [item.name, item.joint]),
+  );
 
   const targetLocationIds = new Set();
   if (project.mode === "advanced") {
-    project.customLevels.forEach(lvl => {
+    project.customLevels.forEach((lvl) => {
       if (activeLevel !== "all" && activeLevel !== lvl) return;
-      project.customAreas.forEach(area => targetLocationIds.add(`${lvl}-${area}`));
+      project.customAreas.forEach((area) =>
+        targetLocationIds.add(`${lvl}-${area}`),
+      );
     });
   } else {
     for (let f = 2; f <= project.floors; f++) {
       if (activeLevel !== "all" && activeLevel !== f.toString()) continue;
-      for (let s = 1; s <= project.sections; s++) targetLocationIds.add(`${f}-${s}`);
+      for (let s = 1; s <= project.sections; s++)
+        targetLocationIds.add(`${f}-${s}`);
     }
     if (activeLevel === "all" || activeLevel === "R") {
-      for (let s = 1; s <= project.sections; s++) targetLocationIds.add(`R-${s}`);
+      for (let s = 1; s <= project.sections; s++)
+        targetLocationIds.add(`R-${s}`);
     }
     if (project.hasPH && (activeLevel === "all" || activeLevel === "PH")) {
-      for (let s = 1; s <= project.sections; s++) targetLocationIds.add(`PH-${s}`);
+      for (let s = 1; s <= project.sections; s++)
+        targetLocationIds.add(`PH-${s}`);
     }
   }
 
@@ -4246,14 +4322,20 @@ export const renderResults = (project) => {
 
       for (const [itemName, count] of Object.entries(data.joints)) {
         const jointObj = nameToJointMap.get(itemName);
-        if (activeType === "all" || (jointObj && getJointFilterId(jointObj) === activeType)) {
+        if (
+          activeType === "all" ||
+          (jointObj && getJointFilterId(jointObj) === activeType)
+        ) {
           filteredJoints[itemName] = count;
           filteredTotal += count;
         }
       }
 
       if (filteredTotal > 0) {
-        filteredData[locId][size] = { total: filteredTotal, joints: filteredJoints };
+        filteredData[locId][size] = {
+          total: filteredTotal,
+          joints: filteredJoints,
+        };
         filteredBoltSizes.add(size);
         grandTotalBolts += filteredTotal;
       }
@@ -4272,7 +4354,9 @@ export const renderResults = (project) => {
 
   if (sortedSizes.length === 0) {
     if (resultsCardContent) {
-      resultsCardContent.innerHTML = buttonsHtml + '<p class="text-gray-500 dark:text-slate-400 p-12 text-center bg-slate-50 dark:bg-slate-800/40 rounded-xl border-2 border-dashed border-slate-200 dark:border-slate-700 font-bold">集計データがありません。</p>';
+      resultsCardContent.innerHTML =
+        buttonsHtml +
+        '<p class="text-gray-500 dark:text-slate-400 p-12 text-center bg-slate-50 dark:bg-slate-800/40 rounded-xl border-2 border-dashed border-slate-200 dark:border-slate-700 font-bold">集計データがありません。</p>';
     }
     resultsCard.classList.remove("hidden");
     return;
@@ -4281,24 +4365,49 @@ export const renderResults = (project) => {
   // テーブル1：フロア工区別テーブル（ダークモード対応）
   let floorColumns = [];
   if (project.mode === "advanced") {
-    project.customLevels.forEach(lvl => {
+    project.customLevels.forEach((lvl) => {
       if (activeLevel !== "all" && activeLevel !== lvl) return;
-      project.customAreas.forEach(area => floorColumns.push({ id: `${lvl}-${area}`, label: `${lvl}-${area}` }));
-      floorColumns.push({ id: `${lvl}_total`, label: `${lvl} 合計`, isTotal: true, level: lvl });
+      project.customAreas.forEach((area) =>
+        floorColumns.push({ id: `${lvl}-${area}`, label: `${lvl}-${area}` }),
+      );
+      floorColumns.push({
+        id: `${lvl}_total`,
+        label: `${lvl} 合計`,
+        isTotal: true,
+        level: lvl,
+      });
     });
   } else {
     for (let f = 2; f <= project.floors; f++) {
       if (activeLevel !== "all" && activeLevel !== f.toString()) continue;
-      for (let s = 1; s <= project.sections; s++) floorColumns.push({ id: `${f}-${s}`, label: `${f}F-${s}` });
-      floorColumns.push({ id: `${f}F_total`, label: `${f}F 合計`, isTotal: true, floor: f });
+      for (let s = 1; s <= project.sections; s++)
+        floorColumns.push({ id: `${f}-${s}`, label: `${f}F-${s}` });
+      floorColumns.push({
+        id: `${f}F_total`,
+        label: `${f}F 合計`,
+        isTotal: true,
+        floor: f,
+      });
     }
     if (activeLevel === "all" || activeLevel === "R") {
-      for (let s = 1; s <= project.sections; s++) floorColumns.push({ id: `R-${s}`, label: `RF-${s}` });
-      floorColumns.push({ id: `R_total`, label: `RF 合計`, isTotal: true, floor: "R" });
+      for (let s = 1; s <= project.sections; s++)
+        floorColumns.push({ id: `R-${s}`, label: `RF-${s}` });
+      floorColumns.push({
+        id: `R_total`,
+        label: `RF 合計`,
+        isTotal: true,
+        floor: "R",
+      });
     }
     if (project.hasPH && (activeLevel === "all" || activeLevel === "PH")) {
-      for (let s = 1; s <= project.sections; s++) floorColumns.push({ id: `PH-${s}`, label: `PH-${s}` });
-      floorColumns.push({ id: `PH_total`, label: `PH 合計`, isTotal: true, floor: "PH" });
+      for (let s = 1; s <= project.sections; s++)
+        floorColumns.push({ id: `PH-${s}`, label: `PH-${s}` });
+      floorColumns.push({
+        id: `PH_total`,
+        label: `PH 合計`,
+        isTotal: true,
+        floor: "PH",
+      });
     }
   }
 
@@ -4313,7 +4422,7 @@ export const renderResults = (project) => {
                 <thead class="bg-slate-200 dark:bg-slate-700 text-xs">
                     <tr>
                         <th class="px-2 py-3 sticky left-0 bg-slate-200 dark:bg-slate-700 z-10 border border-slate-300 dark:border-slate-600 min-w-[120px]">ボルトサイズ</th>
-                        ${floorColumns.map(col => `<th class="px-2 py-3 text-center border border-slate-300 dark:border-slate-600 ${col.isTotal ? 'bg-blue-100 dark:bg-blue-900/50 text-blue-800 dark:text-blue-200' : ''}">${col.label}</th>`).join("")}
+                        ${floorColumns.map((col) => `<th class="px-2 py-3 text-center border border-slate-300 dark:border-slate-600 ${col.isTotal ? "bg-blue-100 dark:bg-blue-900/50 text-blue-800 dark:text-blue-200" : ""}">${col.label}</th>`).join("")}
                         <th class="px-2 py-3 text-center sticky right-0 bg-yellow-300 dark:bg-yellow-800/80 text-yellow-900 dark:text-yellow-100 border border-yellow-400 dark:border-yellow-700 font-bold">総合計</th>
                     </tr>
                 </thead>
@@ -4328,13 +4437,20 @@ export const renderResults = (project) => {
       let cellValue = 0;
       let jointData = {};
       if (col.isTotal) {
-        const areas = project.mode === "advanced" ? project.customAreas : Array.from({ length: project.sections }, (_, i) => i + 1);
-        areas.forEach(area => {
-          const id = project.mode === "advanced" ? `${col.level}-${area}` : `${col.floor}-${area}`;
+        const areas =
+          project.mode === "advanced"
+            ? project.customAreas
+            : Array.from({ length: project.sections }, (_, i) => i + 1);
+        areas.forEach((area) => {
+          const id =
+            project.mode === "advanced"
+              ? `${col.level}-${area}`
+              : `${col.floor}-${area}`;
           const d = filteredData[id]?.[size];
           if (d) {
             cellValue += d.total;
-            for (const [n, c] of Object.entries(d.joints)) jointData[n] = (jointData[n] || 0) + c;
+            for (const [n, c] of Object.entries(d.joints))
+              jointData[n] = (jointData[n] || 0) + c;
           }
         });
       } else {
@@ -4342,17 +4458,24 @@ export const renderResults = (project) => {
         cellValue = d?.total || 0;
         if (d?.joints) jointData = d.joints;
       }
-      
+
       if (!col.isTotal) {
         rowTotal += cellValue;
-        for (const [n, c] of Object.entries(jointData)) rowTotalJoints[n] = (rowTotalJoints[n] || 0) + c;
+        for (const [n, c] of Object.entries(jointData))
+          rowTotalJoints[n] = (rowTotalJoints[n] || 0) + c;
       }
-      
-      const detailsDataAttr = Object.keys(jointData).length > 0 ? `data-details='${JSON.stringify(jointData)}'` : "";
-      floorTableHtml += `<td class="px-2 py-2 text-center border border-slate-200 dark:border-slate-700 ${col.isTotal ? 'bg-blue-50/50 dark:bg-blue-900/20 font-bold' : ''} has-details cursor-pointer hover:bg-yellow-100 dark:hover:bg-yellow-900/40" ${detailsDataAttr}>${cellValue > 0 ? cellValue.toLocaleString() : "-"}</td>`;
+
+      const detailsDataAttr =
+        Object.keys(jointData).length > 0
+          ? `data-details='${JSON.stringify(jointData)}'`
+          : "";
+      floorTableHtml += `<td class="px-2 py-2 text-center border border-slate-200 dark:border-slate-700 ${col.isTotal ? "bg-blue-50/50 dark:bg-blue-900/20 font-bold" : ""} has-details cursor-pointer hover:bg-yellow-100 dark:hover:bg-yellow-900/40" ${detailsDataAttr}>${cellValue > 0 ? cellValue.toLocaleString() : "-"}</td>`;
     });
 
-    const rowTotalDetailsAttr = Object.keys(rowTotalJoints).length > 0 ? `data-details='${JSON.stringify(rowTotalJoints)}'` : "";
+    const rowTotalDetailsAttr =
+      Object.keys(rowTotalJoints).length > 0
+        ? `data-details='${JSON.stringify(rowTotalJoints)}'`
+        : "";
     floorTableHtml += `<td class="px-2 py-2 text-center font-bold sticky right-0 bg-yellow-100 dark:bg-yellow-900/30 border border-yellow-200 dark:border-yellow-800 has-details cursor-pointer hover:bg-yellow-200" ${rowTotalDetailsAttr}>${rowTotal > 0 ? rowTotal.toLocaleString() : "-"}</td></tr>`;
   });
   floorTableHtml += `</tbody></table></div></div>`;
@@ -4361,7 +4484,8 @@ export const renderResults = (project) => {
   const tempBoltsHtml = renderTempBoltResults(project);
 
   if (resultsCardContent) {
-    resultsCardContent.innerHTML = buttonsHtml + floorTableHtml + orderDetailsContainer + tempBoltsHtml;
+    resultsCardContent.innerHTML =
+      buttonsHtml + floorTableHtml + orderDetailsContainer + tempBoltsHtml;
   }
 
   const container = document.getElementById("order-details-container");
@@ -4572,8 +4696,42 @@ export const switchView = (viewName) => {
 
     state.currentProjectId = null;
   }
-};
+  // ▼▼▼ 追加：一括操作バーを隠す処理 ▼▼▼
+  const bulkBar = document.getElementById("bulk-action-bar");
+  if (bulkBar) {
+    // リスト画面かつチェックが入っている時以外は隠す
+    if (viewName !== "list") {
+      bulkBar.classList.add("translate-y-full"); // 下に隠す
+      bulkBar.classList.remove("translate-y-0");
 
+      // 全てのチェックボックスを解除する（念のため）
+      document
+        .querySelectorAll(".project-checkbox")
+        .forEach((cb) => (cb.checked = false));
+    }
+  }
+};
+/**
+ * 一括操作バーの表示・非表示を切り替える共通関数（新規追加しておくと便利）
+ */
+export const updateBulkBarVisibility = () => {
+  const bulkBar = document.getElementById("bulk-action-bar");
+  const selectedCount = document.querySelectorAll(
+    ".project-checkbox:checked",
+  ).length;
+  const countDisplay = document.getElementById("selected-count-display");
+
+  if (!bulkBar) return;
+
+  if (selectedCount > 0) {
+    if (countDisplay) countDisplay.textContent = `${selectedCount}件選択中`;
+    bulkBar.classList.remove("translate-y-full");
+    bulkBar.classList.add("translate-y-0");
+  } else {
+    bulkBar.classList.add("translate-y-full");
+    bulkBar.classList.remove("translate-y-0");
+  }
+};
 /**
  * 詳細画面全体を描画する
  */
