@@ -4697,7 +4697,7 @@ export const switchView = (viewName) => {
     state.currentProjectId = null;
   }
   // ▼▼▼ 追加：一括操作バーを隠す処理 ▼▼▼
-  const bulkBar = document.getElementById("bulk-action-bar");
+  const bulkBar = document.getElementById("bulk-delete-bar");
   if (bulkBar) {
     // リスト画面かつチェックが入っている時以外は隠す
     if (viewName !== "list") {
