@@ -175,6 +175,8 @@ export function setupEventListeners() {
   setupMasterFabEvents(); //大ボスボタンイベント
 
   setupProjectListNewEvents();
+
+  setupTallyClipboardEvents();
 }
 
 function setupMasterFabEvents() {
@@ -4195,83 +4197,85 @@ function setupGlobalActionEvents() {
 /**
  * 箇所数入力表のクリップボードコピー機能
  */
+/**
+ * 箇所数入力表のクリップボードコピー機能 (3段ヘッダー対応版)
+ */
 function setupTallyClipboardEvents() {
-  // ボタンが動的に生成される可能性を考慮し、documentに対してイベントを設定します
   document.addEventListener("click", (e) => {
-    // IDで判定
-    if (e.target.id === "copy-tally-btn") {
-      const table = document.querySelector("#tally-sheet-container table");
-      if (!table) {
-        if (typeof showToast === "function")
-          showToast("コピー対象の表がありません。");
-        return;
-      }
+    // .closest を使うことで、中のアイコンなどをクリックしても確実にボタンを捉えます
+    const copyBtn = e.target.closest("#copy-tally-btn");
+    if (!copyBtn) return;
 
-      const data = [];
-      const tHead = table.querySelector("thead");
-      const tBody = table.querySelector("tbody");
-      const tFoot = table.querySelector("tfoot");
+    const table = document.querySelector("#tally-sheet-container table");
+    if (!table) {
+      showToast("コピー対象の表が見つかりません。");
+      return;
+    }
 
-      // --- ヘッダー処理 ---
-      if (tHead) {
-        const headerRows = tHead.querySelectorAll("tr");
+    const data = [];
+    const tHead = table.querySelector("thead");
+    const tBody = table.querySelector("tbody");
+    const tFoot = table.querySelector("tfoot");
 
-        // 1行目のヘッダー
-        if (headerRows[0]) {
-          const rowData = Array.from(headerRows[0].cells).map(
-            (cell) => `"${cell.textContent.trim()}"`,
-          );
-          data.push(rowData.join("\t"));
-        }
-
-        // 2行目のヘッダー
-        if (headerRows[1]) {
-          const rowData = Array.from(headerRows[1].cells).map(
-            (cell) => `"${cell.textContent.trim()}"`,
-          );
-          // 先頭に空のセルを追加して、横ずれを補正
-          rowData.unshift('""');
-          data.push(rowData.join("\t"));
-        }
-      }
-
-      // --- 本体行を収集 ---
-      if (tBody) {
-        tBody.querySelectorAll("tr").forEach((tr) => {
-          const rowData = Array.from(tr.cells).map((cell) => {
-            const input = cell.querySelector("input");
-            return `"${input ? input.value : cell.textContent.trim()}"`;
-          });
-          data.push(rowData.join("\t"));
+    // --- 1. ヘッダー処理 (3行すべて取得) ---
+    if (tHead) {
+      tHead.querySelectorAll("tr").forEach((tr, rowIndex) => {
+        const rowData = Array.from(tr.cells).map((cell) => {
+          // チェックボックス行などはスキップせず、テキストまたは属性を抽出
+          let text = cell.innerText.trim();
+          // もし中身が空でチェックボックスがある場合
+          if (!text && cell.querySelector('input[type="checkbox"]'))
+            text = "LOCK";
+          return `"${text}"`;
         });
-      }
 
-      // --- フッター行を収集 ---
-      if (tFoot) {
-        tFoot.querySelectorAll("tr").forEach((tr) => {
-          const rowData = Array.from(tr.cells).map(
-            (cell) => `"${cell.textContent.trim()}"`,
-          );
-          data.push(rowData.join("\t"));
+        // 階層列のセルが rowspan で結合されている場合の横ずれ補正
+        if (rowIndex > 0) rowData.unshift('""');
+
+        data.push(rowData.join("\t"));
+      });
+    }
+
+    // --- 2. 本体行 (入力値を取得) ---
+    if (tBody) {
+      tBody.querySelectorAll("tr").forEach((tr) => {
+        const rowData = Array.from(tr.cells).map((cell) => {
+          const input = cell.querySelector("input");
+          // inputがあればその値、なければセルのテキスト
+          const val = input ? input.value : cell.innerText.trim();
+          return `"${val}"`;
         });
-      }
+        data.push(rowData.join("\t"));
+      });
+    }
 
-      // --- クリップボードへ書き込み ---
-      const tsvString = data.join("\n");
+    // --- 3. フッター行 (列合計) ---
+    if (tFoot) {
+      tFoot.querySelectorAll("tr").forEach((tr) => {
+        const rowData = Array.from(tr.cells).map(
+          (cell) => `"${cell.innerText.trim()}"`,
+        );
+        data.push(rowData.join("\t"));
+      });
+    }
 
-      if (navigator.clipboard) {
-        navigator.clipboard
-          .writeText(tsvString)
-          .then(() => {
-            showToast("表のデータをクリップボードにコピーしました。");
-          })
-          .catch((err) => {
-            console.error("コピーに失敗しました: ", err);
-            showCustomAlert("クリップボードへのコピーに失敗しました。");
-          });
-      } else {
-        showCustomAlert("このブラウザはクリップボード操作に対応していません。");
-      }
+    const tsvString = data.join("\n");
+
+    // クリップボードへ書き込み
+    if (navigator.clipboard) {
+      navigator.clipboard
+        .writeText(tsvString)
+        .then(() =>
+          showToast("表のデータをコピーしました。Excel等に貼り付け可能です。"),
+        )
+        .catch((err) => {
+          console.error("Copy failed:", err);
+          showCustomAlert(
+            "コピーに失敗しました。ブラウザの権限を確認してください。",
+          );
+        });
+    } else {
+      showCustomAlert("このブラウザはクリップボード操作に対応していません。");
     }
   });
 }
