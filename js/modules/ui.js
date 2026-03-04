@@ -4084,14 +4084,36 @@ export const renderTallySheet = (project) => {
     }" data-level="${lvl.id}">${lvl.label}</button>`;
   });
   floorTabs.innerHTML = floorHtml;
-
+  // 指定された表示順序の定義
+  const jointTypeOrder = [
+    "girder", // 大梁
+    "girder_pin", // 大梁(ピン)
+    "beam", // 小梁
+    "beam_pin", // 小梁(ピン)
+    "column", // 本柱
+    "stud", // 間柱
+    "stud_pin", // 間柱(ピン)
+    "wall_girt", // 胴縁
+    "roof_purlin", // 母屋
+    "other", // その他
+    "other_pin", // その他(ピン)
+  ];
+  // 存在するIDを抽出し、定義した順序でソートする
   const uniqueFilterIds = [
     ...new Set(allItems.map((item) => getJointFilterId(item.joint))),
-  ].sort();
+  ].sort((a, b) => {
+    const indexA = jointTypeOrder.indexOf(a);
+    const indexB = jointTypeOrder.indexOf(b);
+    // 定義されていないIDがあれば最後へ、定義済みならインデックス順
+    const finalA = indexA === -1 ? 999 : indexA;
+    const finalB = indexB === -1 ? 999 : indexB;
+    return finalA - finalB;
+  });
+
   let typeHtml = `<button class="tally-type-tab-btn px-4 py-1.5 rounded-full text-sm font-bold border transition-all ${
     state.activeTallyType === "all"
       ? "bg-emerald-600 text-white border-emerald-600 shadow-md"
-      : "bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-300 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700"
+      : "bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-300 dark:border-slate-600 hover:bg-slate-100"
   }" data-type="all">全種別</button>`;
 
   uniqueFilterIds.forEach((fid) => {
@@ -4099,9 +4121,10 @@ export const renderTallySheet = (project) => {
     typeHtml += `<button class="tally-type-tab-btn px-4 py-1.5 rounded-full text-sm font-bold border transition-all ${
       active
         ? "bg-emerald-600 text-white border-emerald-600 shadow-md"
-        : "bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-300 dark:border-slate-600"
+        : "bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-300"
     }" data-type="${fid}">${getJointFilterLabel(fid)}</button>`;
   });
+
   if (typeTabs) typeTabs.innerHTML = typeHtml;
 
   // タブイベント
