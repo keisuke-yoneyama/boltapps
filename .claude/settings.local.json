@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(wc -l /c/keisuke/boltapps/.claude/worktrees/modest-shockley/index.html /c/keisuke/boltapps/.claude/worktrees/modest-shockley/js/modules/*.js /c/keisuke/boltapps/.claude/worktrees/modest-shockley/style.css)"
+    ]
+  }
+}
