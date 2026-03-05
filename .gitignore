@@ -16,3 +16,6 @@ build/
 # OSの設定ファイル
 .DS_Store
 Thumbs.db
+
+# Claude Code ローカルツールディレクトリ
+.claude/
