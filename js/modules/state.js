@@ -7,7 +7,6 @@ export const state = {
   scrollPositions: { joints: 0, tally: 0 },
   pendingAction: null,
   pendingUpdateData: null,
-  scrollPositions: { joints: 0, tally: 0 },
   orderDetailsView: "location", // 'location' または 'section'
   // ▼▼▼ 追加：タブの選択状態管理 ▼▼▼
   activeMemberLevel: "all", // 部材リスト用 ('all' または 階層ID)
@@ -23,9 +22,6 @@ export const state = {
 
   // ▼▼▼ 修正：ソート状態をセクションごとに管理するためのオブジェクト ▼▼▼
   sort: {}, // { 'sectionId': { key: 'name', order: 'asc' }, ... }
-
-  pendingAction: null,
-  pendingUpdateData: null,
 
   // ▼▼▼ 追加：グローバルボルトサイズ設定 ▼▼▼
   globalBoltSizes: [], // ボルトマスタ
