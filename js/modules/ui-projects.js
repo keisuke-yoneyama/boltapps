@@ -381,7 +381,7 @@ function _updateProjectOpBar(callbacks) {
 
   if (count > 0) {
     if (countLabel) countLabel.textContent = count;
-    bar.classList.remove("translate-y-24", "opacity-0", "pointer-events-none");
+    bar.classList.remove("translate-y-24", "translate-y-full", "opacity-0", "pointer-events-none");
 
     const firstId = checkedBoxes[0].dataset.id;
 

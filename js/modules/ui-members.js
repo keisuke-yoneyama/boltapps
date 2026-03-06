@@ -698,7 +698,7 @@ export const updateProjectSelectionBar = () => {
     const countEl = document.getElementById("project-selected-count");
     if (countEl) countEl.textContent = `${checkedCount}件選択中`;
   } else {
-    opBar.classList.add("translate-y-full");
+    opBar.classList.add("translate-y-full", "opacity-0", "pointer-events-none");
     opBar.classList.remove("translate-y-0");
   }
 };
