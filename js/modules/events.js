@@ -1085,6 +1085,17 @@ function setupColorControlEvents() {
     });
   }
 
+  // パレット折りたたみトグル (編集モーダル用)
+  const colorPaletteToggle = document.getElementById("color-palette-toggle");
+  const colorPaletteArea = document.getElementById("color-palette-area");
+  const colorPaletteChevron = document.getElementById("color-palette-chevron");
+  if (colorPaletteToggle && colorPaletteArea) {
+    colorPaletteToggle.addEventListener("click", () => {
+      const isHidden = colorPaletteArea.classList.toggle("hidden");
+      if (colorPaletteChevron) colorPaletteChevron.classList.toggle("rotate-180", !isHidden);
+    });
+  }
+
   // --- 2. 新規登録(常設)フォーム用の要素 ---
   const jointColorToggle = document.getElementById("joint-color-toggle");
   const jointColorSection = document.getElementById("joint-color-section");

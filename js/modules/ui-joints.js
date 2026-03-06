@@ -493,6 +493,10 @@ export function openEditModal(joint) {
       renderColorPalette(null);
     }
   }
+  const colorPaletteArea = document.getElementById("color-palette-area");
+  if (colorPaletteArea) colorPaletteArea.classList.add("hidden");
+  const colorPaletteChevron = document.getElementById("color-palette-chevron");
+  if (colorPaletteChevron) colorPaletteChevron.classList.remove("rotate-180");
 
   setVal("edit-flange-size", joint.flangeSize);
   setVal("edit-flange-count", joint.flangeCount);
@@ -608,6 +612,10 @@ export function openNewJointModal() {
     colorInput.dataset.isNull = "true";
     renderColorPalette(null);
   }
+  const colorPaletteArea = document.getElementById("color-palette-area");
+  if (colorPaletteArea) colorPaletteArea.classList.add("hidden");
+  const colorPaletteChevron = document.getElementById("color-palette-chevron");
+  if (colorPaletteChevron) colorPaletteChevron.classList.remove("rotate-180");
 
   updateJointFormUI(true);
 
