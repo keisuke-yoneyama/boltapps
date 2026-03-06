@@ -429,16 +429,20 @@ function setupColorPalleteEvents() {
 //ボルトサイズ選択モーダル終了ボタンイベント
 function setupCloseBoltSizeSelectModalBtnEvents() {
   const closeBoltModalBtn = document.getElementById("close-bolt-modal-btn");
-  closeBoltModalBtn.addEventListener("click", () =>
-    closeModal(document.getElementById("bolt-selector-modal")),
-  );
+  if (closeBoltModalBtn) {
+    closeBoltModalBtn.addEventListener("click", () =>
+      closeModal(document.getElementById("bolt-selector-modal")),
+    );
+  }
 }
 //カスタムアラートモーダル終了ボタンイベント
 function setupCloseCustomAlertModalBtnEvents() {
   const closeAlertBtn = document.getElementById("close-alert-btn");
-  closeAlertBtn.addEventListener("click", () =>
-    closeModal(document.getElementById("custom-alert-modal")),
-  );
+  if (closeAlertBtn) {
+    closeAlertBtn.addEventListener("click", () =>
+      closeModal(document.getElementById("custom-alert-modal")),
+    );
+  }
 }
 
 // //カスタムアラートモーダル終了ボタンイベント
@@ -1943,6 +1947,7 @@ function setupDeleteExecutionEvents() {
       const id = deleteIdInput.value;
       const type = deleteTypeInput.value;
       const projectId = state.currentProjectId;
+      const projectIndex = state.projects.findIndex((p) => p.id === projectId);
 
       // ▼ パターン1：プロジェクト自体の削除
       if (type === "project") {
@@ -1963,6 +1968,8 @@ function setupDeleteExecutionEvents() {
         closeModal(confirmDeleteModal);
         return;
       }
+
+      if (projectIndex === -1) return;
 
       // ▼▼▼ パターン3：一括削除 (新規追加) ▼▼▼
       if (type === "bulk") {
@@ -3312,8 +3319,8 @@ function setupTallySheetInteractions() {
       if (confirmActionTitle) confirmActionTitle.textContent = "数値の移動確認";
       if (confirmActionMessage) {
         confirmActionMessage.innerHTML = `セルからセルへ数値を移動しますか？<br><br>
-             移動元: <strong class="text-blue-600">${sourceValue}</strong><br>
-             移動先: <strong class="text-red-600">${targetValue}</strong> (上書きされます)`;
+             移動元: <strong class="text-blue-600">${esc(sourceValue)}</strong><br>
+             移動先: <strong class="text-red-600">${esc(targetValue)}</strong> (上書きされます)`;
       }
 
       // ★修正のポイント: dragSource と dropTarget という「変数名」をクロージャで使用
@@ -4867,7 +4874,14 @@ export function setupProjectListNewEvents() {
     barCopy.addEventListener("click", () => {
       const id = document.querySelector(".project-checkbox:checked")?.dataset
         .id;
-      if (id) openCopyProjectModal(id); // 既存の複製関数
+      if (id) {
+        const copySourceIdInput = document.getElementById("copy-source-project-id");
+        const copyNewNameInput = document.getElementById("copy-new-project-name");
+        const copyProjectModal = document.getElementById("copy-project-modal");
+        if (copySourceIdInput) copySourceIdInput.value = id;
+        if (copyNewNameInput) copyNewNameInput.value = "";
+        if (copyProjectModal) openModal(copyProjectModal);
+      }
     });
   }
 
