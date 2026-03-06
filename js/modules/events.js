@@ -70,6 +70,9 @@ import {
   calculateResults,
   getProjectLevels,
 } from "./calculator.js";
+
+const esc = (s) => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+
 /**
  * アプリ全体のイベントリスナーを設定する関数
  */
@@ -1723,9 +1726,7 @@ function setupProjectActionEvents() {
           ];
           document.getElementById("confirm-action-title").textContent =
             "箇所数データの削除確認";
-          confirmActionMessage.innerHTML = `階層またはエリアの数を減らしたため、以下の項目に関連する箇所数データが削除されます。よろしいですか？<br><br><strong class="text-red-600">${removedItems.join(
-            "、",
-          )}</strong>`;
+          confirmActionMessage.innerHTML = `階層またはエリアの数を減らしたため、以下の項目に関連する箇所数データが削除されます。よろしいですか？<br><br><strong class="text-red-600">${removedItems.map(esc).join("、")}</strong>`;
 
           state.pendingAction = () => performUpdate(updatedProjectData);
           if (confirmActionModal) openModal(confirmActionModal);
@@ -2447,7 +2448,7 @@ function setupJointActionEvents() {
         );
         if (membersToDelete.length > 0) {
           const memberNames = membersToDelete
-            .map((m) => `・${m.name}`)
+            .map((m) => `・${esc(m.name)}`)
             .join("<br>");
 
           if (confirmMemberDeletionMessage) {
@@ -3697,11 +3698,8 @@ function setupBulkMemberActionEvents() {
           const label = document.createElement("label");
           label.className =
             "flex items-center gap-2 text-sm cursor-pointer ml-3";
-          label.innerHTML = `<input type="checkbox" value="${
-            lvl.id
-          }" class="bulk-level-checkbox-option h-4 w-4 rounded border-gray-300 text-blue-800 focus:ring-yellow-500" ${
-            isChecked ? "checked" : ""
-          } ${isAllChecked ? "disabled" : ""}> ${lvl.label}`;
+          label.innerHTML = `<input type="checkbox" value="${lvl.id}" class="bulk-level-checkbox-option h-4 w-4 rounded border-gray-300 text-blue-800 focus:ring-yellow-500" ${isChecked ? "checked" : ""} ${isAllChecked ? "disabled" : ""}>`;
+          label.append(` ${lvl.label}`);
           bulkLevelOptionsContainer.appendChild(label);
         });
 

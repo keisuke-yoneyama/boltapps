@@ -53,7 +53,8 @@ export const openEditMemberModal = (memberId) => {
       const isChecked = targetLevels.includes(lvl.id);
       const label = document.createElement("label");
       label.className = "flex items-center gap-2 text-sm cursor-pointer";
-      label.innerHTML = `<input type="checkbox" value="${lvl.id}" class="level-checkbox h-4 w-4 text-blue-600 rounded border-gray-300" ${isChecked ? "checked" : ""}> ${lvl.label}`;
+      label.innerHTML = `<input type="checkbox" value="${lvl.id}" class="level-checkbox h-4 w-4 text-blue-600 rounded border-gray-300" ${isChecked ? "checked" : ""}>`;
+      label.append(` ${lvl.label}`);
       levelsContainer.appendChild(label);
     });
   }

@@ -50,6 +50,8 @@ import {
 import { performHistoryActionRaw as _performHistoryAction } from "./ui-theme.js";
 import { openConfirmDeleteModal } from "./ui-modal.js";
 
+const esc = (s) => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+
 // ─── 定数 ─────────────────────────────────────────────────────────
 // 並び順の定義
 const BOLT_TYPE_ORDER = [
@@ -352,10 +354,10 @@ export const renderBoltSizeSettings = (activeBoltTab = "all") => {
     li.innerHTML = `
             <div class="flex flex-col">
                 <div class="flex items-center gap-2">
-                    <span class="font-bold text-slate-800 dark:text-slate-200 text-lg">${bolt.label}</span>
+                    <span class="font-bold text-slate-800 dark:text-slate-200 text-lg">${esc(bolt.label)}</span>
                     ${isUsed ? '<span class="text-xs bg-gray-200 text-gray-600 px-1 rounded">使用中</span>' : ""}
                 </div>
-                <div class="text-xs text-slate-500 dark:text-slate-400">種類: ${bolt.type} / 長さ: ${bolt.length}mm</div>
+                <div class="text-xs text-slate-500 dark:text-slate-400">種類: ${esc(bolt.type)} / 長さ: ${bolt.length}mm</div>
             </div>
             ${deleteBtnHtml}
         `;
@@ -625,7 +627,8 @@ export const renderDetailView = () => {
       const label = document.createElement("label");
       label.className =
         "flex items-center gap-2 text-sm cursor-pointer text-slate-700 dark:text-slate-300";
-      label.innerHTML = `<input type="checkbox" value="${lvl.id}" class="static-level-checkbox h-4 w-4 text-blue-600 rounded border-gray-300 focus:ring-yellow-500"> ${lvl.label}`;
+      label.innerHTML = `<input type="checkbox" value="${lvl.id}" class="static-level-checkbox h-4 w-4 text-blue-600 rounded border-gray-300 focus:ring-yellow-500">`;
+      label.append(` ${lvl.label}`);
       staticLevelsContainer.appendChild(label);
     });
   }
