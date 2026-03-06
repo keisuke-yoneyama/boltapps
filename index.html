@@ -37,7 +37,7 @@
       content="black-translucent"
     />
     <meta name="apple-mobile-web-app-title" content="業務支援システム壱號" />
-    <link rel="apple-touch-icon" href="apple-icon.png" />
+    <link rel="apple-touch-icon" href="apple-touch-icon.png" />
     <link rel="icon" href="favicon.ico" type="image/x-icon" />
 
     <style type="text/tailwindcss">
@@ -3512,5 +3512,12 @@
         </button>
       </div>
     </div>
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('/sw.js');
+        });
+      }
+    </script>
   </body>
 </html>

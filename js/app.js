@@ -175,10 +175,7 @@ const loadProjects = (loader) => {
   );
 };
 
-// DOM読み込み完了時にアプリを起動
-document.addEventListener("DOMContentLoaded", initApp);
-
-// すでに読み込みが完了している場合は、イベントを待たずに即実行
+// DOM読み込み完了時にアプリを起動（二重実行を防ぐ）
 if (document.readyState === "loading") {
   document.addEventListener("DOMContentLoaded", initApp);
 } else {
