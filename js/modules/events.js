@@ -3716,22 +3716,29 @@ function setupBulkMemberActionEvents() {
           const label = document.createElement("label");
           label.className =
             "flex items-center gap-2 text-sm cursor-pointer ml-3";
-          label.innerHTML = `<input type="checkbox" value="${lvl.id}" class="bulk-level-checkbox-option h-4 w-4 rounded border-gray-300 text-blue-800 focus:ring-yellow-500" ${isChecked ? "checked" : ""} ${isAllChecked ? "disabled" : ""}>`;
+          label.innerHTML = `<input type="checkbox" value="${lvl.id}" class="bulk-level-checkbox-option h-4 w-4 rounded border-gray-300 text-blue-800 focus:ring-yellow-500" ${isChecked ? "checked" : ""}>`;
           label.append(` ${lvl.label}`);
           bulkLevelOptionsContainer.appendChild(label);
         });
 
         // 全階層チェックボックスの連動
-        document
-          .getElementById("bulk-level-select-all")
-          .addEventListener("change", (e) => {
+        const allCheckboxEl = document.getElementById("bulk-level-select-all");
+        allCheckboxEl.addEventListener("change", (e) => {
             const isChecked = e.target.checked;
             bulkLevelOptionsContainer
               .querySelectorAll(".bulk-level-checkbox-option")
               .forEach((cb) => {
                 cb.checked = isChecked;
-                cb.disabled = isChecked;
               });
+          });
+
+        // 個別階層選択時は「全階層」を解除
+        bulkLevelOptionsContainer
+          .querySelectorAll(".bulk-level-checkbox-option")
+          .forEach((cb) => {
+            cb.addEventListener("change", () => {
+              if (cb.checked) allCheckboxEl.checked = false;
+            });
           });
 
         openModal(bulkLevelSelectorModal);
