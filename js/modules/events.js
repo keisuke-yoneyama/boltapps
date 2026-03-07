@@ -3737,7 +3737,7 @@ function setupBulkMemberActionEvents() {
           .querySelectorAll(".bulk-level-checkbox-option")
           .forEach((cb) => {
             cb.addEventListener("change", () => {
-              if (cb.checked) allCheckboxEl.checked = false;
+              allCheckboxEl.checked = false;
             });
           });
 
@@ -3765,6 +3765,11 @@ function setupBulkMemberActionEvents() {
             ".bulk-level-checkbox-option:checked",
           ),
         ).map((cb) => cb.value);
+      }
+
+      if (!selectAll && newSelection.length === 0) {
+        showCustomAlert("階層を1つ以上選択するか、「全階層を対象にする」をONにしてください。");
+        return;
       }
 
       if (state.activeBulkMemberIndex !== -1) {
