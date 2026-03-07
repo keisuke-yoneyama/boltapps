@@ -6,6 +6,7 @@ import {
 
 import { checkAndMigrateBoltSizes } from "./modules/calculator.js";
 import { auth, isDevelopmentEnvironment } from "./modules/firebase.js";
+import { initDelivery } from "./modules/delivery.js";
 import { subscribeToProjects, getGlobalSettings } from "./modules/db.js";
 import { setupEventListeners } from "./modules/events.js";
 import { state } from "./modules/state.js";
@@ -93,6 +94,8 @@ const startAuthAndDataSync = (loader) => {
       populateGlobalBoltSelectorModal();
       // ログイン済みならプロジェクトデータを読み込む
       loadProjects(loader);
+      // 搬入リスト機能の初期化
+      initDelivery();
     } else {
       // 未ログインならログインを試みる
       try {

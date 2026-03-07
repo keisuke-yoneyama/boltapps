@@ -316,12 +316,26 @@
       class="fixed top-0 left-0 w-full bg-slate-100 dark:bg-slate-800 shadow-md z-40 p-2 transition-colors duration-300"
     >
       <div class="container mx-auto flex justify-between items-center">
-        <div id="nav-list-context">
+        <div id="nav-list-context" class="flex items-center gap-2">
           <h1
             class="text-xl font-syuku font-bold text-slate-900 dark:text-slate-100"
           >
             業務支援システム壱號
           </h1>
+          <button
+            id="nav-to-delivery-btn"
+            class="text-xs px-2 py-1 rounded-md bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-600 transition-colors"
+          >搬入</button>
+        </div>
+
+        <div id="nav-delivery-context" class="hidden flex items-center gap-3">
+          <button
+            id="nav-to-bolt-btn"
+            class="text-sm text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 transition-colors"
+          >← 計算アプリ</button>
+          <h1
+            class="text-lg font-syuku font-bold text-slate-900 dark:text-slate-100"
+          >搬入管理</h1>
         </div>
 
         <div id="nav-detail-context" class="flex-1 min-w-0 hidden">
@@ -484,7 +498,7 @@
         <p class="text-sm text-slate-500 mt-1">Ver. 1.2.1</p>
       </header>
 
-      <main id="project-list-view" class="view active space-y-8">
+      <main id="project-list-view" class="view space-y-8">
         <section class="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-xl">
           <h2
             class="text-2xl font-bold mb-4 border-b-2 border-yellow-400 pb-2 text-slate-900 dark:text-slate-100"
@@ -1367,6 +1381,234 @@
           </section>
         </div>
       </main>
+
+      <!-- ===== 搬入カレンダー画面 (0) ===== -->
+      <main id="delivery-calendar-view" class="view active">
+        <div class="bg-white dark:bg-slate-800 p-4 md:p-6 rounded-2xl shadow-xl">
+          <!-- ヘッダー -->
+          <div class="flex justify-between items-center mb-4">
+            <div>
+              <h2 class="text-2xl font-bold text-slate-900 dark:text-slate-100">搬入カレンダー</h2>
+              <p id="dl-month-label" class="text-slate-500 dark:text-slate-400 text-sm mt-0.5"></p>
+            </div>
+            <div class="flex items-center gap-2">
+              <button id="dl-prev-month" class="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 transition-colors">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+              </button>
+              <button id="dl-next-month" class="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 transition-colors">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+              </button>
+            </div>
+          </div>
+
+          <!-- アクションボタン -->
+          <div class="flex flex-wrap gap-2 mb-4">
+            <button id="dl-today-btn" class="btn btn-neutral text-sm">今日の搬入を見る</button>
+            <button id="dl-start-input-btn" class="btn btn-primary text-sm">搬入入力を開始</button>
+          </div>
+
+          <!-- カレンダーグリッド（JSで描画）-->
+          <div id="dl-calendar-grid" class="min-h-[300px]">
+            <p class="text-center text-slate-400 py-8">読み込み中...</p>
+          </div>
+        </div>
+      </main>
+
+      <!-- ===== 入力開始画面 (A) ===== -->
+      <main id="delivery-input-view" class="view">
+        <div class="max-w-2xl mx-auto space-y-6">
+          <!-- ヘッダー -->
+          <div class="flex items-center gap-3">
+            <button id="dl-back-to-calendar-btn" class="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 transition-colors">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+            </button>
+            <h2 class="text-2xl font-bold text-slate-900 dark:text-slate-100">搬入入力開始</h2>
+          </div>
+
+          <!-- Section 1: ボルトアプリの工事から選択 -->
+          <section class="bg-white dark:bg-slate-800 p-5 rounded-2xl shadow-xl">
+            <h3 class="text-lg font-semibold mb-3 text-slate-800 dark:text-slate-100 border-b border-slate-200 dark:border-slate-700 pb-2">工事を選択（ボルト計算アプリから）</h3>
+            <input
+              id="dl-project-search"
+              type="text"
+              placeholder="工事名で検索..."
+              class="w-full bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 text-slate-900 dark:text-slate-100 rounded-lg p-3 mb-3 focus:ring-yellow-500 focus:border-yellow-500 dark:placeholder-slate-400"
+            />
+            <div id="dl-bolt-projects-list" class="space-y-2 max-h-48 overflow-y-auto custom-scrollbar"></div>
+          </section>
+
+          <!-- Section 2: 手動工事登録 -->
+          <section class="bg-white dark:bg-slate-800 p-5 rounded-2xl shadow-xl">
+            <h3 class="text-lg font-semibold mb-3 text-slate-800 dark:text-slate-100 border-b border-slate-200 dark:border-slate-700 pb-2">工事を手動登録</h3>
+            <div class="flex gap-2">
+              <input
+                id="dl-manual-project-name"
+                type="text"
+                placeholder="工事名を入力..."
+                class="flex-1 bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 text-slate-900 dark:text-slate-100 rounded-lg p-3 focus:ring-yellow-500 focus:border-yellow-500 dark:placeholder-slate-400"
+              />
+              <button id="dl-add-manual-project-btn" class="btn btn-secondary">登録</button>
+            </div>
+          </section>
+
+          <!-- Section 3: 搬入日を作成（工事選択後に表示） -->
+          <section id="dl-create-plan-section" class="hidden bg-white dark:bg-slate-800 p-5 rounded-2xl shadow-xl border-2 border-yellow-400">
+            <h3 class="text-lg font-semibold mb-1 text-slate-800 dark:text-slate-100">搬入日を作成</h3>
+            <p id="dl-selected-project-label" class="text-sm text-slate-500 dark:text-slate-400 mb-3"></p>
+            <div class="flex gap-2">
+              <input
+                id="dl-delivery-date"
+                type="date"
+                class="flex-1 bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 text-slate-900 dark:text-slate-100 rounded-lg p-3 focus:ring-yellow-500 focus:border-yellow-500"
+              />
+              <button id="dl-create-plan-btn" class="btn btn-primary">作成</button>
+            </div>
+          </section>
+
+          <!-- Section 4: 既存の搬入計画を再開 -->
+          <section class="bg-white dark:bg-slate-800 p-5 rounded-2xl shadow-xl">
+            <h3 class="text-lg font-semibold mb-3 text-slate-800 dark:text-slate-100 border-b border-slate-200 dark:border-slate-700 pb-2">既存の搬入計画を再開</h3>
+            <div id="dl-existing-plans-list" class="space-y-2 max-h-60 overflow-y-auto custom-scrollbar"></div>
+          </section>
+        </div>
+      </main>
+
+      <!-- ===== 搬入日詳細一覧画面 (3) ===== -->
+      <main id="delivery-detail-view" class="view">
+        <div class="max-w-3xl mx-auto space-y-4">
+
+          <!-- ヘッダー -->
+          <div class="flex items-center gap-3">
+            <button
+              id="dl-detail-back-btn"
+              class="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 transition-colors flex-shrink-0"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+              </svg>
+            </button>
+            <div>
+              <h2 id="dl-detail-date-label" class="text-2xl font-bold text-slate-900 dark:text-slate-100">-</h2>
+              <p id="dl-detail-summary" class="text-sm text-slate-500 dark:text-slate-400 mt-0.5"></p>
+            </div>
+          </div>
+
+          <!-- 全体注意事項 -->
+          <div
+            id="dl-detail-notes"
+            class="hidden bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 rounded-xl px-4 py-3 text-sm"
+          ></div>
+
+          <!-- フィルタバー -->
+          <div class="bg-white dark:bg-slate-800 px-4 py-3 rounded-xl shadow flex flex-wrap items-center gap-3">
+            <input
+              id="dl-detail-project-filter"
+              type="text"
+              placeholder="工事名で絞り込み..."
+              class="flex-1 min-w-[160px] bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 text-slate-800 dark:text-slate-100 rounded-lg px-3 py-2 text-sm focus:ring-yellow-500 focus:border-yellow-500 dark:placeholder-slate-400"
+            />
+            <label class="flex items-center gap-2 cursor-pointer select-none text-sm text-slate-700 dark:text-slate-300">
+              <input
+                id="dl-detail-unchecked-only"
+                type="checkbox"
+                class="h-4 w-4 rounded border-slate-300 text-blue-800 focus:ring-yellow-500"
+              />
+              未完了のみ
+            </label>
+          </div>
+
+          <!-- 工事セクション（JSで描画）-->
+          <div id="dl-detail-content"></div>
+
+        </div>
+      </main>
+
+      <!-- ===== 号車詳細画面 (4) ===== -->
+      <main id="delivery-truck-detail-view" class="view">
+
+        <!-- スティッキーヘッダー（nav 下に固定）-->
+        <div class="sticky top-20 z-20 bg-white/95 dark:bg-slate-800/95 backdrop-blur-sm
+          border-b border-slate-200 dark:border-slate-700 rounded-xl mb-4 shadow-sm">
+          <div class="flex items-center gap-2 px-3 py-3">
+            <!-- 戻るボタン -->
+            <button
+              id="dl-truck-back-btn"
+              class="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors flex-shrink-0"
+              aria-label="戻る"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-slate-600 dark:text-slate-300"
+                fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+              </svg>
+            </button>
+
+            <!-- 工事名 + 号車番号 + 位置 -->
+            <div class="flex-1 min-w-0">
+              <p id="dl-truck-project-name"
+                class="text-xs text-slate-500 dark:text-slate-400 truncate leading-tight"></p>
+              <div class="flex items-center gap-2 mt-0.5">
+                <span id="dl-truck-no-label"
+                  class="text-lg font-bold text-slate-900 dark:text-slate-100 leading-tight"></span>
+                <span id="dl-truck-position"
+                  class="text-xs text-slate-400 dark:text-slate-500"></span>
+              </div>
+            </div>
+
+            <!-- 前へ / 次へ -->
+            <div class="flex items-center gap-1 flex-shrink-0">
+              <button
+                id="dl-truck-prev-btn"
+                class="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors
+                  disabled:opacity-30 disabled:cursor-not-allowed"
+                aria-label="前の号車"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-slate-600 dark:text-slate-300"
+                  fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+                </svg>
+              </button>
+              <button
+                id="dl-truck-next-btn"
+                class="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors
+                  disabled:opacity-30 disabled:cursor-not-allowed"
+                aria-label="次の号車"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-slate-600 dark:text-slate-300"
+                  fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                </svg>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- コンテンツ（JSで描画）-->
+        <div id="dl-truck-content" class="max-w-2xl mx-auto space-y-4 pb-12"></div>
+
+      </main>
+
+    </div>
+
+    <!-- ===== 搬入パスワードモーダル ===== -->
+    <div
+      id="delivery-password-modal"
+      class="modal fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center p-4 hidden z-[60]"
+    >
+      <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-sm p-6">
+        <h3 class="text-xl font-bold mb-1 text-slate-900 dark:text-slate-100">搬入入力モード</h3>
+        <p class="text-sm text-slate-500 dark:text-slate-400 mb-4">パスワードを入力してください</p>
+        <input
+          id="dl-password-input"
+          type="password"
+          placeholder="パスワード"
+          class="w-full bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 text-slate-900 dark:text-slate-100 rounded-lg p-3 mb-2 focus:ring-yellow-500 focus:border-yellow-500"
+        />
+        <p id="dl-password-error" class="text-sm text-red-500 mb-3 hidden">パスワードが違います</p>
+        <div class="flex gap-3 justify-end">
+          <button id="dl-password-cancel-btn" class="btn btn-neutral">キャンセル</button>
+          <button id="dl-password-submit-btn" class="btn btn-primary">確認</button>
+        </div>
+      </div>
     </div>
 
     <div
