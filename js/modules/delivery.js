@@ -504,6 +504,7 @@ function _renderTruckDetail(truck) {
   const loadingInstr    = truck.loadingInstruction || '';
   const truckHasDiff    = truck.hasDiff;
   const truckDiffTypes  = truck.diffTypes;
+  const truckDiffSum    = truck.diffSummary || '';
 
   let html = '';
 
@@ -533,11 +534,12 @@ function _renderTruckDetail(truck) {
         </div>`;
     }
     if (truckHasDiff) {
-      const diffStr = Array.isArray(truckDiffTypes) ? truckDiffTypes.join(' / ') : String(truckDiffTypes || '');
+      const diffLabel = Array.isArray(truckDiffTypes) ? truckDiffTypes.join(' / ') : String(truckDiffTypes || '');
+      const diffBody  = truckDiffSum || diffLabel;
       html += `
         <div class="px-4 py-3 bg-yellow-50 dark:bg-yellow-900/20">
-          <p class="text-xs font-bold text-yellow-700 dark:text-yellow-400 mb-1">差分あり</p>
-          ${diffStr ? `<p class="text-sm text-yellow-700 dark:text-yellow-300">${esc(diffStr)}</p>` : ''}
+          <p class="text-xs font-bold text-yellow-700 dark:text-yellow-400 mb-1">差分あり${diffLabel ? '：' + diffLabel : ''}</p>
+          ${diffBody ? `<p class="text-sm text-yellow-700 dark:text-yellow-300 whitespace-pre-wrap">${esc(diffBody)}</p>` : ''}
         </div>`;
     }
     html += `</div>`;
@@ -680,6 +682,7 @@ function _renderItemCard(item, truckId) {
   const hasDiff      = item.hasDiff;
   const diffTypes    = item.diffTypes || [];
   const diffStr      = Array.isArray(diffTypes) ? diffTypes.join(' / ') : String(diffTypes || '');
+  const diffContent  = item.diffSummary || diffStr;
 
   return `
     <div class="dl-item-card flex flex-col rounded-xl border-2 transition-all
@@ -712,7 +715,7 @@ function _renderItemCard(item, truckId) {
           ${loadingInstr ? `<button class="dl-item-tag-btn text-xs px-1.5 py-0.5 rounded bg-blue-100 text-blue-600 dark:bg-blue-900/40 dark:text-blue-300 font-medium active:opacity-70"
             data-tag="loading" data-content="${esc(loadingInstr)}">積込</button>` : ''}
           ${hasDiff      ? `<button class="dl-item-tag-btn text-xs px-1.5 py-0.5 rounded bg-yellow-100 text-yellow-700 dark:bg-yellow-900/40 dark:text-yellow-300 font-medium active:opacity-70"
-            data-tag="diff" data-content="${esc(diffStr)}">差分</button>` : ''}
+            data-tag="diff" data-content="${esc(diffContent)}">差分</button>` : ''}
         </div>` : ''}
 
       <!-- タグ展開エリア -->
