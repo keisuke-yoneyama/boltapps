@@ -7,13 +7,13 @@ import {
   getPlansForMonth,
   getTrucksForPlan,
   getItemsForTruck,
-  getChecksForTruck,
-  setItemCheck,
+  setItemChecked,
   updateTruckStatus,
 } from './delivery-db.js';
 
 // 号車詳細画面のコンテキスト（再描画時に参照）
-let _truckPlanId = null;
+let _truckProjectId = null;
+let _truckPlanId    = null;
 
 // Date → 'YYYY-MM-DD' 文字列
 function toDateStr(d) {
@@ -65,7 +65,7 @@ export function switchAppMode(mode) {
 
   } else if (mode === 'delivery-truck-detail') {
     if (truckView) truckView.style.display = 'block';
-    loadAndRenderTruckDetail(deliveryState.selectedPlanId, deliveryState.selectedTruckId);
+    loadAndRenderTruckDetail(deliveryState.selectedProjectId, deliveryState.selectedPlanId, deliveryState.selectedTruckId);
 
   } else {
     // bolt モード
@@ -215,7 +215,7 @@ async function loadAndRenderDateDetail(date) {
   const plansWithTrucks = [];
   for (const plan of plansForDate) {
     if (!deliveryState.trucksCache[plan.id]) {
-      deliveryState.trucksCache[plan.id] = await getTrucksForPlan(plan.id);
+      deliveryState.trucksCache[plan.id] = await getTrucksForPlan(plan.projectId, plan.id);
     }
     const proj = deliveryState.deliveryProjects.find(p => p.id === plan.projectId);
     plansWithTrucks.push({
@@ -288,7 +288,7 @@ function renderDateDetail(date, plansWithTrucks) {
 
     // 号車を平坦化・ソート・フィルタ
     let trucks = group.items.flatMap(pw =>
-      pw.trucks.map(t => ({ ...t, _planId: pw.plan.id }))
+      pw.trucks.map(t => ({ ...t, _planId: pw.plan.id, _projectId: pw.plan.projectId }))
     );
     trucks.sort((a, b) => {
       const orderDiff = (a.truckOrder ?? 999) - (b.truckOrder ?? 999);
@@ -351,8 +351,9 @@ function renderDateDetail(date, plansWithTrucks) {
   // 号車カードタップ → 画面4へ遷移
   content.querySelectorAll('.dl-truck-row').forEach(el => {
     el.addEventListener('click', () => {
-      deliveryState.selectedTruckId = el.dataset.truckId;
-      deliveryState.selectedPlanId  = el.dataset.planId;
+      deliveryState.selectedTruckId   = el.dataset.truckId;
+      deliveryState.selectedPlanId    = el.dataset.planId;
+      deliveryState.selectedProjectId = el.dataset.projectId;
       switchAppMode('delivery-truck-detail');
     });
   });
@@ -372,7 +373,7 @@ function renderTruckCard(truck) {
     <div class="dl-truck-row border border-slate-200 dark:border-slate-700 rounded-xl overflow-hidden
       cursor-pointer hover:border-blue-300 dark:hover:border-blue-600 active:opacity-70 transition-all
       bg-white dark:bg-slate-800/80"
-      data-truck-id="${esc(truck.id)}" data-plan-id="${esc(truck._planId || '')}">
+      data-truck-id="${esc(truck.id)}" data-plan-id="${esc(truck._planId || '')}" data-project-id="${esc(truck._projectId || '')}">
 
       <!-- 行1: 号車番号 / 車種 / 進捗 -->
       <div class="flex items-center gap-2 px-3 pt-3 pb-1">
@@ -409,14 +410,15 @@ function renderTruckCard(truck) {
 
 // ── 号車詳細画面 (4) ──────────────────────────────────────
 
-async function loadAndRenderTruckDetail(planId, truckId) {
-  _truckPlanId = planId;
+async function loadAndRenderTruckDetail(projectId, planId, truckId) {
+  _truckProjectId = projectId;
+  _truckPlanId    = planId;
   const content = document.getElementById('dl-truck-content');
   if (content) content.innerHTML = '<p class="text-center text-slate-400 py-8">読み込み中...</p>';
 
   // trucks キャッシュ確保
   if (!deliveryState.trucksCache[planId]) {
-    deliveryState.trucksCache[planId] = await getTrucksForPlan(planId);
+    deliveryState.trucksCache[planId] = await getTrucksForPlan(projectId, planId);
   }
   const sorted = (deliveryState.trucksCache[planId] || []).slice()
     .sort((a, b) => (a.truckOrder ?? 999) - (b.truckOrder ?? 999));
@@ -440,10 +442,7 @@ async function _loadAndDrawCurrentTruck() {
   }
 
   if (!deliveryState.itemsCache[truck.id]) {
-    deliveryState.itemsCache[truck.id] = await getItemsForTruck(_truckPlanId, truck.id);
-  }
-  if (!deliveryState.checksCache[truck.id]) {
-    deliveryState.checksCache[truck.id] = await getChecksForTruck(_truckPlanId, truck.id);
+    deliveryState.itemsCache[truck.id] = await getItemsForTruck(_truckProjectId, _truckPlanId, truck.id);
   }
   _renderTruckDetail(truck);
 }
@@ -464,9 +463,8 @@ function navigateTruck(dir) {
 
 function _renderTruckDetail(truck) {
   const { trucksForCurrentPlan, currentTruckIndex } = deliveryState;
-  const items     = deliveryState.itemsCache[truck.id] || [];
-  const checksMap = deliveryState.checksCache[truck.id] || {};
-  const total     = trucksForCurrentPlan.length;
+  const items  = deliveryState.itemsCache[truck.id] || [];
+  const total  = trucksForCurrentPlan.length;
   const progress  = truck.progressStatus || 'pending';
 
   // ── ヘッダー更新 ──
@@ -500,7 +498,7 @@ function _renderTruckDetail(truck) {
   _renderTruckTabBar(trucksForCurrentPlan, currentTruckIndex);
 
   // ── コンテンツ描画 ──
-  const checkedCount    = items.filter(item => checksMap[item.id] === 'checked').length;
+  const checkedCount    = items.filter(item => item.checked).length;
   const loadSummary     = truck.loadSummary      || '';
   const cautionNotes    = truck.cautionNotes     || truck.notes || '';
   const loadingInstr    = truck.loadingInstruction || '';
@@ -571,7 +569,7 @@ function _renderTruckDetail(truck) {
       <div class="p-3 grid grid-cols-2 sm:grid-cols-3 gap-2">
         ${items.length === 0
           ? '<p class="text-sm text-slate-400 col-span-full py-2">品目データがありません</p>'
-          : items.map(item => _renderItemCard(item, checksMap, truck.id)).join('')
+          : items.map(item => _renderItemCard(item, truck.id)).join('')
         }
       </div>
     </div>`;
@@ -589,7 +587,7 @@ function _renderTruckDetail(truck) {
       if (!pId || !tId) return;
       const status = btn.dataset.status;
       try {
-        await updateTruckStatus(pId, tId, status);
+        await updateTruckStatus(_truckProjectId, pId, tId, status);
         [deliveryState.trucksCache[pId], deliveryState.trucksForCurrentPlan].forEach(arr => {
           const t = arr?.find(t => t.id === tId);
           if (t) t.progressStatus = status;
@@ -605,16 +603,18 @@ function _renderTruckDetail(truck) {
   // 品目チェックボタン
   content.querySelectorAll('.dl-item-check-btn').forEach(btn => {
     btn.addEventListener('click', async () => {
-      const { truckId, itemId, checkStatus } = btn.dataset;
-      const newStatus = checkStatus === 'checked' ? 'unchecked' : 'checked';
-      if (!deliveryState.checksCache[truckId]) deliveryState.checksCache[truckId] = {};
-      deliveryState.checksCache[truckId][itemId] = newStatus;
+      const { truckId, itemId } = btn.dataset;
+      const items = deliveryState.itemsCache[truckId];
+      const item  = items?.find(i => i.id === itemId);
+      if (!item) return;
+      const newChecked = !item.checked;
+      item.checked = newChecked;
       _reRenderTruck();
       try {
-        await setItemCheck(_truckPlanId, truckId, itemId, newStatus);
+        await setItemChecked(_truckProjectId, _truckPlanId, truckId, itemId, newChecked);
       } catch (e) {
-        console.error('[delivery] setItemCheck:', e);
-        deliveryState.checksCache[truckId][itemId] = checkStatus;
+        console.error('[delivery] setItemChecked:', e);
+        item.checked = !newChecked;
         _reRenderTruck();
       }
     });
@@ -672,15 +672,14 @@ function _renderTruckTabBar(trucks, currentIndex) {
 }
 
 // 品目カード（横並びグリッド用）
-function _renderItemCard(item, checksMap, truckId) {
-  const checkStatus      = checksMap[item.id] || 'unchecked';
-  const isChecked        = checkStatus === 'checked';
-  const name             = item.itemName || item.name || item.itemCode || '品目名不明';
-  const cautionNote      = item.cautionNote || item.noteText || '';
-  const loadingInstr     = item.loadingInstruction || '';
-  const hasDiff          = item.hasDiff;
-  const diffTypes        = item.diffTypes || [];
-  const diffStr          = Array.isArray(diffTypes) ? diffTypes.join(' / ') : String(diffTypes || '');
+function _renderItemCard(item, truckId) {
+  const isChecked    = !!item.checked;
+  const name         = item.name || item.itemName || item.itemCode || '品目名不明';
+  const cautionNote  = item.cautionNote || item.noteText || '';
+  const loadingInstr = item.loadingInstruction || '';
+  const hasDiff      = item.hasDiff;
+  const diffTypes    = item.diffTypes || [];
+  const diffStr      = Array.isArray(diffTypes) ? diffTypes.join(' / ') : String(diffTypes || '');
 
   return `
     <div class="dl-item-card flex flex-col rounded-xl border-2 transition-all
@@ -691,7 +690,7 @@ function _renderItemCard(item, checksMap, truckId) {
 
       <!-- チェック + 品名 -->
       <button class="dl-item-check-btn text-left p-3 flex items-start gap-2 flex-1 active:opacity-70 w-full"
-        data-truck-id="${esc(truckId)}" data-item-id="${esc(item.id)}" data-check-status="${checkStatus}">
+        data-truck-id="${esc(truckId)}" data-item-id="${esc(item.id)}">
         <span class="flex-shrink-0 w-5 h-5 mt-0.5 rounded border-2 flex items-center justify-center transition-colors
           ${isChecked ? 'bg-green-500 border-green-500' : 'border-slate-300 dark:border-slate-500'}">
           ${isChecked

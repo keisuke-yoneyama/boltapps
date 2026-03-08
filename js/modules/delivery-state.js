@@ -24,6 +24,5 @@ export const deliveryState = {
   deliveryProjects: [],  // 搬入リスト用工事マスタ
   plansCache: {},        // key: 'YYYY-MM', value: [planDoc...]
   trucksCache: {},       // key: planId, value: [truckDoc...]
-  itemsCache: {},        // key: truckId, value: [itemDoc...]
-  checksCache: {},       // key: truckId, value: { itemId: checkStatus }
+  itemsCache: {},        // key: truckId, value: [itemDoc...]  ※ item.checked を正とする
 };

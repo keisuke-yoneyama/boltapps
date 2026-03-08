@@ -1,29 +1,23 @@
 // 搬入リスト固有の Firestore アクセス
-// 既存 db.js とは責務を分ける
 
-import { db, appId } from './firebase.js';
+import { db } from './firebase.js';
 import {
   collection,
+  collectionGroup,
   doc,
   getDocs,
   updateDoc,
-  setDoc,
   query,
   where,
   orderBy,
   serverTimestamp,
 } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js';
 
-// コレクションパス（既存アプリの namespace に合わせる）
-const base = () => `artifacts/${appId}/public/data`;
-const deliveryProjectsCol = () => collection(db, `${base()}/deliveryProjects`);
-const deliveryPlansCol = () => collection(db, `${base()}/deliveryPlans`);
-
 // ── Projects ──────────────────────────────────────────────
 
 export async function getDeliveryProjects() {
   try {
-    const snap = await getDocs(deliveryProjectsCol());
+    const snap = await getDocs(collection(db, 'projects'));
     return snap.docs.map(d => ({ id: d.id, ...d.data() }));
   } catch (e) {
     console.error('[delivery-db] getDeliveryProjects:', e);
@@ -34,17 +28,17 @@ export async function getDeliveryProjects() {
 // ── Plans ─────────────────────────────────────────────────
 
 /**
- * 指定月の搬入計画を全件取得
+ * 指定月の搬入計画を全プロジェクト横断で取得
  * @param {number} year
  * @param {number} month - 0始まり (JS標準)
  */
 export async function getPlansForMonth(year, month) {
   const daysInMonth = new Date(year, month + 1, 0).getDate();
   const start = `${year}-${String(month + 1).padStart(2, '0')}-01`;
-  const end = `${year}-${String(month + 1).padStart(2, '0')}-${String(daysInMonth).padStart(2, '0')}`;
+  const end   = `${year}-${String(month + 1).padStart(2, '0')}-${String(daysInMonth).padStart(2, '0')}`;
   try {
     const q = query(
-      deliveryPlansCol(),
+      collectionGroup(db, 'deliveryPlans'),
       where('deliveryDate', '>=', start),
       where('deliveryDate', '<=', end),
     );
@@ -56,33 +50,47 @@ export async function getPlansForMonth(year, month) {
   }
 }
 
-/**
- * 指定 planId の号車一覧を取得（サブコレクション）
- */
-export async function getTrucksForPlan(planId) {
-  try {
-    const trucksRef = collection(db, `${base()}/deliveryPlans/${planId}/trucks`);
-    const snap = await getDocs(trucksRef);
-    return snap.docs.map(d => ({ id: d.id, ...d.data() }));
-  } catch (e) {
-    console.error('[delivery-db] getTrucksForPlan:', e);
-    return [];
-  }
-}
+// ── Trucks ────────────────────────────────────────────────
 
 /**
- * 指定 truck の品目一覧を取得（sortOrder 順）
+ * 号車一覧を取得（truckOrder 昇順）
  */
-export async function getItemsForTruck(planId, truckId) {
+export async function getTrucksForPlan(projectId, planId) {
   try {
-    const ref = collection(db, `${base()}/deliveryPlans/${planId}/trucks/${truckId}/items`);
-    const q = query(ref, orderBy('sortOrder'));
+    const ref  = collection(db, `projects/${projectId}/deliveryPlans/${planId}/trucks`);
+    const q    = query(ref, orderBy('truckOrder'));
     const snap = await getDocs(q);
     return snap.docs.map(d => ({ id: d.id, ...d.data() }));
   } catch (e) {
-    // orderBy index なしでも fallback
+    // orderBy index なしの fallback
     try {
-      const ref = collection(db, `${base()}/deliveryPlans/${planId}/trucks/${truckId}/items`);
+      const ref  = collection(db, `projects/${projectId}/deliveryPlans/${planId}/trucks`);
+      const snap = await getDocs(ref);
+      return snap.docs.map(d => ({ id: d.id, ...d.data() }))
+        .sort((a, b) => (a.truckOrder ?? 999) - (b.truckOrder ?? 999));
+    } catch (e2) {
+      console.error('[delivery-db] getTrucksForPlan:', e2);
+      return [];
+    }
+  }
+}
+
+// ── Items ─────────────────────────────────────────────────
+
+/**
+ * 品目一覧を取得（sortOrder 昇順）
+ * item.checked を正とするため checks サブコレクションは参照しない
+ */
+export async function getItemsForTruck(projectId, planId, truckId) {
+  try {
+    const ref  = collection(db, `projects/${projectId}/deliveryPlans/${planId}/trucks/${truckId}/items`);
+    const q    = query(ref, orderBy('sortOrder'));
+    const snap = await getDocs(q);
+    return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  } catch (e) {
+    // orderBy index なしの fallback
+    try {
+      const ref  = collection(db, `projects/${projectId}/deliveryPlans/${planId}/trucks/${truckId}/items`);
       const snap = await getDocs(ref);
       return snap.docs.map(d => ({ id: d.id, ...d.data() }))
         .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
@@ -93,48 +101,20 @@ export async function getItemsForTruck(planId, truckId) {
   }
 }
 
-/**
- * 指定 truck のチェック一覧を { itemId: checkStatus } マップで返す
- */
-export async function getChecksForTruck(planId, truckId) {
-  try {
-    const ref = collection(db, `${base()}/deliveryPlans/${planId}/trucks/${truckId}/checks`);
-    const snap = await getDocs(ref);
-    const map = {};
-    snap.docs.forEach(d => {
-      const data = d.data();
-      map[data.deliveryItemId || d.id] = data.checkStatus || 'unchecked';
-    });
-    return map;
-  } catch (e) {
-    console.error('[delivery-db] getChecksForTruck:', e);
-    return {};
-  }
-}
+// ── Writes ────────────────────────────────────────────────
 
 /**
- * 品目チェック状態を書き込む（doc ID = itemId で upsert）
+ * 品目のチェック状態を item.checked で更新
  */
-export async function setItemCheck(planId, truckId, itemId, checkStatus) {
-  const checkRef = doc(db, `${base()}/deliveryPlans/${planId}/trucks/${truckId}/checks/${itemId}`);
-  await setDoc(checkRef, {
-    deliveryItemId: itemId,
-    checkType: 'item',
-    checkStatus,
-    checkedAt: serverTimestamp(),
-    checkedBy: 'editor',
-  }, { merge: true });
+export async function setItemChecked(projectId, planId, truckId, itemId, checked) {
+  const ref = doc(db, `projects/${projectId}/deliveryPlans/${planId}/trucks/${truckId}/items/${itemId}`);
+  await updateDoc(ref, { checked, updatedAt: serverTimestamp() });
 }
 
 /**
  * 号車全体の progressStatus を更新
  */
-export async function updateTruckStatus(planId, truckId, progressStatus) {
-  const truckRef = doc(db, `${base()}/deliveryPlans/${planId}/trucks/${truckId}`);
-  await updateDoc(truckRef, {
-    progressStatus,
-    updatedAt: serverTimestamp(),
-    updatedBy: 'editor',
-  });
+export async function updateTruckStatus(projectId, planId, truckId, progressStatus) {
+  const ref = doc(db, `projects/${projectId}/deliveryPlans/${planId}/trucks/${truckId}`);
+  await updateDoc(ref, { progressStatus, updatedAt: serverTimestamp() });
 }
-
