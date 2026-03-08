@@ -4,10 +4,7 @@
 import { deliveryState } from './delivery-state.js';
 import {
   getDeliveryProjects,
-  addDeliveryProject,
   getPlansForMonth,
-  addDeliveryPlan,
-  getActivePlansByProject,
   getTrucksForPlan,
   getItemsForTruck,
   getChecksForTruck,
@@ -15,14 +12,9 @@ import {
   updateTruckStatus,
 } from './delivery-db.js';
 
-import { state } from './state.js'; // ボルトアプリ工事一覧を参照
-
 // 号車詳細画面のコンテキスト（再描画時に参照）
 let _truckPlanId = null;
 let _truckProjectName = '';
-
-// 簡易パスワード（変更する場合はここだけ修正）
-const EDITOR_PASSWORD = '1234';
 
 const esc = s =>
   String(s || '')
@@ -35,7 +27,6 @@ const esc = s =>
 
 export function switchAppMode(mode) {
   const calView    = document.getElementById('delivery-calendar-view');
-  const inputView  = document.getElementById('delivery-input-view');
   const detailView = document.getElementById('delivery-detail-view');
   const truckView  = document.getElementById('delivery-truck-detail-view');
   const boltList   = document.getElementById('project-list-view');
@@ -48,7 +39,7 @@ export function switchAppMode(mode) {
   const masterFab      = document.getElementById('master-fab-container');
 
   // 全ビューを非表示
-  [calView, inputView, detailView, truckView, boltList, boltDetail].forEach(el => {
+  [calView, detailView, truckView, boltList, boltDetail].forEach(el => {
     if (el) el.style.display = 'none';
   });
 
@@ -63,10 +54,6 @@ export function switchAppMode(mode) {
   if (mode === 'delivery') {
     if (calView) calView.style.display = 'block';
     loadAndRenderCalendar();
-
-  } else if (mode === 'delivery-input') {
-    if (inputView) inputView.style.display = 'block';
-    renderInputScreen();
 
   } else if (mode === 'delivery-detail') {
     if (detailView) detailView.style.display = 'block';
@@ -646,244 +633,6 @@ function progressCls(status) {
   }[status] || 'bg-slate-100 text-slate-500 dark:bg-slate-700 dark:text-slate-400';
 }
 
-// ── 入力開始画面 (A) ──────────────────────────────────────
-
-function renderInputScreen() {
-  const boltProjects = state.projects || [];
-  const filter       = deliveryState.projectFilter.toLowerCase();
-
-  const filtered = boltProjects.filter(p => {
-    const name = (p.name || '').toLowerCase();
-    const prop = (p.propertyName || '').toLowerCase();
-    return name.includes(filter) || prop.includes(filter);
-  });
-
-  const listEl = document.getElementById('dl-bolt-projects-list');
-  if (listEl) {
-    if (filtered.length === 0) {
-      listEl.innerHTML = filter
-        ? '<p class="text-sm text-slate-400 py-2">該当する工事が見つかりません</p>'
-        : '<p class="text-sm text-slate-400 py-2">ボルト計算アプリに工事がありません</p>';
-    } else {
-      listEl.innerHTML = filtered.map(p => {
-        const isSel = deliveryState.selectedProjectId === p.id && deliveryState.selectedSourceType === 'bolt';
-        return `
-          <div class="dl-bolt-project-item flex items-center justify-between p-3 rounded-lg border transition-colors cursor-pointer
-            ${isSel ? 'border-yellow-400 bg-yellow-50 dark:bg-yellow-900/20' : 'border-slate-200 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-700'}"
-            data-project-id="${esc(p.id)}" data-project-name="${esc(p.name)}" data-source-type="bolt">
-            <div>
-              <p class="font-semibold text-slate-800 dark:text-slate-100">${esc(p.name)}</p>
-              ${p.propertyName ? `<p class="text-xs text-slate-400">${esc(p.propertyName)}</p>` : ''}
-            </div>
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
-            </svg>
-          </div>`;
-      }).join('');
-
-      listEl.querySelectorAll('.dl-bolt-project-item').forEach(item => {
-        item.addEventListener('click', () => {
-          deliveryState.selectedProjectId   = item.dataset.projectId;
-          deliveryState.selectedProjectName = item.dataset.projectName;
-          deliveryState.selectedSourceType  = item.dataset.sourceType;
-          renderInputScreen();
-          showCreatePlanSection();
-        });
-      });
-    }
-  }
-
-  // 選択済み工事表示
-  const selectedEl = document.getElementById('dl-selected-project-label');
-  if (selectedEl) {
-    selectedEl.textContent = deliveryState.selectedProjectName
-      ? `選択中: ${deliveryState.selectedProjectName}`
-      : '';
-  }
-
-  // 既存計画
-  renderExistingPlans();
-}
-
-async function renderExistingPlans() {
-  const el = document.getElementById('dl-existing-plans-list');
-  if (!el) return;
-
-  const projects = deliveryState.deliveryProjects;
-  if (projects.length === 0) {
-    el.innerHTML = '<p class="text-sm text-slate-400 py-2">搬入計画はまだありません</p>';
-    return;
-  }
-
-  el.innerHTML = '<p class="text-sm text-slate-400 py-2">読み込み中...</p>';
-
-  try {
-    const allPlans = [];
-    for (const proj of projects.slice(0, 10)) {
-      const plans = await getActivePlansByProject(proj.id);
-      plans.forEach(plan => allPlans.push({ ...plan, _projectName: proj.projectName }));
-    }
-
-    allPlans.sort((a, b) => (b.deliveryDate || '').localeCompare(a.deliveryDate || ''));
-    const recent = allPlans.slice(0, 10);
-
-    if (recent.length === 0) {
-      el.innerHTML = '<p class="text-sm text-slate-400 py-2">搬入計画はまだありません</p>';
-      return;
-    }
-
-    el.innerHTML = recent.map(plan => `
-      <div class="dl-resume-plan-item flex items-center justify-between p-3 rounded-lg border border-slate-200 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-700 cursor-pointer transition-colors"
-        data-plan-id="${esc(plan.id)}" data-project-id="${esc(plan.projectId || '')}">
-        <div>
-          <p class="font-semibold text-slate-800 dark:text-slate-100">${esc(plan._projectName || '工事名不明')}</p>
-          <p class="text-xs text-slate-400">${esc(plan.deliveryDate || '日付未設定')} ・ ${statusLabel(plan.status)}</p>
-        </div>
-        <span class="text-xs px-2 py-0.5 rounded-full ${statusBadgeCls(plan.status)}">${statusLabel(plan.status)}</span>
-      </div>`).join('');
-
-    el.querySelectorAll('.dl-resume-plan-item').forEach(item => {
-      item.addEventListener('click', () => {
-        deliveryState.selectedPlanId    = item.dataset.planId;
-        deliveryState.selectedProjectId = item.dataset.projectId;
-        // phase 2: navigateToPlanDetail(...)
-        console.log('[delivery] resume plan:', item.dataset.planId);
-      });
-    });
-  } catch (e) {
-    el.innerHTML = '<p class="text-sm text-red-400 py-2">読み込みに失敗しました</p>';
-  }
-}
-
-function showCreatePlanSection() {
-  const el = document.getElementById('dl-create-plan-section');
-  if (el) el.classList.remove('hidden');
-}
-
-function statusLabel(status) {
-  return { planned: '計画中', in_progress: '進行中', completed: '完了', cancelled: 'キャンセル' }[status] || (status || '不明');
-}
-
-function statusBadgeCls(status) {
-  return {
-    planned:     'bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300',
-    in_progress: 'bg-orange-100 text-orange-700 dark:bg-orange-900/50 dark:text-orange-300',
-    completed:   'bg-green-100 text-green-700 dark:bg-green-900/50 dark:text-green-300',
-    cancelled:   'bg-slate-100 text-slate-500',
-  }[status] || 'bg-slate-100 text-slate-500';
-}
-
-// ── パスワードモーダル ─────────────────────────────────────
-
-function showPasswordModal() {
-  const modal = document.getElementById('delivery-password-modal');
-  const input = document.getElementById('dl-password-input');
-  const errEl = document.getElementById('dl-password-error');
-  if (modal) modal.classList.remove('hidden');
-  if (input) { input.value = ''; setTimeout(() => input.focus(), 50); }
-  if (errEl) errEl.classList.add('hidden');
-}
-
-function hidePasswordModal() {
-  const modal = document.getElementById('delivery-password-modal');
-  if (modal) modal.classList.add('hidden');
-}
-
-function checkPassword() {
-  const input = document.getElementById('dl-password-input');
-  const errEl = document.getElementById('dl-password-error');
-  if (!input) return;
-  if (input.value === EDITOR_PASSWORD) {
-    deliveryState.isEditorMode = true;
-    hidePasswordModal();
-    switchAppMode('delivery-input');
-  } else {
-    if (errEl) errEl.classList.remove('hidden');
-    input.value = '';
-    input.focus();
-  }
-}
-
-// ── 手動工事登録 ──────────────────────────────────────────
-
-async function addManualProject() {
-  const nameEl = document.getElementById('dl-manual-project-name');
-  const name   = nameEl?.value.trim();
-  if (!name) { alert('工事名を入力してください'); return; }
-
-  try {
-    const ref = await addDeliveryProject({ projectName: name, sourceType: 'manual', boltProjectId: null });
-    const newProj = { id: ref.id, projectName: name, sourceType: 'manual', status: 'active' };
-    deliveryState.deliveryProjects.push(newProj);
-    deliveryState.selectedProjectId   = ref.id;
-    deliveryState.selectedProjectName = name;
-    deliveryState.selectedSourceType  = 'manual';
-    if (nameEl) nameEl.value = '';
-    renderInputScreen();
-    showCreatePlanSection();
-  } catch (e) {
-    console.error('[delivery] addManualProject:', e);
-    alert('登録に失敗しました');
-  }
-}
-
-// ── 搬入計画作成 ──────────────────────────────────────────
-
-async function createDeliveryPlan() {
-  const dateEl = document.getElementById('dl-delivery-date');
-  const date   = dateEl?.value;
-
-  if (!deliveryState.selectedProjectId) { alert('工事を選択してください'); return; }
-  if (!date) { alert('搬入日を選択してください'); return; }
-
-  let deliveryProjectId = deliveryState.selectedProjectId;
-
-  // ボルトアプリ工事を選択した場合: 対応する deliveryProject を作成/特定
-  if (deliveryState.selectedSourceType === 'bolt') {
-    const existing = deliveryState.deliveryProjects.find(
-      p => p.boltProjectId === deliveryState.selectedProjectId,
-    );
-    if (existing) {
-      deliveryProjectId = existing.id;
-    } else {
-      const ref = await addDeliveryProject({
-        projectName:  deliveryState.selectedProjectName,
-        boltProjectId: deliveryState.selectedProjectId,
-        sourceType:   'bolt',
-      });
-      const newProj = {
-        id: ref.id,
-        projectName:  deliveryState.selectedProjectName,
-        boltProjectId: deliveryState.selectedProjectId,
-        sourceType:   'bolt',
-        status:       'active',
-      };
-      deliveryState.deliveryProjects.push(newProj);
-      deliveryProjectId = ref.id;
-    }
-  }
-
-  try {
-    await addDeliveryPlan({
-      projectId:    deliveryProjectId,
-      deliveryDate: date,
-      dayIndex:     1,
-      overallNotes: '',
-      updatedBy:    'editor',
-    });
-
-    // 該当月のキャッシュを無効化
-    const [y, m] = date.split('-');
-    delete deliveryState.plansCache[`${y}-${m}`];
-
-    alert(`搬入計画を作成しました\n日付: ${date}`);
-    switchAppMode('delivery');
-  } catch (e) {
-    console.error('[delivery] createDeliveryPlan:', e);
-    alert('搬入計画の作成に失敗しました');
-  }
-}
-
 // ── イベント設定 ──────────────────────────────────────────
 
 function on(id, event, handler) {
@@ -911,20 +660,8 @@ function setupDeliveryEvents() {
     const now = new Date();
     deliveryState.displayMonth = new Date(now.getFullYear(), now.getMonth(), 1);
     deliveryState.selectedDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-    loadAndRenderCalendar();
+    switchAppMode('delivery-detail');
   });
-  on('dl-start-input-btn', 'click', () => {
-    if (deliveryState.isEditorMode) {
-      switchAppMode('delivery-input');
-    } else {
-      showPasswordModal();
-    }
-  });
-
-  // パスワードモーダル
-  on('dl-password-cancel-btn', 'click', hidePasswordModal);
-  on('dl-password-submit-btn', 'click', checkPassword);
-  on('dl-password-input', 'keydown', e => { if (e.key === 'Enter') checkPassword(); });
 
   // 号車詳細画面 (4)
   on('dl-truck-back-btn',  'click', () => switchAppMode('delivery-detail'));
@@ -960,15 +697,6 @@ function setupDeliveryEvents() {
     );
   });
 
-  // 入力開始画面
-  on('dl-back-to-calendar-btn', 'click', () => switchAppMode('delivery'));
-  on('dl-project-search', 'input', e => {
-    deliveryState.projectFilter = e.target.value;
-    renderInputScreen();
-  });
-  on('dl-add-manual-project-btn', 'click', addManualProject);
-  on('dl-manual-project-name', 'keydown', e => { if (e.key === 'Enter') addManualProject(); });
-  on('dl-create-plan-btn', 'click', createDeliveryPlan);
 }
 
 // ── 初期化（エントリーポイント） ──────────────────────────

@@ -1404,72 +1404,12 @@
           <!-- アクションボタン -->
           <div class="flex flex-wrap gap-2 mb-4">
             <button id="dl-today-btn" class="btn btn-neutral text-sm">今日の搬入を見る</button>
-            <button id="dl-start-input-btn" class="btn btn-primary text-sm">搬入入力を開始</button>
           </div>
 
           <!-- カレンダーグリッド（JSで描画）-->
           <div id="dl-calendar-grid" class="min-h-[300px]">
             <p class="text-center text-slate-400 py-8">読み込み中...</p>
           </div>
-        </div>
-      </main>
-
-      <!-- ===== 入力開始画面 (A) ===== -->
-      <main id="delivery-input-view" class="view">
-        <div class="max-w-2xl mx-auto space-y-6">
-          <!-- ヘッダー -->
-          <div class="flex items-center gap-3">
-            <button id="dl-back-to-calendar-btn" class="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 transition-colors">
-              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
-            </button>
-            <h2 class="text-2xl font-bold text-slate-900 dark:text-slate-100">搬入入力開始</h2>
-          </div>
-
-          <!-- Section 1: ボルトアプリの工事から選択 -->
-          <section class="bg-white dark:bg-slate-800 p-5 rounded-2xl shadow-xl">
-            <h3 class="text-lg font-semibold mb-3 text-slate-800 dark:text-slate-100 border-b border-slate-200 dark:border-slate-700 pb-2">工事を選択（ボルト計算アプリから）</h3>
-            <input
-              id="dl-project-search"
-              type="text"
-              placeholder="工事名で検索..."
-              class="w-full bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 text-slate-900 dark:text-slate-100 rounded-lg p-3 mb-3 focus:ring-yellow-500 focus:border-yellow-500 dark:placeholder-slate-400"
-            />
-            <div id="dl-bolt-projects-list" class="space-y-2 max-h-48 overflow-y-auto custom-scrollbar"></div>
-          </section>
-
-          <!-- Section 2: 手動工事登録 -->
-          <section class="bg-white dark:bg-slate-800 p-5 rounded-2xl shadow-xl">
-            <h3 class="text-lg font-semibold mb-3 text-slate-800 dark:text-slate-100 border-b border-slate-200 dark:border-slate-700 pb-2">工事を手動登録</h3>
-            <div class="flex gap-2">
-              <input
-                id="dl-manual-project-name"
-                type="text"
-                placeholder="工事名を入力..."
-                class="flex-1 bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 text-slate-900 dark:text-slate-100 rounded-lg p-3 focus:ring-yellow-500 focus:border-yellow-500 dark:placeholder-slate-400"
-              />
-              <button id="dl-add-manual-project-btn" class="btn btn-secondary">登録</button>
-            </div>
-          </section>
-
-          <!-- Section 3: 搬入日を作成（工事選択後に表示） -->
-          <section id="dl-create-plan-section" class="hidden bg-white dark:bg-slate-800 p-5 rounded-2xl shadow-xl border-2 border-yellow-400">
-            <h3 class="text-lg font-semibold mb-1 text-slate-800 dark:text-slate-100">搬入日を作成</h3>
-            <p id="dl-selected-project-label" class="text-sm text-slate-500 dark:text-slate-400 mb-3"></p>
-            <div class="flex gap-2">
-              <input
-                id="dl-delivery-date"
-                type="date"
-                class="flex-1 bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 text-slate-900 dark:text-slate-100 rounded-lg p-3 focus:ring-yellow-500 focus:border-yellow-500"
-              />
-              <button id="dl-create-plan-btn" class="btn btn-primary">作成</button>
-            </div>
-          </section>
-
-          <!-- Section 4: 既存の搬入計画を再開 -->
-          <section class="bg-white dark:bg-slate-800 p-5 rounded-2xl shadow-xl">
-            <h3 class="text-lg font-semibold mb-3 text-slate-800 dark:text-slate-100 border-b border-slate-200 dark:border-slate-700 pb-2">既存の搬入計画を再開</h3>
-            <div id="dl-existing-plans-list" class="space-y-2 max-h-60 overflow-y-auto custom-scrollbar"></div>
-          </section>
         </div>
       </main>
 
@@ -1587,28 +1527,6 @@
 
       </main>
 
-    </div>
-
-    <!-- ===== 搬入パスワードモーダル ===== -->
-    <div
-      id="delivery-password-modal"
-      class="modal fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center p-4 hidden z-[60]"
-    >
-      <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-sm p-6">
-        <h3 class="text-xl font-bold mb-1 text-slate-900 dark:text-slate-100">搬入入力モード</h3>
-        <p class="text-sm text-slate-500 dark:text-slate-400 mb-4">パスワードを入力してください</p>
-        <input
-          id="dl-password-input"
-          type="password"
-          placeholder="パスワード"
-          class="w-full bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 text-slate-900 dark:text-slate-100 rounded-lg p-3 mb-2 focus:ring-yellow-500 focus:border-yellow-500"
-        />
-        <p id="dl-password-error" class="text-sm text-red-500 mb-3 hidden">パスワードが違います</p>
-        <div class="flex gap-3 justify-end">
-          <button id="dl-password-cancel-btn" class="btn btn-neutral">キャンセル</button>
-          <button id="dl-password-submit-btn" class="btn btn-primary">確認</button>
-        </div>
-      </div>
     </div>
 
     <div

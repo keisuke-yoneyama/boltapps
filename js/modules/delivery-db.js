@@ -5,7 +5,6 @@ import { db, appId } from './firebase.js';
 import {
   collection,
   doc,
-  addDoc,
   getDocs,
   updateDoc,
   setDoc,
@@ -32,16 +31,6 @@ export async function getDeliveryProjects() {
   }
 }
 
-export async function addDeliveryProject(data) {
-  return await addDoc(deliveryProjectsCol(), {
-    ...data,
-    sourceType: data.sourceType || 'manual',
-    status: 'active',
-    createdAt: serverTimestamp(),
-    updatedAt: serverTimestamp(),
-  });
-}
-
 // ── Plans ─────────────────────────────────────────────────
 
 /**
@@ -65,14 +54,6 @@ export async function getPlansForMonth(year, month) {
     console.error('[delivery-db] getPlansForMonth:', e);
     return [];
   }
-}
-
-export async function addDeliveryPlan(data) {
-  return await addDoc(deliveryPlansCol(), {
-    ...data,
-    status: 'planned',
-    updatedAt: serverTimestamp(),
-  });
 }
 
 /**
@@ -157,13 +138,3 @@ export async function updateTruckStatus(planId, truckId, progressStatus) {
   });
 }
 
-export async function getActivePlansByProject(projectId) {
-  try {
-    const q = query(deliveryPlansCol(), where('projectId', '==', projectId));
-    const snap = await getDocs(q);
-    return snap.docs.map(d => ({ id: d.id, ...d.data() }));
-  } catch (e) {
-    console.error('[delivery-db] getActivePlansByProject:', e);
-    return [];
-  }
-}

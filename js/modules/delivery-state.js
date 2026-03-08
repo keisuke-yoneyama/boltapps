@@ -2,7 +2,6 @@
 // 将来的にボルト計算アプリと分離しやすいよう独立させる
 
 export const deliveryState = {
-  isEditorMode: false,
   displayMonth: (() => {
     const d = new Date();
     d.setDate(1);
@@ -12,10 +11,7 @@ export const deliveryState = {
   selectedDate: null,
   selectedProjectId: null,
   selectedProjectName: null,
-  selectedSourceType: null,
   selectedPlanId: null,
-  editorPasswordModalOpen: false,
-  projectFilter: '',
   // 搬入日詳細画面 (3)
   selectedTruckId: null,
   uncheckedOnly: false,
