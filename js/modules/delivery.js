@@ -14,7 +14,6 @@ import {
 
 // 号車詳細画面のコンテキスト（再描画時に参照）
 let _truckPlanId = null;
-let _truckProjectName = '';
 
 const esc = s =>
   String(s || '')
@@ -376,15 +375,6 @@ async function loadAndRenderTruckDetail(planId, truckId) {
   deliveryState.currentTruckIndex = idx >= 0 ? idx : 0;
   deliveryState.selectedTruckId = sorted[deliveryState.currentTruckIndex]?.id || truckId;
 
-  // projectName 解決
-  let planData = null;
-  for (const plans of Object.values(deliveryState.plansCache)) {
-    planData = plans.find(p => p.id === planId);
-    if (planData) break;
-  }
-  const proj = deliveryState.deliveryProjects.find(p => p.id === planData?.projectId);
-  _truckProjectName = proj?.projectName || '';
-
   await _loadAndDrawCurrentTruck();
 }
 
@@ -426,46 +416,85 @@ function _renderTruckDetail(truck) {
   const items     = deliveryState.itemsCache[truck.id] || [];
   const checksMap = deliveryState.checksCache[truck.id] || {};
   const total     = trucksForCurrentPlan.length;
+  const progress  = truck.progressStatus || 'pending';
 
-  // ヘッダー更新
+  // ── ヘッダー更新 ──
   const el = id => document.getElementById(id);
-  if (el('dl-truck-project-name')) el('dl-truck-project-name').textContent = _truckProjectName;
-  if (el('dl-truck-no-label'))     el('dl-truck-no-label').textContent = `${truck.truckNo || '-'}号車`;
-  if (el('dl-truck-position'))     el('dl-truck-position').textContent = `${currentTruckIndex + 1} / ${total}`;
-  const prevBtn = el('dl-truck-prev-btn');
-  const nextBtn = el('dl-truck-next-btn');
-  if (prevBtn) prevBtn.disabled = currentTruckIndex === 0;
-  if (nextBtn) nextBtn.disabled = currentTruckIndex === total - 1;
 
-  const checkedCount = items.filter(item => checksMap[item.id] === 'checked').length;
-  const progress = truck.progressStatus || 'pending';
-  const hasNotes = truck.notes && truck.notes.trim();
+  // 搬入日ラベル
+  let planData = null;
+  for (const plans of Object.values(deliveryState.plansCache)) {
+    planData = plans.find(p => p.id === _truckPlanId);
+    if (planData) break;
+  }
+  const dateRaw = planData?.deliveryDate || '';
+  if (el('dl-truck-date-label')) {
+    el('dl-truck-date-label').textContent = dateRaw ? `${dateRaw.replace(/-/g, '/')} 搬入` : '';
+  }
+
+  // 号車情報行: 号車番号 / 車種 / 計画図番号 / 進捗状態
+  const infoRow = [
+    truck.truckNo    ? `${truck.truckNo}号車`      : null,
+    truck.vehicleType                               || null,
+    truck.drawingNo  ? `計画図${truck.drawingNo}`  : null,
+    progressLabel(progress),
+  ].filter(Boolean).join(' / ');
+  if (el('dl-truck-info-row')) el('dl-truck-info-row').textContent = infoRow;
+
+  // 前後ボタン
+  if (el('dl-truck-prev-btn')) el('dl-truck-prev-btn').disabled = currentTruckIndex === 0;
+  if (el('dl-truck-next-btn')) el('dl-truck-next-btn').disabled = currentTruckIndex === total - 1;
+
+  // タブバー
+  _renderTruckTabBar(trucksForCurrentPlan, currentTruckIndex);
+
+  // ── コンテンツ描画 ──
+  const checkedCount    = items.filter(item => checksMap[item.id] === 'checked').length;
+  const loadSummary     = truck.loadSummary      || '';
+  const cautionNotes    = truck.cautionNotes     || truck.notes || '';
+  const loadingInstr    = truck.loadingInstruction || '';
+  const truckHasDiff    = truck.hasDiff;
+  const truckDiffTypes  = truck.diffTypes;
 
   let html = '';
 
-  // 1. 基本情報
-  html += `
-    <div class="bg-white dark:bg-slate-800 rounded-2xl shadow p-4">
-      <h3 class="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-3">基本情報</h3>
-      <div class="grid grid-cols-2 gap-y-3 gap-x-4">
-        ${_infoRow('車種', truck.vehicleType)}
-        ${_infoRow('優先順位', truck.loadingPriority != null ? `優先 ${truck.loadingPriority}` : null)}
-        ${_infoRow('積む向き', truck.loadingOrientation)}
-        ${_infoRow('高さ制限', truck.heightLimit != null ? `${truck.heightLimit} m 以下` : null)}
-        ${_infoRow('幅制限',   truck.widthLimit  != null ? `${truck.widthLimit} m 以下`  : null)}
-      </div>
-    </div>`;
+  // 1. 号車サマリー
+  if (loadSummary || cautionNotes || loadingInstr || truckHasDiff) {
+    html += `<div class="bg-white dark:bg-slate-800 rounded-2xl shadow overflow-hidden">`;
 
-  // 2. 注意事項
-  if (hasNotes) {
-    html += `
-      <div class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-2xl p-4">
-        <h3 class="text-xs font-bold text-red-600 dark:text-red-400 uppercase tracking-wider mb-2">注意事項</h3>
-        <p class="text-sm text-red-700 dark:text-red-300 whitespace-pre-wrap">${esc(truck.notes)}</p>
-      </div>`;
+    if (loadSummary) {
+      html += `
+        <div class="px-4 py-3 border-b border-slate-100 dark:border-slate-700">
+          <p class="text-xs font-bold text-slate-500 dark:text-slate-400 mb-1">主な積載物</p>
+          <p class="text-sm text-slate-800 dark:text-slate-100">${esc(loadSummary)}</p>
+        </div>`;
+    }
+    if (cautionNotes) {
+      html += `
+        <div class="px-4 py-3 border-b border-slate-100 dark:border-slate-700 bg-red-50 dark:bg-red-900/20">
+          <p class="text-xs font-bold text-red-600 dark:text-red-400 mb-1">注意事項</p>
+          <p class="text-sm text-red-700 dark:text-red-300 whitespace-pre-wrap">${esc(cautionNotes)}</p>
+        </div>`;
+    }
+    if (loadingInstr) {
+      html += `
+        <div class="px-4 py-3 ${truckHasDiff ? 'border-b border-slate-100 dark:border-slate-700' : ''}">
+          <p class="text-xs font-bold text-slate-500 dark:text-slate-400 mb-1">積込指示</p>
+          <p class="text-sm text-slate-800 dark:text-slate-100 whitespace-pre-wrap">${esc(loadingInstr)}</p>
+        </div>`;
+    }
+    if (truckHasDiff) {
+      const diffStr = Array.isArray(truckDiffTypes) ? truckDiffTypes.join(' / ') : String(truckDiffTypes || '');
+      html += `
+        <div class="px-4 py-3 bg-yellow-50 dark:bg-yellow-900/20">
+          <p class="text-xs font-bold text-yellow-700 dark:text-yellow-400 mb-1">差分あり</p>
+          ${diffStr ? `<p class="text-sm text-yellow-700 dark:text-yellow-300">${esc(diffStr)}</p>` : ''}
+        </div>`;
+    }
+    html += `</div>`;
   }
 
-  // 3. 積込進捗（号車全体）
+  // 2. 積込進捗（号車全体）
   html += `
     <div class="bg-white dark:bg-slate-800 rounded-2xl shadow p-4">
       <div class="flex items-center justify-between mb-3">
@@ -479,29 +508,21 @@ function _renderTruckDetail(truck) {
       </div>
     </div>`;
 
-  // 4. 品目一覧
+  // 3. 品目グリッド
   html += `
     <div class="bg-white dark:bg-slate-800 rounded-2xl shadow overflow-hidden">
-      <div class="px-4 py-3 border-b border-slate-100 dark:border-slate-700">
+      <div class="px-4 py-3 border-b border-slate-100 dark:border-slate-700 flex items-center justify-between">
         <h3 class="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
           品目一覧 <span class="font-normal normal-case text-slate-400">(${items.length}点)</span>
         </h3>
+        ${checkedCount > 0 ? `<span class="text-xs text-green-600 dark:text-green-400">${checkedCount}件済</span>` : ''}
       </div>
-      ${items.length === 0
-        ? '<p class="text-sm text-slate-400 px-4 py-4">品目データがありません</p>'
-        : items.map(item => _renderItemRow(item, checksMap, truck.id)).join('')
-      }
-    </div>`;
-
-  // 5. 補足情報
-  const updatedAt = truck.updatedAt?.toDate?.();
-  const updatedStr = updatedAt
-    ? updatedAt.toLocaleDateString('ja-JP') + ' ' + updatedAt.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' })
-    : '-';
-  html += `
-    <div class="text-xs text-slate-400 dark:text-slate-500 px-1 pb-6 space-y-0.5">
-      ${truck.drawingNo ? `<p>計画図番号: ${esc(truck.drawingNo)}</p>` : ''}
-      <p>更新: ${updatedStr}${truck.updatedBy ? ' ／ ' + esc(truck.updatedBy) : ''}</p>
+      <div class="p-3 grid grid-cols-2 sm:grid-cols-3 gap-2">
+        ${items.length === 0
+          ? '<p class="text-sm text-slate-400 col-span-full py-2">品目データがありません</p>'
+          : items.map(item => _renderItemCard(item, checksMap, truck.id)).join('')
+        }
+      </div>
     </div>`;
 
   const content = document.getElementById('dl-truck-content');
@@ -518,7 +539,6 @@ function _renderTruckDetail(truck) {
       const status = btn.dataset.status;
       try {
         await updateTruckStatus(pId, tId, status);
-        // キャッシュ更新
         [deliveryState.trucksCache[pId], deliveryState.trucksForCurrentPlan].forEach(arr => {
           const t = arr?.find(t => t.id === tId);
           if (t) t.progressStatus = status;
@@ -536,7 +556,6 @@ function _renderTruckDetail(truck) {
     btn.addEventListener('click', async () => {
       const { truckId, itemId, checkStatus } = btn.dataset;
       const newStatus = checkStatus === 'checked' ? 'unchecked' : 'checked';
-      // 即時 UI 更新（楽観的更新）
       if (!deliveryState.checksCache[truckId]) deliveryState.checksCache[truckId] = {};
       deliveryState.checksCache[truckId][itemId] = newStatus;
       _reRenderTruck();
@@ -544,54 +563,114 @@ function _renderTruckDetail(truck) {
         await setItemCheck(_truckPlanId, truckId, itemId, newStatus);
       } catch (e) {
         console.error('[delivery] setItemCheck:', e);
-        // ロールバック
         deliveryState.checksCache[truckId][itemId] = checkStatus;
         _reRenderTruck();
       }
     });
   });
+
+  // タグ展開ボタン
+  content.querySelectorAll('.dl-item-tag-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const card     = btn.closest('.dl-item-card');
+      const expandEl = card?.querySelector('.dl-item-expand');
+      if (!expandEl) return;
+      const tag    = btn.dataset.tag;
+      const text   = btn.dataset.content;
+      const labels = { caution: '注意事項', loading: '積込指示', diff: '差分' };
+      const isSame = expandEl.dataset.activeTag === tag && !expandEl.classList.contains('hidden');
+      if (isSame) {
+        expandEl.classList.add('hidden');
+        expandEl.dataset.activeTag = '';
+      } else {
+        expandEl.classList.remove('hidden');
+        expandEl.dataset.activeTag = tag;
+        expandEl.innerHTML = `<span class="font-bold">▼ ${labels[tag]}</span><br><span class="whitespace-pre-wrap">${esc(text)}</span>`;
+      }
+    });
+  });
 }
 
-function _renderItemRow(item, checksMap, truckId) {
-  const checkStatus = checksMap[item.id] || 'unchecked';
-  const isChecked   = checkStatus === 'checked';
+// 号車タブバーを描画してクリックイベントを設定
+function _renderTruckTabBar(trucks, currentIndex) {
+  const tabBar = document.getElementById('dl-truck-tab-bar');
+  if (!tabBar) return;
+
+  tabBar.innerHTML = trucks.map((t, i) => {
+    const active = i === currentIndex;
+    return `<button class="dl-truck-tab flex-shrink-0 px-3 py-1 rounded-full text-xs font-bold transition-colors
+      ${active
+        ? 'bg-blue-600 text-white'
+        : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600'}"
+      data-index="${i}">${esc(String(t.truckNo || i + 1))}号車</button>`;
+  }).join('');
+
+  // アクティブタブを中央に
+  const activeTab = tabBar.querySelector(`.dl-truck-tab[data-index="${currentIndex}"]`);
+  if (activeTab) activeTab.scrollIntoView({ block: 'nearest', inline: 'center', behavior: 'smooth' });
+
+  tabBar.querySelectorAll('.dl-truck-tab').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const idx = parseInt(btn.dataset.index);
+      if (idx === deliveryState.currentTruckIndex) return;
+      deliveryState.currentTruckIndex = idx;
+      deliveryState.selectedTruckId = trucks[idx].id;
+      _loadAndDrawCurrentTruck();
+    });
+  });
+}
+
+// 品目カード（横並びグリッド用）
+function _renderItemCard(item, checksMap, truckId) {
+  const checkStatus      = checksMap[item.id] || 'unchecked';
+  const isChecked        = checkStatus === 'checked';
+  const name             = item.itemName || item.name || item.itemCode || '品目名不明';
+  const cautionNote      = item.cautionNote || item.noteText || '';
+  const loadingInstr     = item.loadingInstruction || '';
+  const hasDiff          = item.hasDiff;
+  const diffTypes        = item.diffTypes || [];
+  const diffStr          = Array.isArray(diffTypes) ? diffTypes.join(' / ') : String(diffTypes || '');
+
   return `
-    <div class="flex items-center gap-3 px-4 py-3 border-t border-slate-100 dark:border-slate-700/50
-      ${isChecked ? 'opacity-50' : 'hover:bg-slate-50 dark:hover:bg-slate-700/20'} transition-colors">
-      <div class="flex-1 min-w-0">
-        <div class="flex items-center gap-1.5 flex-wrap mb-0.5">
-          ${item.itemCategory ? `<span class="text-xs text-slate-400">${esc(item.itemCategory)}</span>` : ''}
-          ${item.hasDiff    ? '<span class="text-xs bg-yellow-100 text-yellow-700 dark:bg-yellow-900/50 dark:text-yellow-300 px-1 rounded">差分</span>' : ''}
-          ${item.noteText   ? '<span class="text-xs bg-red-50 text-red-500 dark:bg-red-900/30 dark:text-red-300 px-1 rounded">注意</span>' : ''}
-        </div>
-        <p class="text-sm font-semibold text-slate-800 dark:text-slate-100 ${isChecked ? 'line-through' : ''}">
-          ${esc(item.itemName || item.itemCode || '品目名不明')}
-        </p>
-        <p class="text-xs text-slate-400 mt-0.5">
-          ${item.quantity != null ? esc(String(item.quantity)) : ''}${item.unit ? '&nbsp;' + esc(item.unit) : ''}
-        </p>
-      </div>
-      <button class="dl-item-check-btn flex-shrink-0 w-12 h-12 rounded-full border-2 transition-all active:scale-95
-        ${isChecked
-          ? 'bg-green-500 border-green-500 text-white'
-          : 'bg-white dark:bg-slate-700 border-slate-300 dark:border-slate-500 text-transparent hover:border-green-400'}"
+    <div class="dl-item-card flex flex-col rounded-xl border-2 transition-all
+      ${isChecked
+        ? 'border-green-300 bg-green-50 dark:bg-green-900/20 dark:border-green-700'
+        : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800'}"
+      data-item-id="${esc(item.id)}">
+
+      <!-- チェック + 品名 -->
+      <button class="dl-item-check-btn text-left p-3 flex items-start gap-2 flex-1 active:opacity-70 w-full"
         data-truck-id="${esc(truckId)}" data-item-id="${esc(item.id)}" data-check-status="${checkStatus}">
-        <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 mx-auto" fill="none" viewBox="0 0 24 24"
-          stroke="currentColor" stroke-width="3">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>
-        </svg>
+        <span class="flex-shrink-0 w-5 h-5 mt-0.5 rounded border-2 flex items-center justify-center transition-colors
+          ${isChecked ? 'bg-green-500 border-green-500' : 'border-slate-300 dark:border-slate-500'}">
+          ${isChecked
+            ? '<svg class="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>'
+            : ''}
+        </span>
+        <span class="text-sm font-bold leading-snug ${isChecked ? 'line-through text-slate-400 dark:text-slate-500' : 'text-slate-800 dark:text-slate-100'}">${esc(name)}</span>
       </button>
+
+      ${item.quantity != null
+        ? `<p class="text-xs text-slate-400 px-3 -mt-1 pb-1">${esc(String(item.quantity))}${item.unit ? '&nbsp;' + esc(item.unit) : ''}</p>`
+        : ''}
+
+      <!-- タグ行 -->
+      ${cautionNote || loadingInstr || hasDiff ? `
+        <div class="flex gap-1 px-2 pb-2 flex-wrap">
+          ${cautionNote  ? `<button class="dl-item-tag-btn text-xs px-1.5 py-0.5 rounded bg-red-100 text-red-600 dark:bg-red-900/40 dark:text-red-300 font-medium active:opacity-70"
+            data-tag="caution" data-content="${esc(cautionNote)}">注意</button>` : ''}
+          ${loadingInstr ? `<button class="dl-item-tag-btn text-xs px-1.5 py-0.5 rounded bg-blue-100 text-blue-600 dark:bg-blue-900/40 dark:text-blue-300 font-medium active:opacity-70"
+            data-tag="loading" data-content="${esc(loadingInstr)}">積込</button>` : ''}
+          ${hasDiff      ? `<button class="dl-item-tag-btn text-xs px-1.5 py-0.5 rounded bg-yellow-100 text-yellow-700 dark:bg-yellow-900/40 dark:text-yellow-300 font-medium active:opacity-70"
+            data-tag="diff" data-content="${esc(diffStr)}">差分</button>` : ''}
+        </div>` : ''}
+
+      <!-- タグ展開エリア -->
+      <div class="dl-item-expand hidden px-3 pb-2 pt-2 text-xs border-t border-slate-100 dark:border-slate-700
+        text-slate-700 dark:text-slate-300"></div>
     </div>`;
 }
 
-function _infoRow(label, value) {
-  if (value == null || value === '') return '';
-  return `
-    <div>
-      <p class="text-xs text-slate-400 dark:text-slate-500">${label}</p>
-      <p class="text-sm font-semibold text-slate-800 dark:text-slate-100">${esc(String(value))}</p>
-    </div>`;
-}
 
 function _progressBtn(status, label, current) {
   const active = status === current;
