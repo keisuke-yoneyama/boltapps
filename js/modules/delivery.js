@@ -15,6 +15,11 @@ import {
 // 号車詳細画面のコンテキスト（再描画時に参照）
 let _truckPlanId = null;
 
+// Date → 'YYYY-MM-DD' 文字列
+function toDateStr(d) {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
 const esc = s =>
   String(s || '')
     .replace(/&/g, '&amp;')
@@ -96,19 +101,20 @@ function renderCalendar() {
   const label = document.getElementById('dl-month-label');
   if (label) label.textContent = `${year}年${month + 1}月`;
 
-  // 日付ごとに集計
+  // 日付ごとに集計（差分件数を含む）
   const plansByDate = {};
   plans.forEach(plan => {
     const d = plan.deliveryDate;
     if (!d) return;
-    if (!plansByDate[d]) plansByDate[d] = [];
-    plansByDate[d].push(plan);
+    if (!plansByDate[d]) plansByDate[d] = { count: 0, diffCount: 0 };
+    plansByDate[d].count++;
+    if (plan.hasDiff) plansByDate[d].diffCount += plan.diffCount ?? 1;
   });
 
   const now = new Date();
-  const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+  const todayStr = toDateStr(now);
 
-  const firstDay    = new Date(year, month, 1).getDay(); // 0=日
+  const firstDay    = new Date(year, month, 1).getDay();
   const daysInMonth = new Date(year, month + 1, 0).getDate();
   const DAY_LABELS  = ['日', '月', '火', '水', '木', '金', '土'];
 
@@ -122,44 +128,55 @@ function renderCalendar() {
 
   // 月初め前の空セル
   for (let i = 0; i < firstDay; i++) {
-    html += '<div class="min-h-[60px]"></div>';
+    html += '<div class="min-h-[64px]"></div>';
   }
 
   // 日付セル
   for (let d = 1; d <= daysInMonth; d++) {
     const dateStr  = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
-    const dayPlans = plansByDate[dateStr] || [];
-    const dow      = (firstDay + d - 1) % 7;
-    const isToday  = dateStr === todayStr;
-    const isSel    = dateStr === selectedDate;
+    const dayData  = plansByDate[dateStr];
+    const planCount = dayData?.count   || 0;
+    const diffCount = dayData?.diffCount || 0;
+    const hasPlans  = planCount > 0;
+    const hasDiff   = diffCount > 0;
+    const dow       = (firstDay + d - 1) % 7;
+    const isToday   = dateStr === todayStr;
+    const isSel     = dateStr === selectedDate;
 
-    let cellCls = 'min-h-[60px] p-1 rounded-lg border cursor-pointer transition-colors ';
+    // セルスタイル優先順位: 今日 > 選択中 > 差分あり > 搬入あり > 通常
+    let cellCls = 'min-h-[64px] p-1 rounded-lg border cursor-pointer transition-colors ';
     if (isToday) {
       cellCls += 'border-blue-400 bg-blue-50 dark:bg-blue-900/30 ';
     } else if (isSel) {
       cellCls += 'border-yellow-400 bg-yellow-50 dark:bg-yellow-900/30 ';
+    } else if (hasDiff) {
+      cellCls += 'border-yellow-300 bg-yellow-50 dark:bg-yellow-900/20 dark:border-yellow-700/60 ';
+    } else if (hasPlans) {
+      cellCls += 'border-orange-200 bg-orange-50/40 dark:bg-orange-900/10 dark:border-orange-800/40 ';
     } else {
       cellCls += 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700/50 ';
     }
 
+    // 日付番号
     const numCls = dow === 0 ? 'text-red-500' : dow === 6 ? 'text-blue-500' : 'text-slate-700 dark:text-slate-200';
     const numEl  = isToday
       ? `<span class="bg-blue-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs font-bold">${d}</span>`
-      : `<span class="text-sm font-semibold ${numCls}">${d}</span>`;
+      : `<span class="text-xs font-semibold ${numCls}">${d}</span>`;
 
-    const planBadge = dayPlans.length > 0
-      ? `<span class="text-xs bg-orange-100 text-orange-700 dark:bg-orange-900/50 dark:text-orange-300 rounded px-1 leading-tight">${dayPlans.length}件</span>`
+    // 搬入バッジ
+    const planBadge = hasPlans
+      ? `<span class="text-xs leading-tight text-orange-700 dark:text-orange-300">搬入${planCount}</span>`
       : '';
 
-    const projIds   = [...new Set(dayPlans.map(p => p.projectId).filter(Boolean))];
-    const projBadge = projIds.length > 0
-      ? `<span class="text-xs text-slate-400 dark:text-slate-500">${projIds.length}工事</span>`
+    // 差分バッジ
+    const diffBadge = hasDiff
+      ? `<span class="text-xs leading-tight font-medium text-yellow-700 dark:text-yellow-400">差分${diffCount}</span>`
       : '';
 
     html += `
       <div class="${cellCls}" data-date="${dateStr}">
         <div class="flex">${numEl}</div>
-        <div class="mt-0.5 flex flex-col gap-0.5">${planBadge}${projBadge}</div>
+        <div class="mt-0.5 flex flex-col gap-0.5">${planBadge}${diffBadge}</div>
       </div>`;
   }
 
@@ -772,7 +789,7 @@ function setupDeliveryEvents() {
   on('dl-today-btn', 'click', () => {
     const now = new Date();
     deliveryState.displayMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-    deliveryState.selectedDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+    deliveryState.selectedDate = toDateStr(now);
     switchAppMode('delivery-detail');
   });
 
