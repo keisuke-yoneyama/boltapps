@@ -305,7 +305,7 @@ function renderDateDetail(date, plansWithTrucks) {
   const grouped = {};
   filtered.forEach(pw => {
     const key = pw.plan.projectId || '_none';
-    if (!grouped[key]) grouped[key] = { projectName: pw.projectName, items: [] };
+    if (!grouped[key]) grouped[key] = { projectName: pw.projectName, drawingNo: pw.plan.drawingNo || '', items: [] };
     grouped[key].items.push(pw);
   });
 
@@ -338,6 +338,7 @@ function renderDateDetail(date, plansWithTrucks) {
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
             </svg>
             <h3 class="font-bold text-slate-800 dark:text-slate-100 truncate">${esc(group.projectName)}</h3>
+            ${group.drawingNo ? `<span class="flex-shrink-0 text-xs bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300 px-2 py-0.5 rounded-full">計画図 ${esc(group.drawingNo)}</span>` : ''}
             ${hasCaution ? '<span class="flex-shrink-0 text-xs bg-red-100 text-red-600 dark:bg-red-900/50 dark:text-red-300 px-2 py-0.5 rounded-full">注意</span>' : ''}
           </div>
           <span class="flex-shrink-0 text-sm text-slate-500 ml-2">${doneCount}/${trucks.length}台</span>
@@ -415,19 +416,19 @@ function renderTruckCard(truck) {
         <p class="text-xs text-slate-500 dark:text-slate-400 px-3 py-1 leading-snug">${esc(truck.loadSummary)}</p>
       ` : ''}
 
-      <!-- 行3: 計画図番号 / 建方日目 -->
-      ${(truck.drawingNo || truck.constructionDay) ? `
-        <p class="text-xs text-slate-400 dark:text-slate-500 px-3 ${hasBadge ? '' : 'pb-3'}">${[truck.drawingNo ? `計画図 ${esc(truck.drawingNo)}` : '', truck.constructionDay ? `建方${esc(String(truck.constructionDay))}日目` : ''].filter(Boolean).join(' / ')}</p>
+      <!-- 行3: 建方日目 -->
+      ${truck.constructionDay ? `
+        <p class="text-xs text-slate-400 dark:text-slate-500 px-3 ${hasBadge ? '' : 'pb-3'}">建方${esc(String(truck.constructionDay))}日目</p>
       ` : ''}
 
       <!-- バッジ行 -->
       ${hasBadge ? `
-        <div class="flex gap-1 px-3 pb-3 pt-1.5 flex-wrap ${truck.drawingNo || truck.constructionDay || truck.loadSummary ? 'border-t border-slate-100 dark:border-slate-700/50' : ''}">
+        <div class="flex gap-1 px-3 pb-3 pt-1.5 flex-wrap ${truck.constructionDay || truck.loadSummary ? 'border-t border-slate-100 dark:border-slate-700/50' : ''}">
           ${hasCaution     ? '<span class="text-xs bg-red-100 text-red-600 dark:bg-red-900/40 dark:text-red-300 px-2 py-0.5 rounded-full font-medium">注意</span>' : ''}
           ${hasLoadingInst ? '<span class="text-xs bg-blue-100 text-blue-600 dark:bg-blue-900/40 dark:text-blue-300 px-2 py-0.5 rounded-full font-medium">積込指示</span>' : ''}
           ${_diffBadges(truck.diffs)}
         </div>
-      ` : (!truck.drawingNo && !truck.constructionDay && !truck.loadSummary ? '<div class="pb-2"></div>' : '<div class="pb-3"></div>')}
+      ` : (!truck.constructionDay && !truck.loadSummary ? '<div class="pb-2"></div>' : '<div class="pb-3"></div>')}
     </div>`;
 }
 
@@ -504,12 +505,12 @@ function _renderTruckDetail(truck) {
     el('dl-truck-date-label').textContent = dateRaw ? `${dateRaw.replace(/-/g, '/')} 搬入` : '';
   }
 
-  // 号車情報行: 号車番号 / 車種 / 計画図番号 / 進捗状態
+  // 号車情報行: 号車番号 / 車種 / 計画図番号(plan側) / 建方日目
   const infoRow = [
-    truck.truckNo         ? `${truck.truckNo}号車`             : null,
-    truck.vehicleType                                           || null,
-    truck.drawingNo       ? `計画図${truck.drawingNo}`         : null,
-    truck.constructionDay ? `建方${truck.constructionDay}日目` : null,
+    truck.truckNo          ? `${truck.truckNo}号車`              : null,
+    truck.vehicleType                                             || null,
+    planData?.drawingNo    ? `計画図 ${planData.drawingNo}`      : null,
+    truck.constructionDay  ? `建方${truck.constructionDay}日目`  : null,
   ].filter(Boolean).join(' / ');
   if (el('dl-truck-info-row')) el('dl-truck-info-row').textContent = infoRow;
 

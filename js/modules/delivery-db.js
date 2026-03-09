@@ -18,11 +18,17 @@ import {
 
 const DEV_MODE = true;
 
+// プロジェクト1: 計画図番あり
 const _M_PROJ_ID  = 'dev-project-1';
 const _M_PLAN_ID  = 'dev-plan-1';
 const _M_T1 = 'dev-truck-1';
 const _M_T2 = 'dev-truck-2';
 const _M_T3 = 'dev-truck-3';
+
+// プロジェクト2: 計画図番なし
+const _M_PROJ2_ID = 'dev-project-2';
+const _M_PLAN2_ID = 'dev-plan-2';
+const _M_T4 = 'dev-truck-4';
 
 const _todayStr = (() => {
   const d = new Date();
@@ -30,78 +36,102 @@ const _todayStr = (() => {
 })();
 
 const MOCK_PROJECTS = [
-  { id: _M_PROJ_ID, projectName: '【DEV】テスト工事', projectCode: 'DEV-001', isActive: true },
+  { id: _M_PROJ_ID,  projectName: '【DEV】テスト工事 A', projectCode: 'DEV-001', isActive: true },
+  { id: _M_PROJ2_ID, projectName: '【DEV】テスト工事 B', projectCode: 'DEV-002', isActive: true },
 ];
 
 const MOCK_PLANS = [
+  // Plan1: 計画図番あり・差分あり
   {
     id: _M_PLAN_ID, projectId: _M_PROJ_ID,
-    deliveryDate: _todayStr, status: 'active', version: 1, truckCount: 3,
+    deliveryDate: _todayStr, status: 'active', version: 1,
+    drawingNo: 'DWG-2026-001', truckCount: 3,
+  },
+  // Plan2: 計画図番なし（別工事・同日）
+  {
+    id: _M_PLAN2_ID, projectId: _M_PROJ2_ID,
+    deliveryDate: _todayStr, status: 'active', version: 1,
+    truckCount: 1,
   },
 ];
 
 const MOCK_TRUCKS = [
+  // ── Plan1: 工事A ──────────────────────────────────────
+  // Truck1: 差分あり・注意あり・建方1日目
   {
     id: _M_T1, projectId: _M_PROJ_ID, planId: _M_PLAN_ID,
     truckNo: '1', truckOrder: 1, vehicleType: '4t平ボディ',
-    progressStatus: 'pending', drawingNo: 'DWG-001', constructionDay: 1,
+    progressStatus: 'pending', constructionDay: 1,
     loadSummary: 'H鋼 / ボルト類',
     cautionNotes: '搬入口が狭いため要注意', hasCaution: true,
     loadingInstruction: '', hasLoadingInstruction: false,
-    diffs: [
-      { date: '2026-03-08', type: '変更' },
-      { date: '2026-03-09', type: '追加' },
-    ],
+    diffs: [{ date: '2026-03-08', type: '変更' }, { date: '2026-03-09', type: '追加' }],
     itemCount: 4, checkedCount: 0,
   },
+  // Truck2: 積込指示あり・建方1日目
   {
     id: _M_T2, projectId: _M_PROJ_ID, planId: _M_PLAN_ID,
     truckNo: '2', truckOrder: 2, vehicleType: '2t箱車',
     progressStatus: 'in_progress', constructionDay: 1,
     loadSummary: 'アンカーボルト / ナット',
     loadingInstruction: '精密部品のため横積み禁止', hasLoadingInstruction: true,
-    cautionNotes: '', hasCaution: false,
-    diffs: [],
+    cautionNotes: '', hasCaution: false, diffs: [],
     itemCount: 3, checkedCount: 1,
   },
+  // Truck3: 全チェック済み・積込完了確認用・建方2日目
   {
     id: _M_T3, projectId: _M_PROJ_ID, planId: _M_PLAN_ID,
     truckNo: '3', truckOrder: 3, vehicleType: '大型トレーラー',
-    progressStatus: 'done', drawingNo: 'DWG-003', constructionDay: 2,
+    progressStatus: 'done', constructionDay: 2,
     loadSummary: '鉄骨大梁',
-    hasCaution: false, hasLoadingInstruction: false,
-    diffs: [],
+    hasCaution: false, hasLoadingInstruction: false, diffs: [],
     itemCount: 5, checkedCount: 5,
+  },
+  // ── Plan2: 工事B（計画図番なし）──────────────────────
+  {
+    id: _M_T4, projectId: _M_PROJ2_ID, planId: _M_PLAN2_ID,
+    truckNo: '1', truckOrder: 1, vehicleType: '4t平ボディ',
+    progressStatus: 'pending',
+    loadSummary: 'PC部材 / スリーブ',
+    cautionNotes: '', hasCaution: false,
+    loadingInstruction: '', hasLoadingInstruction: false, diffs: [],
+    itemCount: 3, checkedCount: 0,
   },
 ];
 
 const MOCK_ITEMS = {
+  // Truck1: 差分・注意・積込指示 を品目レベルで確認
   [_M_T1]: [
     { id: 'mi-1-1', name: 'H鋼 200×100×5.5×8', quantity: 10, unit: '本', sortOrder: 1,
       checked: false, diffs: [{ date: '2026-03-08', type: '変更' }] },
     { id: 'mi-1-2', name: 'ボルト M16×40', quantity: 60, unit: '個', sortOrder: 2,
-      checked: true, cautionNote: '規格品との混入注意', hasCaution: true,
+      checked: true, cautionNote: '規格品との混入注意',
       diffs: [{ date: '2026-03-08', type: '変更' }] },
     { id: 'mi-1-3', name: 'アングル L-65×65×6', quantity: 4, unit: '本', sortOrder: 3,
-      checked: false, loadingInstruction: '束ねて積載すること', hasLoadingInstruction: true,
-      diffs: [] },
+      checked: false, loadingInstruction: '束ねて積載すること', diffs: [] },
     { id: 'mi-1-4', name: 'ナット M16', quantity: 120, unit: '個', sortOrder: 4,
       checked: false, diffs: [{ date: '2026-03-09', type: '追加' }] },
   ],
+  // Truck2: シンプル品目
   [_M_T2]: [
-    { id: 'mi-2-1', name: 'アンカーボルト M20', quantity: 24, unit: '本', sortOrder: 1,
-      checked: true, diffs: [] },
-    { id: 'mi-2-2', name: 'ナット M20', quantity: 48, unit: '個', sortOrder: 2,
-      checked: false, diffs: [] },
+    { id: 'mi-2-1', name: 'アンカーボルト M20', quantity: 24, unit: '本', sortOrder: 1, checked: true, diffs: [] },
+    { id: 'mi-2-2', name: 'ナット M20', quantity: 48, unit: '個', sortOrder: 2, checked: false, diffs: [] },
     { id: 'mi-2-3', name: '座金 φ22', quantity: 48, unit: '枚', sortOrder: 3,
-      checked: false, cautionNote: '薄物のため変形注意', hasCaution: true, diffs: [] },
+      checked: false, cautionNote: '薄物のため変形注意', diffs: [] },
   ],
+  // Truck3: 全チェック済み（積込完了バナー確認用）
   [_M_T3]: [
     { id: 'mi-3-1', name: '大梁 BH-400×200', quantity: 3, unit: '本', sortOrder: 1, checked: true, diffs: [] },
     { id: 'mi-3-2', name: '小梁 H-200×100',  quantity: 6, unit: '本', sortOrder: 2, checked: true, diffs: [] },
     { id: 'mi-3-3', name: 'スタッドボルト',   quantity: 200, unit: '本', sortOrder: 3, checked: true, diffs: [] },
     { id: 'mi-3-4', name: 'デッキプレート',   quantity: 10, unit: '枚', sortOrder: 4, checked: true, diffs: [] },
     { id: 'mi-3-5', name: '溶接棒',           quantity: 5, unit: 'kg', sortOrder: 5, checked: true, diffs: [] },
+  ],
+  // Truck4: 計画図番なし工事の品目
+  [_M_T4]: [
+    { id: 'mi-4-1', name: 'PC柱 C1', quantity: 2, unit: '本', sortOrder: 1, checked: false, diffs: [] },
+    { id: 'mi-4-2', name: 'スリーブ φ100', quantity: 8, unit: '個', sortOrder: 2, checked: false, diffs: [] },
+    { id: 'mi-4-3', name: '支持金物',       quantity: 4, unit: '個', sortOrder: 3, checked: false, diffs: [] },
   ],
 };
 
@@ -160,7 +190,7 @@ export async function getTrucksForPlan(projectId, planId) {
     const q    = query(ref, orderBy('truckOrder'));
     const snap = await getDocs(q);
     const result = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-    if (!result.length && DEV_MODE && planId === _M_PLAN_ID) return MOCK_TRUCKS;
+    if (!result.length && DEV_MODE) return MOCK_TRUCKS.filter(t => t.planId === planId);
     return result;
   } catch (e) {
     // orderBy index なしの fallback
@@ -169,11 +199,11 @@ export async function getTrucksForPlan(projectId, planId) {
       const snap = await getDocs(ref);
       const result = snap.docs.map(d => ({ id: d.id, ...d.data() }))
         .sort((a, b) => (a.truckOrder ?? 999) - (b.truckOrder ?? 999));
-      if (!result.length && DEV_MODE && planId === _M_PLAN_ID) return MOCK_TRUCKS;
+      if (!result.length && DEV_MODE) return MOCK_TRUCKS.filter(t => t.planId === planId);
       return result;
     } catch (e2) {
       console.error('[delivery-db] getTrucksForPlan:', e2);
-      return DEV_MODE && planId === _M_PLAN_ID ? MOCK_TRUCKS : [];
+      return DEV_MODE ? MOCK_TRUCKS.filter(t => t.planId === planId) : [];
     }
   }
 }
