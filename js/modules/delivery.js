@@ -27,6 +27,46 @@ const esc = s =>
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;');
 
+// ── 差分バッジ ────────────────────────────────────────────
+
+const DIFF_COLORS = [
+  'bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-300',
+  'bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-300',
+  'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300',
+  'bg-lime-100 text-lime-700 dark:bg-lime-900/40 dark:text-lime-300',
+  'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300',
+  'bg-teal-100 text-teal-700 dark:bg-teal-900/40 dark:text-teal-300',
+  'bg-cyan-100 text-cyan-700 dark:bg-cyan-900/40 dark:text-cyan-300',
+  'bg-sky-100 text-sky-700 dark:bg-sky-900/40 dark:text-sky-300',
+  'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300',
+  'bg-violet-100 text-violet-700 dark:bg-violet-900/40 dark:text-violet-300',
+  'bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300',
+  'bg-fuchsia-100 text-fuchsia-700 dark:bg-fuchsia-900/40 dark:text-fuchsia-300',
+  'bg-pink-100 text-pink-700 dark:bg-pink-900/40 dark:text-pink-300',
+  'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300',
+  'bg-yellow-200 text-yellow-800 dark:bg-yellow-900/40 dark:text-yellow-300',
+  'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300',
+  'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300',
+  'bg-slate-200 text-slate-700 dark:bg-slate-600 dark:text-slate-200',
+  'bg-stone-100 text-stone-700 dark:bg-stone-700 dark:text-stone-200',
+  'bg-zinc-100 text-zinc-700 dark:bg-zinc-700 dark:text-zinc-200',
+];
+
+function _diffColorCls(dateStr) {
+  let h = 0;
+  for (const c of dateStr) h = (h * 31 + c.charCodeAt(0)) & 0xffff;
+  return DIFF_COLORS[h % DIFF_COLORS.length];
+}
+
+function _diffBadges(diffs) {
+  if (!diffs?.length) return '';
+  return diffs.map(d => {
+    const [, m, day] = (d.date || '').split('-');
+    const label = m && day ? `${parseInt(m)}/${parseInt(day)}${d.type || ''}` : (d.type || '差分');
+    return `<span class="text-xs px-1.5 py-0.5 rounded font-medium ${_diffColorCls(d.date || '')}">${esc(label)}</span>`;
+  }).join('');
+}
+
 // ── アプリモード切替 ──────────────────────────────────────
 
 export function switchAppMode(mode) {
@@ -101,14 +141,14 @@ function renderCalendar() {
   const label = document.getElementById('dl-month-label');
   if (label) label.textContent = `${year}年${month + 1}月`;
 
-  // 日付ごとに集計（差分件数を含む）
+  // 日付ごとに工事名を集計
   const plansByDate = {};
   plans.forEach(plan => {
     const d = plan.deliveryDate;
     if (!d) return;
-    if (!plansByDate[d]) plansByDate[d] = { count: 0, diffCount: 0 };
-    plansByDate[d].count++;
-    if (plan.hasDiff) plansByDate[d].diffCount += plan.diffCount ?? 1;
+    if (!plansByDate[d]) plansByDate[d] = [];
+    const proj = deliveryState.deliveryProjects.find(p => p.id === plan.projectId);
+    plansByDate[d].push(proj?.projectName || '工事');
   });
 
   const now = new Date();
@@ -134,11 +174,8 @@ function renderCalendar() {
   // 日付セル
   for (let d = 1; d <= daysInMonth; d++) {
     const dateStr  = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
-    const dayData  = plansByDate[dateStr];
-    const planCount = dayData?.count   || 0;
-    const diffCount = dayData?.diffCount || 0;
-    const hasPlans  = planCount > 0;
-    const hasDiff   = diffCount > 0;
+    const projects  = plansByDate[dateStr] || [];
+    const hasPlans  = projects.length > 0;
     const dow       = (firstDay + d - 1) % 7;
     const isToday   = dateStr === todayStr;
     const isSel     = dateStr === selectedDate;
@@ -149,8 +186,6 @@ function renderCalendar() {
       cellCls += 'border-blue-400 bg-blue-50 dark:bg-blue-900/30 ';
     } else if (isSel) {
       cellCls += 'border-yellow-400 bg-yellow-50 dark:bg-yellow-900/30 ';
-    } else if (hasDiff) {
-      cellCls += 'border-yellow-300 bg-yellow-50 dark:bg-yellow-900/20 dark:border-yellow-700/60 ';
     } else if (hasPlans) {
       cellCls += 'border-orange-200 bg-orange-50/40 dark:bg-orange-900/10 dark:border-orange-800/40 ';
     } else {
@@ -163,20 +198,14 @@ function renderCalendar() {
       ? `<span class="bg-blue-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs font-bold">${d}</span>`
       : `<span class="text-xs font-semibold ${numCls}">${d}</span>`;
 
-    // 搬入バッジ
-    const planBadge = hasPlans
-      ? `<span class="text-xs leading-tight text-orange-700 dark:text-orange-300">搬入${planCount}</span>`
-      : '';
-
-    // 差分バッジ
-    const diffBadge = hasDiff
-      ? `<span class="text-xs leading-tight font-medium text-yellow-700 dark:text-yellow-400">差分${diffCount}</span>`
-      : '';
+    const projHtml = projects.map(name =>
+      `<span class="text-xs leading-tight text-orange-700 dark:text-orange-300 truncate block">${esc(name)}</span>`
+    ).join('');
 
     html += `
       <div class="${cellCls}" data-date="${dateStr}">
         <div class="flex">${numEl}</div>
-        <div class="mt-0.5 flex flex-col gap-0.5">${planBadge}${diffBadge}</div>
+        <div class="mt-0.5 flex flex-col gap-0.5 overflow-hidden">${projHtml}</div>
       </div>`;
   }
 
@@ -240,11 +269,9 @@ function renderDateDetail(date, plansWithTrucks) {
   const projIds     = new Set(plansWithTrucks.map(pw => pw.plan.projectId).filter(Boolean));
   const allTrucks   = plansWithTrucks.flatMap(pw => pw.trucks);
   const totalTrucks = allTrucks.length;
-  const totalDiff   = allTrucks.filter(t => t.hasDiff).length;
   const summary = document.getElementById('dl-detail-summary');
   if (summary) {
-    summary.textContent = `${projIds.size}工事 / 号車${totalTrucks}台`
-      + (totalDiff > 0 ? ` / 差分${totalDiff}件` : '');
+    summary.textContent = `${projIds.size}工事 / 号車${totalTrucks}台`;
   }
 
   // 全体注意事項
@@ -298,7 +325,6 @@ function renderDateDetail(date, plansWithTrucks) {
     if (uncheckedOnly) trucks = trucks.filter(t => t.progressStatus !== 'done');
 
     const hasCaution = trucks.some(t => t.hasCaution || (t.cautionNotes || t.notes || '').trim());
-    const diffCount  = trucks.filter(t => t.hasDiff).length;
     const doneCount  = trucks.filter(t => t.progressStatus === 'done').length;
 
     html += `
@@ -313,7 +339,6 @@ function renderDateDetail(date, plansWithTrucks) {
             </svg>
             <h3 class="font-bold text-slate-800 dark:text-slate-100 truncate">${esc(group.projectName)}</h3>
             ${hasCaution ? '<span class="flex-shrink-0 text-xs bg-red-100 text-red-600 dark:bg-red-900/50 dark:text-red-300 px-2 py-0.5 rounded-full">注意</span>' : ''}
-            ${diffCount > 0 ? `<span class="flex-shrink-0 text-xs bg-yellow-100 text-yellow-700 dark:bg-yellow-900/50 dark:text-yellow-300 px-2 py-0.5 rounded-full">差分${diffCount}</span>` : ''}
           </div>
           <span class="flex-shrink-0 text-sm text-slate-500 ml-2">${doneCount}/${trucks.length}台</span>
         </div>
@@ -364,9 +389,7 @@ function renderTruckCard(truck) {
   const progLbl        = progressLabel(truck.progressStatus);
   const hasCaution     = truck.hasCaution || !!(truck.cautionNotes || truck.notes || '').trim();
   const hasLoadingInst = truck.hasLoadingInstruction || !!truck.loadingInstruction?.trim();
-  const hasDiff        = truck.hasDiff;
-  const diffTypes      = truck.diffTypes;
-  const diffStr        = Array.isArray(diffTypes) ? diffTypes.join(' / ') : String(diffTypes || '');
+  const hasDiff        = (truck.diffs?.length ?? 0) > 0;
   const hasBadge       = hasCaution || hasLoadingInst || hasDiff;
 
   return `
@@ -392,19 +415,19 @@ function renderTruckCard(truck) {
         <p class="text-xs text-slate-500 dark:text-slate-400 px-3 py-1 leading-snug">${esc(truck.loadSummary)}</p>
       ` : ''}
 
-      <!-- 行3: 計画図番号 -->
-      ${truck.drawingNo ? `
-        <p class="text-xs text-slate-400 dark:text-slate-500 px-3 ${hasBadge ? '' : 'pb-3'}">計画図 ${esc(truck.drawingNo)}</p>
+      <!-- 行3: 計画図番号 / 建方日目 -->
+      ${(truck.drawingNo || truck.constructionDay) ? `
+        <p class="text-xs text-slate-400 dark:text-slate-500 px-3 ${hasBadge ? '' : 'pb-3'}">${[truck.drawingNo ? `計画図 ${esc(truck.drawingNo)}` : '', truck.constructionDay ? `建方${esc(String(truck.constructionDay))}日目` : ''].filter(Boolean).join(' / ')}</p>
       ` : ''}
 
       <!-- バッジ行 -->
       ${hasBadge ? `
-        <div class="flex gap-1 px-3 pb-3 pt-1.5 flex-wrap ${truck.drawingNo || truck.loadSummary ? 'border-t border-slate-100 dark:border-slate-700/50' : ''}">
+        <div class="flex gap-1 px-3 pb-3 pt-1.5 flex-wrap ${truck.drawingNo || truck.constructionDay || truck.loadSummary ? 'border-t border-slate-100 dark:border-slate-700/50' : ''}">
           ${hasCaution     ? '<span class="text-xs bg-red-100 text-red-600 dark:bg-red-900/40 dark:text-red-300 px-2 py-0.5 rounded-full font-medium">注意</span>' : ''}
           ${hasLoadingInst ? '<span class="text-xs bg-blue-100 text-blue-600 dark:bg-blue-900/40 dark:text-blue-300 px-2 py-0.5 rounded-full font-medium">積込指示</span>' : ''}
-          ${hasDiff        ? `<span class="text-xs bg-yellow-100 text-yellow-700 dark:bg-yellow-900/40 dark:text-yellow-300 px-2 py-0.5 rounded-full font-medium">差分${diffStr ? ': ' + esc(diffStr) : ''}</span>` : ''}
+          ${_diffBadges(truck.diffs)}
         </div>
-      ` : (!truck.drawingNo && !truck.loadSummary ? '<div class="pb-2"></div>' : '<div class="pb-3"></div>')}
+      ` : (!truck.drawingNo && !truck.constructionDay && !truck.loadSummary ? '<div class="pb-2"></div>' : '<div class="pb-3"></div>')}
     </div>`;
 }
 
@@ -483,9 +506,10 @@ function _renderTruckDetail(truck) {
 
   // 号車情報行: 号車番号 / 車種 / 計画図番号 / 進捗状態
   const infoRow = [
-    truck.truckNo    ? `${truck.truckNo}号車`      : null,
-    truck.vehicleType                               || null,
-    truck.drawingNo  ? `計画図${truck.drawingNo}`  : null,
+    truck.truckNo         ? `${truck.truckNo}号車`             : null,
+    truck.vehicleType                                           || null,
+    truck.drawingNo       ? `計画図${truck.drawingNo}`         : null,
+    truck.constructionDay ? `建方${truck.constructionDay}日目` : null,
   ].filter(Boolean).join(' / ');
   if (el('dl-truck-info-row')) el('dl-truck-info-row').textContent = infoRow;
 
@@ -515,7 +539,10 @@ function _renderTruckDetail(truck) {
       html += `
         <div class="px-4 py-3 border-b border-slate-100 dark:border-slate-700">
           <p class="text-xs font-bold text-slate-500 dark:text-slate-400 mb-1">主な積載物</p>
-          <p class="text-sm text-slate-800 dark:text-slate-100">${esc(loadSummary)}</p>
+          <div class="flex flex-wrap items-center gap-1.5">
+            <span class="text-sm text-slate-800 dark:text-slate-100">${esc(loadSummary)}</span>
+            ${_diffBadges(truck.diffs)}
+          </div>
         </div>`;
     }
     if (cautionNotes) {
@@ -653,10 +680,7 @@ function _renderItemCard(item, truckId) {
   const name         = item.name || item.itemName || item.itemCode || '品目名不明';
   const cautionNote  = item.cautionNote || item.noteText || '';
   const loadingInstr = item.loadingInstruction || '';
-  const hasDiff      = item.hasDiff;
-  const diffTypes    = item.diffTypes || [];
-  const diffStr      = Array.isArray(diffTypes) ? diffTypes.join(' / ') : String(diffTypes || '');
-  const diffContent  = item.diffSummary || diffStr;
+  const itemDiffs    = item.diffs || [];
 
   return `
     <div class="dl-item-card flex flex-col rounded-xl border-2 transition-all
@@ -682,14 +706,13 @@ function _renderItemCard(item, truckId) {
         : ''}
 
       <!-- タグ行 -->
-      ${cautionNote || loadingInstr || hasDiff ? `
+      ${(cautionNote || loadingInstr || itemDiffs.length) ? `
         <div class="flex gap-1 px-2 pb-2 flex-wrap">
           ${cautionNote  ? `<button class="dl-item-tag-btn text-xs px-1.5 py-0.5 rounded bg-red-100 text-red-600 dark:bg-red-900/40 dark:text-red-300 font-medium active:opacity-70"
             data-tag="caution" data-content="${esc(cautionNote)}">注意</button>` : ''}
           ${loadingInstr ? `<button class="dl-item-tag-btn text-xs px-1.5 py-0.5 rounded bg-blue-100 text-blue-600 dark:bg-blue-900/40 dark:text-blue-300 font-medium active:opacity-70"
             data-tag="loading" data-content="${esc(loadingInstr)}">積込</button>` : ''}
-          ${hasDiff      ? `<button class="dl-item-tag-btn text-xs px-1.5 py-0.5 rounded bg-yellow-100 text-yellow-700 dark:bg-yellow-900/40 dark:text-yellow-300 font-medium active:opacity-70"
-            data-tag="diff" data-content="${esc(diffContent)}">差分</button>` : ''}
+          ${_diffBadges(itemDiffs)}
         </div>` : ''}
 
       <!-- タグ展開エリア -->

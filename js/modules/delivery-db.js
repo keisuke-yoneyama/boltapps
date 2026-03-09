@@ -36,8 +36,7 @@ const MOCK_PROJECTS = [
 const MOCK_PLANS = [
   {
     id: _M_PLAN_ID, projectId: _M_PROJ_ID,
-    deliveryDate: _todayStr, status: 'active', version: 1,
-    hasDiff: true, diffCount: 2, truckCount: 3,
+    deliveryDate: _todayStr, status: 'active', version: 1, truckCount: 3,
   },
 ];
 
@@ -45,30 +44,33 @@ const MOCK_TRUCKS = [
   {
     id: _M_T1, projectId: _M_PROJ_ID, planId: _M_PLAN_ID,
     truckNo: '1', truckOrder: 1, vehicleType: '4t平ボディ',
-    progressStatus: 'pending', drawingNo: 'DWG-001',
+    progressStatus: 'pending', drawingNo: 'DWG-001', constructionDay: 1,
     loadSummary: 'H鋼 / ボルト類',
     cautionNotes: '搬入口が狭いため要注意', hasCaution: true,
     loadingInstruction: '', hasLoadingInstruction: false,
-    hasDiff: true, diffTypes: ['数量変更', '品目追加'],
-    diffSummary: 'ボルトM16×40 数量 50→60 に変更。アングル L-65 追加。',
+    diffs: [
+      { date: '2026-03-08', type: '変更' },
+      { date: '2026-03-09', type: '追加' },
+    ],
     itemCount: 4, checkedCount: 0,
   },
   {
     id: _M_T2, projectId: _M_PROJ_ID, planId: _M_PLAN_ID,
     truckNo: '2', truckOrder: 2, vehicleType: '2t箱車',
-    progressStatus: 'in_progress',
+    progressStatus: 'in_progress', constructionDay: 1,
     loadSummary: 'アンカーボルト / ナット',
     loadingInstruction: '精密部品のため横積み禁止', hasLoadingInstruction: true,
     cautionNotes: '', hasCaution: false,
-    hasDiff: false,
+    diffs: [],
     itemCount: 3, checkedCount: 1,
   },
   {
     id: _M_T3, projectId: _M_PROJ_ID, planId: _M_PLAN_ID,
     truckNo: '3', truckOrder: 3, vehicleType: '大型トレーラー',
-    progressStatus: 'done', drawingNo: 'DWG-003',
+    progressStatus: 'done', drawingNo: 'DWG-003', constructionDay: 2,
     loadSummary: '鉄骨大梁',
-    hasCaution: false, hasLoadingInstruction: false, hasDiff: false,
+    hasCaution: false, hasLoadingInstruction: false,
+    diffs: [],
     itemCount: 5, checkedCount: 5,
   },
 ];
@@ -76,29 +78,30 @@ const MOCK_TRUCKS = [
 const MOCK_ITEMS = {
   [_M_T1]: [
     { id: 'mi-1-1', name: 'H鋼 200×100×5.5×8', quantity: 10, unit: '本', sortOrder: 1,
-      checked: false, hasDiff: true, diffTypes: ['数量変更'], diffSummary: '8本→10本に変更' },
+      checked: false, diffs: [{ date: '2026-03-08', type: '変更' }] },
     { id: 'mi-1-2', name: 'ボルト M16×40', quantity: 60, unit: '個', sortOrder: 2,
       checked: true, cautionNote: '規格品との混入注意', hasCaution: true,
-      hasDiff: true, diffTypes: ['数量変更'], diffSummary: '50個→60個に変更' },
+      diffs: [{ date: '2026-03-08', type: '変更' }] },
     { id: 'mi-1-3', name: 'アングル L-65×65×6', quantity: 4, unit: '本', sortOrder: 3,
-      checked: false, loadingInstruction: '束ねて積載すること', hasLoadingInstruction: true, hasDiff: false },
+      checked: false, loadingInstruction: '束ねて積載すること', hasLoadingInstruction: true,
+      diffs: [] },
     { id: 'mi-1-4', name: 'ナット M16', quantity: 120, unit: '個', sortOrder: 4,
-      checked: false, hasDiff: false },
+      checked: false, diffs: [{ date: '2026-03-09', type: '追加' }] },
   ],
   [_M_T2]: [
     { id: 'mi-2-1', name: 'アンカーボルト M20', quantity: 24, unit: '本', sortOrder: 1,
-      checked: true, hasDiff: false },
+      checked: true, diffs: [] },
     { id: 'mi-2-2', name: 'ナット M20', quantity: 48, unit: '個', sortOrder: 2,
-      checked: false, hasDiff: false },
+      checked: false, diffs: [] },
     { id: 'mi-2-3', name: '座金 φ22', quantity: 48, unit: '枚', sortOrder: 3,
-      checked: false, cautionNote: '薄物のため変形注意', hasCaution: true, hasDiff: false },
+      checked: false, cautionNote: '薄物のため変形注意', hasCaution: true, diffs: [] },
   ],
   [_M_T3]: [
-    { id: 'mi-3-1', name: '大梁 BH-400×200', quantity: 3, unit: '本', sortOrder: 1, checked: true, hasDiff: false },
-    { id: 'mi-3-2', name: '小梁 H-200×100',  quantity: 6, unit: '本', sortOrder: 2, checked: true, hasDiff: false },
-    { id: 'mi-3-3', name: 'スタッドボルト',   quantity: 200, unit: '本', sortOrder: 3, checked: true, hasDiff: false },
-    { id: 'mi-3-4', name: 'デッキプレート',   quantity: 10, unit: '枚', sortOrder: 4, checked: true, hasDiff: false },
-    { id: 'mi-3-5', name: '溶接棒',           quantity: 5, unit: 'kg', sortOrder: 5, checked: true, hasDiff: false },
+    { id: 'mi-3-1', name: '大梁 BH-400×200', quantity: 3, unit: '本', sortOrder: 1, checked: true, diffs: [] },
+    { id: 'mi-3-2', name: '小梁 H-200×100',  quantity: 6, unit: '本', sortOrder: 2, checked: true, diffs: [] },
+    { id: 'mi-3-3', name: 'スタッドボルト',   quantity: 200, unit: '本', sortOrder: 3, checked: true, diffs: [] },
+    { id: 'mi-3-4', name: 'デッキプレート',   quantity: 10, unit: '枚', sortOrder: 4, checked: true, diffs: [] },
+    { id: 'mi-3-5', name: '溶接棒',           quantity: 5, unit: 'kg', sortOrder: 5, checked: true, diffs: [] },
   ],
 };
 
