@@ -486,7 +486,6 @@ function _renderTruckDetail(truck) {
     truck.truckNo    ? `${truck.truckNo}号車`      : null,
     truck.vehicleType                               || null,
     truck.drawingNo  ? `計画図${truck.drawingNo}`  : null,
-    progressLabel(progress),
   ].filter(Boolean).join(' / ');
   if (el('dl-truck-info-row')) el('dl-truck-info-row').textContent = infoRow;
 
@@ -545,19 +544,16 @@ function _renderTruckDetail(truck) {
     html += `</div>`;
   }
 
-  // 2. 積込進捗（号車全体）
-  html += `
-    <div class="bg-white dark:bg-slate-800 rounded-2xl shadow p-4">
-      <div class="flex items-center justify-between mb-3">
-        <h3 class="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">積込進捗</h3>
-        <span class="text-xs text-slate-400">${checkedCount} / ${items.length} 品目完了</span>
-      </div>
-      <div class="flex gap-2" data-plan-id="${esc(_truckPlanId)}" data-truck-id="${esc(truck.id)}">
-        ${_progressBtn('pending',     '未着手', progress)}
-        ${_progressBtn('in_progress', '積込中', progress)}
-        ${_progressBtn('done',        '完了',   progress)}
-      </div>
-    </div>`;
+  // 2. 積込完了バナー（全品目 checked のときのみ）
+  if (items.length > 0 && checkedCount === items.length) {
+    html += `
+      <div class="bg-green-50 dark:bg-green-900/30 border border-green-300 dark:border-green-700 rounded-2xl px-4 py-3 flex items-center gap-2">
+        <svg class="w-5 h-5 text-green-500 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>
+        </svg>
+        <span class="text-sm font-bold text-green-700 dark:text-green-300">積込完了</span>
+      </div>`;
+  }
 
   // 3. 品目グリッド
   html += `
@@ -579,28 +575,6 @@ function _renderTruckDetail(truck) {
   const content = document.getElementById('dl-truck-content');
   if (!content) return;
   content.innerHTML = html;
-
-  // 号車進捗ボタン
-  content.querySelectorAll('.dl-truck-progress-btn').forEach(btn => {
-    btn.addEventListener('click', async () => {
-      const wrap = btn.closest('[data-plan-id]');
-      const pId  = wrap?.dataset.planId;
-      const tId  = wrap?.dataset.truckId;
-      if (!pId || !tId) return;
-      const status = btn.dataset.status;
-      try {
-        await updateTruckStatus(_truckProjectId, pId, tId, status);
-        [deliveryState.trucksCache[pId], deliveryState.trucksForCurrentPlan].forEach(arr => {
-          const t = arr?.find(t => t.id === tId);
-          if (t) t.progressStatus = status;
-        });
-        _reRenderTruck();
-      } catch (e) {
-        console.error('[delivery] updateTruckStatus:', e);
-        alert('更新に失敗しました');
-      }
-    });
-  });
 
   // 品目チェックボタン
   content.querySelectorAll('.dl-item-check-btn').forEach(btn => {
