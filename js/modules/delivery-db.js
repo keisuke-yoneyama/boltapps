@@ -211,6 +211,7 @@ export async function getItemsForTruck(projectId, planId, truckId) {
  * 品目のチェック状態を item.checked で更新
  */
 export async function setItemChecked(projectId, planId, truckId, itemId, checked) {
+  if (DEV_MODE) return; // モックデータのためFirestore書き込みをスキップ
   const ref = doc(db, `projects/${projectId}/deliveryPlans/${planId}/trucks/${truckId}/items/${itemId}`);
   await updateDoc(ref, { checked, updatedAt: serverTimestamp() });
 }
@@ -219,6 +220,7 @@ export async function setItemChecked(projectId, planId, truckId, itemId, checked
  * 号車全体の progressStatus を更新
  */
 export async function updateTruckStatus(projectId, planId, truckId, progressStatus) {
+  if (DEV_MODE) return; // モックデータのためFirestore書き込みをスキップ
   const ref = doc(db, `projects/${projectId}/deliveryPlans/${planId}/trucks/${truckId}`);
   await updateDoc(ref, { progressStatus, updatedAt: serverTimestamp() });
 }
