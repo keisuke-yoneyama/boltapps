@@ -58,6 +58,13 @@ function _diffColorCls(dateStr) {
   return DIFF_COLORS[h % DIFF_COLORS.length];
 }
 
+// item.checked 集計から進捗を算出
+function _computeProgress(items) {
+  if (!items?.length) return 'pending';
+  const c = items.filter(i => i.checked).length;
+  return c === 0 ? 'pending' : c === items.length ? 'done' : 'in_progress';
+}
+
 function _diffBadges(diffs) {
   if (!diffs?.length) return '';
   return diffs.map(d => {
@@ -322,7 +329,10 @@ function renderDateDetail(date, plansWithTrucks) {
       if (orderDiff !== 0) return orderDiff;
       return String(a.truckNo ?? '').localeCompare(String(b.truckNo ?? ''), 'ja', { numeric: true });
     });
-    if (uncheckedOnly) trucks = trucks.filter(t => t.progressStatus !== 'done');
+    if (uncheckedOnly) trucks = trucks.filter(t => {
+      const _it = deliveryState.itemsCache[t.id];
+      return (_it ? _computeProgress(_it) : t.progressStatus) !== 'done';
+    });
 
     const hasCaution = trucks.some(t => t.hasCaution || (t.cautionNotes || t.notes || '').trim());
     const doneCount  = trucks.filter(t => t.progressStatus === 'done').length;
@@ -386,8 +396,10 @@ function renderDateDetail(date, plansWithTrucks) {
 }
 
 function renderTruckCard(truck) {
-  const progCls        = progressCls(truck.progressStatus);
-  const progLbl        = progressLabel(truck.progressStatus);
+  const _items  = deliveryState.itemsCache[truck.id];
+  const _prog   = _items ? _computeProgress(_items) : (truck.progressStatus || 'pending');
+  const progCls = progressCls(_prog);
+  const progLbl = progressLabel(_prog);
   const hasCaution     = truck.hasCaution || !!(truck.cautionNotes || truck.notes || '').trim();
   const hasLoadingInst = truck.hasLoadingInstruction || !!truck.loadingInstruction?.trim();
   const hasDiff        = (truck.diffs?.length ?? 0) > 0;
@@ -487,9 +499,8 @@ function navigateTruck(dir) {
 
 function _renderTruckDetail(truck) {
   const { trucksForCurrentPlan, currentTruckIndex } = deliveryState;
-  const items  = deliveryState.itemsCache[truck.id] || [];
-  const total  = trucksForCurrentPlan.length;
-  const progress  = truck.progressStatus || 'pending';
+  const items = deliveryState.itemsCache[truck.id] || [];
+  const total = trucksForCurrentPlan.length;
 
   // ── ヘッダー更新 ──
   const el = id => document.getElementById(id);
@@ -613,6 +624,12 @@ function _renderTruckDetail(truck) {
       if (!item) return;
       const newChecked = !item.checked;
       item.checked = newChecked;
+      // 進捗を再計算してキャッシュ更新（画面3の再表示に備える）
+      const newProgress = _computeProgress(deliveryState.itemsCache[truckId]);
+      [deliveryState.trucksForCurrentPlan, deliveryState.trucksCache[_truckPlanId]].forEach(arr => {
+        const t = arr?.find(t => t.id === truckId);
+        if (t) t.progressStatus = newProgress;
+      });
       _reRenderTruck();
       try {
         await setItemChecked(_truckProjectId, _truckPlanId, truckId, itemId, newChecked);
