@@ -1,0 +1,6 @@
+# admin SPA
+/admin/*  /admin/index.html  200
+
+# 将来追加予定
+# /field/*  /field/index.html  200
+# /bolt/*   /bolt/index.html   200
