@@ -10,6 +10,11 @@ import {
   setItemChecked,
   updateTruckStatus,
 } from './delivery-db.js';
+import {
+  resolveTruckProgress,
+  formatDiffBadge,
+  summarizeCalendarDay,
+} from '../../packages/shared-domain/src/index.js';
 
 // 号車詳細画面のコンテキスト（再描画時に参照）
 let _truckProjectId = null;
@@ -52,25 +57,16 @@ const DIFF_COLORS = [
   'bg-zinc-100 text-zinc-700 dark:bg-zinc-700 dark:text-zinc-200',
 ];
 
-function _diffColorCls(dateStr) {
-  let h = 0;
-  for (const c of dateStr) h = (h * 31 + c.charCodeAt(0)) & 0xffff;
-  return DIFF_COLORS[h % DIFF_COLORS.length];
-}
 
-// item.checked 集計から進捗を算出
-function _computeProgress(items) {
-  if (!items?.length) return 'pending';
-  const c = items.filter(i => i.checked).length;
-  return c === 0 ? 'pending' : c === items.length ? 'done' : 'in_progress';
-}
+// item.checked 集計から進捗を算出（shared-domain へ委譲）
+const _computeProgress = resolveTruckProgress;
 
+// HTML組み立ては delivery.js が担当、ラベル/色インデックス生成は shared-domain に委譲
 function _diffBadges(diffs) {
   if (!diffs?.length) return '';
   return diffs.map(d => {
-    const [, m, day] = (d.date || '').split('-');
-    const label = m && day ? `${parseInt(m)}/${parseInt(day)}${d.type || ''}` : (d.type || '差分');
-    return `<span class="text-xs px-1.5 py-0.5 rounded font-medium ${_diffColorCls(d.date || '')}">${esc(label)}</span>`;
+    const { label, colorIndex } = formatDiffBadge(d);
+    return `<span class="text-xs px-1.5 py-0.5 rounded font-medium ${DIFF_COLORS[colorIndex]}">${esc(label)}</span>`;
   }).join('');
 }
 
