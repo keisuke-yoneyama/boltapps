@@ -46,6 +46,7 @@ function getItemDisplayName(item) {
 // ── Right Panel: draft state ───────────────────────────────
 
 let _diffDraft = [];
+let _bulkDraft = []; // { name: string, nameParts: object }[]
 
 function _diffDraftListHtml() {
   if (!_diffDraft.length) return '<span class="text-xs text-gray-500">差分なし</span>';
@@ -416,16 +417,52 @@ function _updateBulkPreview() {
   if (!el) return;
   const f = _readBulkFormData();
   if (!f.baseName) {
+    _bulkDraft = [];
     el.innerHTML = '<p class="text-xs text-gray-600">品名を入力すると一覧が表示されます</p>';
     return;
   }
-  const items = _generateBulkItems(f);
-  el.innerHTML = items.map((item, i) => `
-    <div class="flex items-center gap-2 py-0.5 border-b border-gray-800 last:border-0">
+  // フォーム変更時はドラフトを再生成（手動編集は上書きされる）
+  _bulkDraft = _generateBulkItems(f);
+  _renderBulkDraftList();
+}
+
+function _renderBulkDraftList() {
+  const el = elRightContent.querySelector('#rp-bulk-preview');
+  if (!el) return;
+  if (!_bulkDraft.length) {
+    el.innerHTML = '<p class="text-xs text-gray-500">行がありません</p>';
+    return;
+  }
+  el.innerHTML = _bulkDraft.map((item, i) => `
+    <div class="flex items-center gap-1 py-0.5 border-b border-gray-800 last:border-0" data-bulk-row="${i}">
       <span class="text-xs text-gray-500 w-5 text-right shrink-0">${i + 1}</span>
-      <span class="text-xs text-gray-200">${esc(item.name)}</span>
+      <span class="text-xs text-gray-200 flex-1 truncate">${esc(item.name)}</span>
+      <button data-bulk-edit="${i}" class="text-xs text-blue-400 hover:text-blue-300 px-1 shrink-0">編集</button>
+      <button data-bulk-del="${i}"  class="text-xs text-red-400  hover:text-red-300  px-1 shrink-0">削除</button>
     </div>
   `).join('');
+}
+
+function _startBulkRowEdit(idx) {
+  const rowEl = elRightContent.querySelector(`[data-bulk-row="${idx}"]`);
+  if (!rowEl || !_bulkDraft[idx]) return;
+  const currentName = _bulkDraft[idx].name;
+  rowEl.innerHTML = `
+    <span class="text-xs text-gray-500 w-5 text-right shrink-0">${idx + 1}</span>
+    <input data-bulk-input="${idx}" type="text" value="${esc(currentName)}"
+      class="flex-1 bg-gray-600 text-gray-100 rounded px-1.5 py-0.5 text-xs min-w-0">
+    <button data-bulk-confirm="${idx}" class="text-xs text-green-400 hover:text-green-300 px-1 shrink-0">確定</button>
+    <button data-bulk-del="${idx}"     class="text-xs text-red-400  hover:text-red-300  px-1 shrink-0">削除</button>
+  `;
+  rowEl.querySelector(`[data-bulk-input="${idx}"]`)?.focus();
+}
+
+function _confirmBulkRowEdit(idx) {
+  const input = elRightContent.querySelector(`[data-bulk-input="${idx}"]`);
+  if (!input || !_bulkDraft[idx]) return;
+  const newName = input.value.trim();
+  if (newName) _bulkDraft[idx].name = newName;
+  _renderBulkDraftList();
 }
 
 function _renderBulkPanel() {
@@ -606,24 +643,23 @@ async function _handleDelete() {
 }
 
 async function _handleBulkSave() {
-  const f = _readBulkFormData();
-  if (!f.baseName) {
+  if (!_bulkDraft.length) {
     elRightContent.querySelector('#rp-bulk-baseName')?.focus();
     return;
   }
 
+  const f = _readBulkFormData(); // category のみ使用
   const { selectedProjectId, selectedPlanId, selectedTruckId, itemsCache } = adminState;
   const items    = itemsCache[selectedTruckId] ?? [];
   let maxOrder   = items.reduce((m, i) => Math.max(m, i.sortOrder ?? 0), 0);
 
-  const generated = _generateBulkItems(f);
   let lastCreatedId = null;
 
-  for (const gen of generated) {
+  for (const draft of _bulkDraft) {
     maxOrder += 10;
     const itemData = {
-      nameParts:          gen.nameParts,
-      name:               gen.name,
+      nameParts:          draft.nameParts,  // 構造体（将来の拡張用）
+      name:               draft.name,       // 手動編集済みの表示名
       category:           f.category,
       cautionNote:        '',
       loadingInstruction: '',
@@ -636,6 +672,7 @@ async function _handleBulkSave() {
     lastCreatedId = created.id;
   }
 
+  _bulkDraft = [];
   adminState.selectedItemId = lastCreatedId;
   adminState.rightPanelMode = lastCreatedId ? 'view' : 'idle';
   renderMainGrid();
@@ -650,6 +687,7 @@ async function selectTruck(truckId) {
   adminState.multiSelectedItemIds = [];
   adminState.rightPanelMode       = 'idle';
   _diffDraft = [];
+  _bulkDraft = [];
 
   if (!adminState.itemsCache[truckId]) {
     const items = await getItemsForTruck(
@@ -732,6 +770,20 @@ function bindEvents() {
       return;
     }
 
+    // bulk ドラフト行: 編集・確定・削除
+    const bulkEdit = e.target.closest('[data-bulk-edit]');
+    if (bulkEdit) { _startBulkRowEdit(parseInt(bulkEdit.dataset.bulkEdit, 10)); return; }
+
+    const bulkConfirm = e.target.closest('[data-bulk-confirm]');
+    if (bulkConfirm) { _confirmBulkRowEdit(parseInt(bulkConfirm.dataset.bulkConfirm, 10)); return; }
+
+    const bulkDel = e.target.closest('[data-bulk-del]');
+    if (bulkDel) {
+      _bulkDraft.splice(parseInt(bulkDel.dataset.bulkDel, 10), 1);
+      _renderBulkDraftList();
+      return;
+    }
+
     const action = e.target.closest('[data-rp-action]')?.dataset.rpAction;
     if (!action) return;
 
@@ -780,6 +832,7 @@ function bindEvents() {
     }
 
     if (action === 'mode-single') {
+      _bulkDraft = [];
       adminState.rightPanelMode = 'new';
       renderRightPanel();
       return;
