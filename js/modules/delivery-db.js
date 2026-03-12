@@ -57,33 +57,34 @@ const MOCK_PLANS = [
 
 const MOCK_TRUCKS = [
   // ── Plan1: 工事A ──────────────────────────────────────
-  // Truck1: 差分あり・注意あり・建方1日目
+  // Truck1: 多種別混在・差分複数色・注意・積込指示・チェック一部ON ← 画面A中央グリッド確認メイン
   {
     id: _M_T1, projectId: _M_PROJ_ID, planId: _M_PLAN_ID,
     truckNo: '1', truckOrder: 1, vehicleType: '4t平ボディ',
     progressStatus: 'pending', constructionDay: 1,
-    loadSummary: 'H鋼 / ボルト類',
+    loadSummary: '大梁 / 小梁 / 柱 他',
     cautionNotes: '搬入口が狭いため要注意', hasCaution: true,
     loadingInstruction: '', hasLoadingInstruction: false,
-    diffs: [{ date: '2026-03-08', type: '変更' }, { date: '2026-03-09', type: '追加' }],
-    itemCount: 4, checkedCount: 0,
+    diffs: [{ date: '2026-03-13', type: '追加' }, { date: '2026-03-14', type: '変更' }],
+    itemCount: 14, checkedCount: 1,
   },
-  // Truck2: 積込指示あり・建方1日目
+  // Truck2: アンカーボルト系・積込指示あり・差分あり・チェック一部ON
   {
     id: _M_T2, projectId: _M_PROJ_ID, planId: _M_PLAN_ID,
     truckNo: '2', truckOrder: 2, vehicleType: '2t箱車',
     progressStatus: 'in_progress', constructionDay: 1,
-    loadSummary: 'アンカーボルト / ナット',
+    loadSummary: 'アンカーボルト / ナット / 座金',
     loadingInstruction: '精密部品のため横積み禁止', hasLoadingInstruction: true,
-    cautionNotes: '', hasCaution: false, diffs: [],
+    cautionNotes: '', hasCaution: false,
+    diffs: [{ date: '2026-03-13', type: '変更' }],
     itemCount: 3, checkedCount: 1,
   },
-  // Truck3: 全チェック済み・積込完了確認用・建方2日目
+  // Truck3: 全チェック済み・積込完了バナー確認用・建方2日目
   {
     id: _M_T3, projectId: _M_PROJ_ID, planId: _M_PLAN_ID,
     truckNo: '3', truckOrder: 3, vehicleType: '大型トレーラー',
     progressStatus: 'done', constructionDay: 2,
-    loadSummary: '鉄骨大梁',
+    loadSummary: '大梁 / 小梁 / スタッド / デッキ',
     hasCaution: false, hasLoadingInstruction: false, diffs: [],
     itemCount: 5, checkedCount: 5,
   },
@@ -92,7 +93,7 @@ const MOCK_TRUCKS = [
     id: _M_T4, projectId: _M_PROJ2_ID, planId: _M_PLAN2_ID,
     truckNo: '1', truckOrder: 1, vehicleType: '4t平ボディ',
     progressStatus: 'pending',
-    loadSummary: 'PC部材 / スリーブ',
+    loadSummary: 'PC柱 / スリーブ',
     cautionNotes: '', hasCaution: false,
     loadingInstruction: '', hasLoadingInstruction: false, diffs: [],
     itemCount: 3, checkedCount: 0,
@@ -100,38 +101,65 @@ const MOCK_TRUCKS = [
 ];
 
 const MOCK_ITEMS = {
-  // Truck1: 差分・注意・積込指示 を品目レベルで確認
+  // ── Truck1: 多種別混在（画面A種別セクション・4列グリッド確認用） ──────────
   [_M_T1]: [
-    { id: 'mi-1-1', name: 'H鋼 200×100×5.5×8', quantity: 10, unit: '本', sortOrder: 1,
-      checked: false, diffs: [{ date: '2026-03-08', type: '変更' }] },
-    { id: 'mi-1-2', name: 'ボルト M16×40', quantity: 60, unit: '個', sortOrder: 2,
-      checked: true, cautionNote: '規格品との混入注意',
-      diffs: [{ date: '2026-03-08', type: '変更' }] },
-    { id: 'mi-1-3', name: 'アングル L-65×65×6', quantity: 4, unit: '本', sortOrder: 3,
-      checked: false, loadingInstruction: '束ねて積載すること', diffs: [] },
-    { id: 'mi-1-4', name: 'ナット M16', quantity: 120, unit: '個', sortOrder: 4,
-      checked: false, diffs: [{ date: '2026-03-09', type: '追加' }] },
+    // 大梁 (3品目)
+    { id: 'mi-1-g1', name: '2SG500-1',  category: '大梁', quantity: 1, unit: '本', sortOrder:  1,
+      checked: false, diffs: [{ date: '2026-03-13', type: '追加' }] },
+    { id: 'mi-1-g2', name: '2SG588-1',  category: '大梁', quantity: 1, unit: '本', sortOrder:  2,
+      checked: false, diffs: [] },
+    { id: 'mi-1-g3', name: '2SG600-1',  category: '大梁', quantity: 1, unit: '本', sortOrder:  3,
+      checked: true,  diffs: [{ date: '2026-03-14', type: '変更' }] },
+    // 小梁 (4品目)
+    { id: 'mi-1-b1', name: '2SB198-1',  category: '小梁', quantity: 2, unit: '本', sortOrder: 10,
+      checked: false, diffs: [] },
+    { id: 'mi-1-b2', name: '2SB198-2',  category: '小梁', quantity: 2, unit: '本', sortOrder: 11,
+      checked: false, cautionNote: '養生テープ剥がし忘れ注意', diffs: [] },
+    { id: 'mi-1-b3', name: '2SB300-1',  category: '小梁', quantity: 1, unit: '本', sortOrder: 12,
+      checked: false, diffs: [{ date: '2026-03-13', type: '変更' }] },
+    { id: 'mi-1-b4', name: '2SB350-1',  category: '小梁', quantity: 1, unit: '本', sortOrder: 13,
+      checked: false, diffs: [] },
+    // 柱 (2品目)
+    { id: 'mi-1-c1', name: '2C1',        category: '柱',   quantity: 1, unit: '本', sortOrder: 20,
+      checked: false, diffs: [] },
+    { id: 'mi-1-c2', name: '2C2',        category: '柱',   quantity: 1, unit: '本', sortOrder: 21,
+      checked: false, loadingInstruction: '底板養生必須', diffs: [] },
+    // 間柱 (2品目)
+    { id: 'mi-1-m1', name: 'M1',         category: '間柱', quantity: 4, unit: '本', sortOrder: 30,
+      checked: false, diffs: [] },
+    { id: 'mi-1-m2', name: 'M2',         category: '間柱', quantity: 4, unit: '本', sortOrder: 31,
+      checked: false, diffs: [{ date: '2026-03-14', type: '削除' }] },
+    // ブレース (2品目)
+    { id: 'mi-1-br1', name: 'BR1',       category: 'ブレース', quantity: 1, unit: '本', sortOrder: 40,
+      checked: false, diffs: [] },
+    { id: 'mi-1-br2', name: 'BR2',       category: 'ブレース', quantity: 1, unit: '本', sortOrder: 41,
+      checked: false, diffs: [] },
+    // その他 (1品目)
+    { id: 'mi-1-z1', name: '小物セット', category: 'その他',   quantity: 1, unit: '式', sortOrder: 50,
+      checked: false, diffs: [] },
   ],
-  // Truck2: シンプル品目
+  // ── Truck2: アンカーボルト系・チェック一部ON ─────────────────────────────
   [_M_T2]: [
-    { id: 'mi-2-1', name: 'アンカーボルト M20', quantity: 24, unit: '本', sortOrder: 1, checked: true, diffs: [] },
-    { id: 'mi-2-2', name: 'ナット M20', quantity: 48, unit: '個', sortOrder: 2, checked: false, diffs: [] },
-    { id: 'mi-2-3', name: '座金 φ22', quantity: 48, unit: '枚', sortOrder: 3,
-      checked: false, cautionNote: '薄物のため変形注意', diffs: [] },
+    { id: 'mi-2-1', name: 'アンカーボルト M20×200', category: 'アンカーボルト', quantity: 24, unit: '本', sortOrder: 1,
+      checked: true,  diffs: [] },
+    { id: 'mi-2-2', name: 'ナット M20',              category: 'アンカーボルト', quantity: 48, unit: '個', sortOrder: 2,
+      checked: false, diffs: [] },
+    { id: 'mi-2-3', name: '座金 φ22',               category: 'アンカーボルト', quantity: 48, unit: '枚', sortOrder: 3,
+      checked: false, cautionNote: '薄物のため変形注意', diffs: [{ date: '2026-03-13', type: '変更' }] },
   ],
-  // Truck3: 全チェック済み（積込完了バナー確認用）
+  // ── Truck3: 全チェック済み（積込完了バナー確認用） ───────────────────────
   [_M_T3]: [
-    { id: 'mi-3-1', name: '大梁 BH-400×200', quantity: 3, unit: '本', sortOrder: 1, checked: true, diffs: [] },
-    { id: 'mi-3-2', name: '小梁 H-200×100',  quantity: 6, unit: '本', sortOrder: 2, checked: true, diffs: [] },
-    { id: 'mi-3-3', name: 'スタッドボルト',   quantity: 200, unit: '本', sortOrder: 3, checked: true, diffs: [] },
-    { id: 'mi-3-4', name: 'デッキプレート',   quantity: 10, unit: '枚', sortOrder: 4, checked: true, diffs: [] },
-    { id: 'mi-3-5', name: '溶接棒',           quantity: 5, unit: 'kg', sortOrder: 5, checked: true, diffs: [] },
+    { id: 'mi-3-1', name: '2SG400-1',    category: '大梁',         quantity: 3,   unit: '本', sortOrder: 1, checked: true, diffs: [] },
+    { id: 'mi-3-2', name: '2SB200-1',    category: '小梁',         quantity: 6,   unit: '本', sortOrder: 2, checked: true, diffs: [] },
+    { id: 'mi-3-3', name: 'スタッドボルト', category: 'スタッド',   quantity: 200, unit: '本', sortOrder: 3, checked: true, diffs: [] },
+    { id: 'mi-3-4', name: 'デッキプレート', category: 'デッキプレート', quantity: 10, unit: '枚', sortOrder: 4, checked: true, diffs: [] },
+    { id: 'mi-3-5', name: '溶接棒',       category: 'その他',       quantity: 5,   unit: 'kg', sortOrder: 5, checked: true, diffs: [] },
   ],
-  // Truck4: 計画図番なし工事の品目
+  // ── Truck4: 工事B・計画図番なし確認用 ────────────────────────────────────
   [_M_T4]: [
-    { id: 'mi-4-1', name: 'PC柱 C1', quantity: 2, unit: '本', sortOrder: 1, checked: false, diffs: [] },
-    { id: 'mi-4-2', name: 'スリーブ φ100', quantity: 8, unit: '個', sortOrder: 2, checked: false, diffs: [] },
-    { id: 'mi-4-3', name: '支持金物',       quantity: 4, unit: '個', sortOrder: 3, checked: false, diffs: [] },
+    { id: 'mi-4-1', name: 'PC柱 C1',    category: '柱',    quantity: 2, unit: '本', sortOrder: 1, checked: false, diffs: [] },
+    { id: 'mi-4-2', name: 'スリーブ φ100', category: 'その他', quantity: 8, unit: '個', sortOrder: 2, checked: false, diffs: [] },
+    { id: 'mi-4-3', name: '支持金物',   category: 'その他', quantity: 4, unit: '個', sortOrder: 3, checked: false, diffs: [] },
   ],
 };
 
