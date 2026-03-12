@@ -183,6 +183,8 @@ function renderRightPanel() {
     _renderFormPanel('edit', item);
   } else if (rightPanelMode === 'new') {
     _renderFormPanel('new', null);
+  } else if (rightPanelMode === 'bulk') {
+    _renderBulkPanel();
   } else {
     // idle
     elRightContent.innerHTML = selectedTruckId ? `
@@ -261,6 +263,14 @@ function _renderFormPanel(mode, item) {
   ).join('');
 
   elRightContent.innerHTML = `
+    ${!isEdit ? `
+      <div class="flex gap-0.5 mb-3 bg-gray-900 rounded-md p-0.5">
+        <button data-rp-action="mode-single"
+          class="flex-1 text-xs py-1 rounded bg-gray-600 text-white font-medium">単品</button>
+        <button data-rp-action="mode-bulk"
+          class="flex-1 text-xs py-1 rounded text-gray-400 hover:text-gray-200">一括</button>
+      </div>
+    ` : ''}
     <div class="flex gap-1.5 mb-4">
       <button data-rp-action="save"
         class="flex-1 text-xs ${isEdit ? 'bg-green-700 hover:bg-green-600' : 'bg-blue-700 hover:bg-blue-600'} text-white py-1.5 rounded font-medium">
@@ -291,29 +301,29 @@ function _renderFormPanel(mode, item) {
       <p class="text-xs font-semibold text-gray-400 tracking-widest">品名パーツ</p>
 
       <div>
-        <label class="text-xs text-gray-400">prefix</label>
+        <label class="text-xs text-gray-400">接頭</label>
         <input id="rp-prefix" type="text" value="${esc(np.prefix?.value ?? '')}"
           class="${inp()}" placeholder="例: 2S">
       </div>
       <div>
-        <label class="text-xs text-gray-400">baseName <span class="text-red-400">*</span></label>
+        <label class="text-xs text-gray-400">品名 <span class="text-red-400">*</span></label>
         <input id="rp-baseName" type="text" value="${esc(np.baseName?.value ?? item?.name ?? '')}"
           class="${inp()}" placeholder="例: G500">
       </div>
       <div class="flex gap-1.5">
         <div class="w-20 shrink-0">
-          <label class="text-xs text-gray-400">separator</label>
+          <label class="text-xs text-gray-400">区切り</label>
           <input id="rp-separator" type="text" value="${esc(np.separator?.value ?? '-')}"
             class="${inp()}" placeholder="-">
         </div>
         <div class="flex-1">
-          <label class="text-xs text-gray-400">suffix</label>
+          <label class="text-xs text-gray-400">枝番</label>
           <input id="rp-suffix" type="text" value="${esc(np.suffix?.value ?? '')}"
             class="${inp()}" placeholder="例: 1">
         </div>
       </div>
       <div>
-        <label class="text-xs text-gray-400">note</label>
+        <label class="text-xs text-gray-400">補足</label>
         <input id="rp-note" type="text" value="${esc(np.note?.value ?? '')}"
           class="${inp()}" placeholder="×4 など">
       </div>
@@ -367,6 +377,145 @@ function _readFormData() {
     cautionNote:        q('#rp-cautionNote')?.value.trim()        ?? '',
     loadingInstruction: q('#rp-loadingInstruction')?.value.trim() ?? '',
   };
+}
+
+// ── Bulk: helpers ──────────────────────────────────────────
+
+function _readBulkFormData() {
+  const q = id => elRightContent.querySelector(id);
+  return {
+    category:      q('#rp-bulk-category')?.value        ?? '',
+    prefix:        q('#rp-bulk-prefix')?.value.trim()   ?? '',
+    baseName:      q('#rp-bulk-baseName')?.value.trim() ?? '',
+    separator:     q('#rp-bulk-separator')?.value       ?? '-',
+    suffixStart:   q('#rp-bulk-suffixStart')?.value     ?? '1',
+    note:          q('#rp-bulk-note')?.value.trim()     ?? '',
+    count:         q('#rp-bulk-count')?.value           ?? '3',
+    autoIncrement: q('#rp-bulk-auto')?.checked          ?? true,
+  };
+}
+
+function _generateBulkItems(f) {
+  const count    = Math.min(30, Math.max(2, parseInt(f.count) || 3));
+  const startNum = parseInt(f.suffixStart) || 1;
+  return Array.from({ length: count }, (_, i) => {
+    const suffixVal = f.autoIncrement ? String(startNum + i) : f.suffixStart;
+    const nameParts = {
+      prefix:    { value: f.prefix },
+      baseName:  { value: f.baseName },
+      separator: { value: f.separator || '-' },
+      suffix:    { value: suffixVal },
+      note:      { value: f.note },
+    };
+    return { nameParts, name: buildItemName(nameParts) };
+  });
+}
+
+function _updateBulkPreview() {
+  const el = elRightContent.querySelector('#rp-bulk-preview');
+  if (!el) return;
+  const f = _readBulkFormData();
+  if (!f.baseName) {
+    el.innerHTML = '<p class="text-xs text-gray-600">品名を入力すると一覧が表示されます</p>';
+    return;
+  }
+  const items = _generateBulkItems(f);
+  el.innerHTML = items.map((item, i) => `
+    <div class="flex items-center gap-2 py-0.5 border-b border-gray-800 last:border-0">
+      <span class="text-xs text-gray-500 w-5 text-right shrink-0">${i + 1}</span>
+      <span class="text-xs text-gray-200">${esc(item.name)}</span>
+    </div>
+  `).join('');
+}
+
+function _renderBulkPanel() {
+  const inp = (extra = '') =>
+    `w-full bg-gray-700 text-gray-100 rounded px-2 py-1 mt-0.5 text-sm ${extra}`;
+  const catOptions = CATEGORY_ORDER.map(c =>
+    `<option value="${esc(c)}">${esc(c)}</option>`
+  ).join('');
+
+  elRightContent.innerHTML = `
+    <div class="flex gap-0.5 mb-3 bg-gray-900 rounded-md p-0.5">
+      <button data-rp-action="mode-single"
+        class="flex-1 text-xs py-1 rounded text-gray-400 hover:text-gray-200">単品</button>
+      <button data-rp-action="mode-bulk"
+        class="flex-1 text-xs py-1 rounded bg-gray-600 text-white font-medium">一括</button>
+    </div>
+    <div class="flex gap-1.5 mb-4">
+      <button data-rp-action="bulk-save"
+        class="flex-1 text-xs bg-blue-700 hover:bg-blue-600 text-white py-1.5 rounded font-medium">
+        一括登録
+      </button>
+      <button data-rp-action="cancel"
+        class="flex-1 text-xs bg-gray-700 hover:bg-gray-600 text-white py-1.5 rounded">
+        キャンセル
+      </button>
+    </div>
+
+    <div class="space-y-2.5 text-sm">
+      <div>
+        <label class="text-xs text-gray-400">カテゴリー</label>
+        <select id="rp-bulk-category" class="${inp()}">
+          <option value="">— 未選択 —</option>
+          ${catOptions}
+        </select>
+      </div>
+
+      <hr class="border-gray-700 my-1">
+      <p class="text-xs font-semibold text-gray-400 tracking-widest">品名パーツ</p>
+
+      <div>
+        <label class="text-xs text-gray-400">接頭</label>
+        <input id="rp-bulk-prefix" type="text" value=""
+          class="${inp()}" placeholder="例: 2S">
+      </div>
+      <div>
+        <label class="text-xs text-gray-400">品名 <span class="text-red-400">*</span></label>
+        <input id="rp-bulk-baseName" type="text" value=""
+          class="${inp()}" placeholder="例: B198">
+      </div>
+      <div class="flex gap-1.5">
+        <div class="w-20 shrink-0">
+          <label class="text-xs text-gray-400">区切り</label>
+          <input id="rp-bulk-separator" type="text" value="-"
+            class="${inp()}" placeholder="-">
+        </div>
+        <div class="flex-1">
+          <label class="text-xs text-gray-400">枝番 開始</label>
+          <input id="rp-bulk-suffixStart" type="text" value="1"
+            class="${inp()}" placeholder="1">
+        </div>
+      </div>
+      <div>
+        <label class="text-xs text-gray-400">補足</label>
+        <input id="rp-bulk-note" type="text" value=""
+          class="${inp()}" placeholder="×4 など">
+      </div>
+
+      <hr class="border-gray-700 my-1">
+      <p class="text-xs font-semibold text-gray-400 tracking-widest">生成設定</p>
+
+      <div class="flex items-end gap-3">
+        <div class="flex-1">
+          <label class="text-xs text-gray-400">登録個数（2〜30）</label>
+          <input id="rp-bulk-count" type="number" min="2" max="30" value="3"
+            class="${inp()}" placeholder="3">
+        </div>
+        <label class="flex items-center gap-1.5 pb-1.5 cursor-pointer shrink-0">
+          <input id="rp-bulk-auto" type="checkbox" checked class="accent-blue-500">
+          <span class="text-xs text-gray-400">枝番連番</span>
+        </label>
+      </div>
+
+      <hr class="border-gray-700 my-1">
+      <p class="text-xs font-semibold text-gray-400 tracking-widest">プレビュー</p>
+
+      <div id="rp-bulk-preview" class="rounded bg-gray-950 px-2 py-1.5 min-h-[48px]">
+        <p class="text-xs text-gray-600">品名を入力すると一覧が表示されます</p>
+      </div>
+    </div>
+  `;
 }
 
 async function _handleSave() {
@@ -454,6 +603,43 @@ async function _handleDelete() {
   for (const id of idsToDelete) {
     await deleteItem(selectedProjectId, selectedPlanId, selectedTruckId, id);
   }
+}
+
+async function _handleBulkSave() {
+  const f = _readBulkFormData();
+  if (!f.baseName) {
+    elRightContent.querySelector('#rp-bulk-baseName')?.focus();
+    return;
+  }
+
+  const { selectedProjectId, selectedPlanId, selectedTruckId, itemsCache } = adminState;
+  const items    = itemsCache[selectedTruckId] ?? [];
+  let maxOrder   = items.reduce((m, i) => Math.max(m, i.sortOrder ?? 0), 0);
+
+  const generated = _generateBulkItems(f);
+  let lastCreatedId = null;
+
+  for (const gen of generated) {
+    maxOrder += 10;
+    const itemData = {
+      nameParts:          gen.nameParts,
+      name:               gen.name,
+      category:           f.category,
+      cautionNote:        '',
+      loadingInstruction: '',
+      diffs:              [],
+      sortOrder:          maxOrder,
+      checked:            false,
+    };
+    const created = await createItem(selectedProjectId, selectedPlanId, selectedTruckId, itemData);
+    addItemToState(selectedTruckId, created);
+    lastCreatedId = created.id;
+  }
+
+  adminState.selectedItemId = lastCreatedId;
+  adminState.rightPanelMode = lastCreatedId ? 'view' : 'idle';
+  renderMainGrid();
+  renderRightPanel();
 }
 
 // ── Actions: Truck / Item ───────────────────────────────────
@@ -590,14 +776,36 @@ function bindEvents() {
       elRightContent.querySelector('#rp-diff-date').value = '';
       const listEl = elRightContent.querySelector('#rp-diff-list');
       if (listEl) listEl.innerHTML = _diffDraftListHtml();
+      return;
+    }
+
+    if (action === 'mode-single') {
+      adminState.rightPanelMode = 'new';
+      renderRightPanel();
+      return;
+    }
+
+    if (action === 'mode-bulk') {
+      adminState.rightPanelMode = 'bulk';
+      renderRightPanel();
+      return;
+    }
+
+    if (action === 'bulk-save') {
+      await _handleBulkSave();
+      return;
     }
   });
+
+  // 右パネル: 一括モードのリアルタイムプレビュー
+  elRightContent.addEventListener('input',  () => { if (adminState.rightPanelMode === 'bulk') _updateBulkPreview(); });
+  elRightContent.addEventListener('change', () => { if (adminState.rightPanelMode === 'bulk') _updateBulkPreview(); });
 
   // Delete キー: フォーム編集中は無効化、それ以外は品目削除
   document.addEventListener('keydown', async e => {
     if (e.key !== 'Delete') return;
     const mode = adminState.rightPanelMode;
-    if (mode === 'edit' || mode === 'new') return; // フォーム入力中は誤削除防止
+    if (mode === 'edit' || mode === 'new' || mode === 'bulk') return; // フォーム入力中は誤削除防止
     if (!adminState.selectedTruckId || !adminState.selectedItemId) return;
     await _handleDelete();
   });
