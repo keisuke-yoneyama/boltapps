@@ -1,7 +1,7 @@
 // 管理画面 UI / イベント
 
-import { adminState } from './state.js';
-import { getTrucksForPlan, getItemsForTruck } from './db.js';
+import { adminState, removeItemFromState } from './state.js';
+import { getTrucksForPlan, getItemsForTruck, deleteItem } from './db.js';
 import { sortItems, buildItemName } from '../../packages/shared-domain/src/index.js';
 
 // ── 種別順（ボルトアプリ準拠） ─────────────────────────────
@@ -290,21 +290,27 @@ function bindEvents() {
     if (cell) selectItem(cell.dataset.itemId, e);
   });
 
-  // Delete キー: 選択品目をローカル削除（TODO: Firestore連携）
-  document.addEventListener('keydown', e => {
+  // Delete キー: 選択品目を削除（Firestore + state）
+  document.addEventListener('keydown', async e => {
     if (e.key !== 'Delete') return;
-    const { selectedTruckId, selectedItemId, multiSelectedItemIds } = adminState;
+    const { selectedProjectId, selectedPlanId, selectedTruckId, selectedItemId, multiSelectedItemIds } = adminState;
     if (!selectedTruckId || !selectedItemId) return;
 
-    const idsToDelete = new Set(
-      multiSelectedItemIds.length > 0 ? multiSelectedItemIds : [selectedItemId]
-    );
-    adminState.itemsCache[selectedTruckId] =
-      (adminState.itemsCache[selectedTruckId] ?? []).filter(i => !idsToDelete.has(i.id));
+    const idsToDelete = multiSelectedItemIds.length > 0 ? [...multiSelectedItemIds] : [selectedItemId];
+
+    // Optimistic: state を先に更新して即座に再描画
+    for (const id of idsToDelete) {
+      removeItemFromState(selectedTruckId, id);
+    }
     adminState.selectedItemId       = null;
     adminState.multiSelectedItemIds = [];
     renderMainGrid();
     renderRightPanel();
+
+    // Firestore 書き込み（DEV_MODE 時はスタブ）
+    for (const id of idsToDelete) {
+      await deleteItem(selectedProjectId, selectedPlanId, selectedTruckId, id);
+    }
   });
 }
 
