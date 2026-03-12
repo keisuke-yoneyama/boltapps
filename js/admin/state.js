@@ -6,8 +6,9 @@ export const adminState = {
   selectedPlanId:    'dev-plan-1',
 
   // 選択中の号車・品目
-  selectedTruckId: null,
-  selectedItemId:  null,
+  selectedTruckId:      null,
+  selectedItemId:       null,   // 主選択（単一）
+  multiSelectedItemIds: [],     // Ctrl/Shift 複数選択中の品目ID配列
 
   // ロード済みデータ
   trucks:     [],   // getTrucksForPlan の結果

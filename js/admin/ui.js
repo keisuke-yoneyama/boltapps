@@ -2,7 +2,25 @@
 
 import { adminState } from './state.js';
 import { getTrucksForPlan, getItemsForTruck } from './db.js';
-import { sortItems } from '../../packages/shared-domain/src/index.js';
+import { sortItems, buildItemName } from '../../packages/shared-domain/src/index.js';
+
+// ── 種別順（ボルトアプリ準拠） ─────────────────────────────
+const CATEGORY_ORDER = [
+  '大梁', '小梁', 'ブレース', '柱', '根巻き柱脚', 'ランナー', 'スタッド',
+  'スプライスプレート', 'ガセット', 'エンドプレート',
+  '高力ボルト', 'アンカーボルト', 'デッキプレート', 'その他',
+];
+
+function sortedGroups(groups) {
+  return [...groups.entries()].sort(([a], [b]) => {
+    const ai = CATEGORY_ORDER.indexOf(a);
+    const bi = CATEGORY_ORDER.indexOf(b);
+    if (ai >= 0 && bi >= 0) return ai - bi;
+    if (ai >= 0) return -1;
+    if (bi >= 0) return 1;
+    return a.localeCompare(b, 'ja');
+  });
+}
 
 // ── DOM refs ───────────────────────────────────────────────
 const elTruckList    = document.getElementById('admin-truck-list');
@@ -25,6 +43,11 @@ function esc(s) {
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;');
+}
+
+function getItemDisplayName(item) {
+  if (item.nameParts) return buildItemName(item.nameParts);
+  return item.name || item.itemName || item.itemCode || '品目名不明';
 }
 
 // ── Render: Header ─────────────────────────────────────────
@@ -72,7 +95,7 @@ function renderTruckList() {
 // ── Render: Main Grid ──────────────────────────────────────
 
 function renderMainGrid() {
-  const { selectedTruckId, itemsCache, selectedItemId } = adminState;
+  const { selectedTruckId, itemsCache, selectedItemId, multiSelectedItemIds } = adminState;
 
   if (!selectedTruckId) {
     elMainGrid.innerHTML = '<p class="text-gray-500 text-sm">号車を選択してください</p>';
@@ -94,35 +117,50 @@ function renderMainGrid() {
     groups.get(cat).push(item);
   }
 
-  elMainGrid.innerHTML = [...groups.entries()].map(([cat, catItems]) => `
-    <section>
-      <h2 class="text-xs font-semibold text-gray-400 tracking-widest uppercase mb-2 px-1 border-b border-gray-700 pb-1">
-        ${esc(cat)}
-        <span class="ml-2 text-gray-600 font-normal normal-case">${catItems.length}品目</span>
+  const multiSet = new Set(multiSelectedItemIds);
+
+  elMainGrid.innerHTML = sortedGroups(groups).map(([cat, catItems]) => `
+    <section class="pb-2">
+      <h2 class="sticky top-0 z-10 bg-gray-900 text-sm font-semibold text-gray-200 px-1 py-2 mb-3 border-b border-gray-700 flex items-center gap-1">
+        ${esc(cat)}<span class="text-xs text-gray-500 font-normal">（${catItems.length}）</span>
       </h2>
       <div class="grid grid-cols-4 gap-2">
-        ${catItems.map(item => renderItemCell(item, item.id === selectedItemId)).join('')}
+        ${catItems.map(item => renderItemCell(
+          item,
+          item.id === selectedItemId,
+          multiSet.has(item.id) && item.id !== selectedItemId
+        )).join('')}
       </div>
     </section>
   `).join('');
 }
 
-function renderItemCell(item, isSelected) {
-  const hasDiff = item.diffs?.length > 0;
+function renderItemCell(item, isPrimary, isMulti) {
+  const hasDiff    = item.diffs?.length > 0;
   const hasCaution = !!item.cautionNote;
-  const borderCls = isSelected
-    ? 'border-blue-400 bg-blue-900/40 text-white'
-    : 'border-gray-600 hover:border-gray-400 bg-gray-800 text-gray-200';
+  const hasLoading = !!item.loadingInstruction;
+
+  let borderCls;
+  if (isPrimary) {
+    borderCls = 'border-blue-400 bg-blue-900/60 ring-1 ring-blue-400 text-white';
+  } else if (isMulti) {
+    borderCls = 'border-blue-700 bg-blue-900/20 text-blue-100';
+  } else {
+    borderCls = 'border-gray-600 hover:border-gray-400 bg-gray-800 text-gray-200';
+  }
+
+  const name = getItemDisplayName(item);
 
   return `
     <button
       data-item-id="${esc(item.id)}"
       class="relative text-left rounded-md border p-2 transition-colors min-h-[64px] ${borderCls}"
     >
-      ${hasDiff    ? '<span class="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full bg-orange-400" title="差分あり"></span>' : ''}
+      ${hasDiff    ? '<span class="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full bg-orange-400" title="差分あり"></span>'    : ''}
       ${hasCaution ? '<span class="absolute top-1.5 right-4   w-1.5 h-1.5 rounded-full bg-red-400"    title="注意事項あり"></span>' : ''}
-      <div class="text-xs font-medium leading-snug line-clamp-2 pr-3">${esc(item.name)}</div>
-      <div class="text-xs text-gray-400 mt-1">${esc(item.quantity)}${esc(item.unit)}</div>
+      ${hasLoading ? '<span class="absolute top-1.5 right-7   w-1.5 h-1.5 rounded-full bg-blue-400"   title="積込指示あり"></span>' : ''}
+      <div class="text-xs font-medium leading-snug line-clamp-2 pr-9">${esc(name)}</div>
+      ${item.quantity != null ? `<div class="text-xs text-gray-400 mt-1">${esc(item.quantity)}${esc(item.unit ?? '')}</div>` : ''}
     </button>
   `;
 }
@@ -180,8 +218,9 @@ function renderRightPanel() {
 // ── Actions ────────────────────────────────────────────────
 
 async function selectTruck(truckId) {
-  adminState.selectedTruckId = truckId;
-  adminState.selectedItemId  = null;
+  adminState.selectedTruckId       = truckId;
+  adminState.selectedItemId        = null;
+  adminState.multiSelectedItemIds  = [];
 
   if (!adminState.itemsCache[truckId]) {
     const items = await getItemsForTruck(
@@ -195,10 +234,45 @@ async function selectTruck(truckId) {
   renderTruckList();
   renderMainGrid();
   renderRightPanel();
+  elMainGrid.scrollTop = 0;
 }
 
-function selectItem(itemId) {
-  adminState.selectedItemId = itemId;
+function selectItem(itemId, e = {}) {
+  const isMulti = e.ctrlKey || e.metaKey;
+  const isShift = e.shiftKey;
+
+  if (isMulti) {
+    // Ctrl/Cmd クリック: トグル追加/削除
+    const set = new Set(adminState.multiSelectedItemIds);
+    if (set.has(itemId)) {
+      set.delete(itemId);
+      if (adminState.selectedItemId === itemId) {
+        adminState.selectedItemId = set.size > 0 ? [...set].at(-1) : null;
+      }
+    } else {
+      set.add(itemId);
+      adminState.selectedItemId = itemId;
+    }
+    adminState.multiSelectedItemIds = [...set];
+
+  } else if (isShift && adminState.selectedItemId) {
+    // Shift クリック: primary から対象まで範囲選択
+    const items = adminState.itemsCache[adminState.selectedTruckId] ?? [];
+    const flat  = sortItems(items).map(i => i.id);
+    const fromIdx = flat.indexOf(adminState.selectedItemId);
+    const toIdx   = flat.indexOf(itemId);
+    if (fromIdx >= 0 && toIdx >= 0) {
+      const [lo, hi] = [Math.min(fromIdx, toIdx), Math.max(fromIdx, toIdx)];
+      adminState.multiSelectedItemIds = flat.slice(lo, hi + 1);
+    }
+    adminState.selectedItemId = itemId;
+
+  } else {
+    // 単クリック: 単一選択
+    adminState.selectedItemId       = itemId;
+    adminState.multiSelectedItemIds = [];
+  }
+
   renderMainGrid();
   renderRightPanel();
 }
@@ -213,7 +287,24 @@ function bindEvents() {
 
   elMainGrid.addEventListener('click', e => {
     const cell = e.target.closest('[data-item-id]');
-    if (cell) selectItem(cell.dataset.itemId);
+    if (cell) selectItem(cell.dataset.itemId, e);
+  });
+
+  // Delete キー: 選択品目をローカル削除（TODO: Firestore連携）
+  document.addEventListener('keydown', e => {
+    if (e.key !== 'Delete') return;
+    const { selectedTruckId, selectedItemId, multiSelectedItemIds } = adminState;
+    if (!selectedTruckId || !selectedItemId) return;
+
+    const idsToDelete = new Set(
+      multiSelectedItemIds.length > 0 ? multiSelectedItemIds : [selectedItemId]
+    );
+    adminState.itemsCache[selectedTruckId] =
+      (adminState.itemsCache[selectedTruckId] ?? []).filter(i => !idsToDelete.has(i.id));
+    adminState.selectedItemId       = null;
+    adminState.multiSelectedItemIds = [];
+    renderMainGrid();
+    renderRightPanel();
   });
 }
 
