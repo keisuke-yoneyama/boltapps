@@ -1,7 +1,7 @@
 // 管理画面 UI / イベント
 
-import { adminState, removeItemFromState } from './state.js';
-import { getTrucksForPlan, getItemsForTruck, deleteItem } from './db.js';
+import { adminState, addItemToState, updateItemInState, removeItemFromState } from './state.js';
+import { getTrucksForPlan, getItemsForTruck, createItem, updateItem, deleteItem } from './db.js';
 import { sortItems, buildItemName } from '../../packages/shared-domain/src/index.js';
 
 // ── 種別順（ボルトアプリ準拠） ─────────────────────────────
@@ -48,6 +48,20 @@ function esc(s) {
 function getItemDisplayName(item) {
   if (item.nameParts) return buildItemName(item.nameParts);
   return item.name || item.itemName || item.itemCode || '品目名不明';
+}
+
+// ── Right Panel: draft state ───────────────────────────────
+
+let _diffDraft = [];
+
+function _diffDraftListHtml() {
+  if (!_diffDraft.length) return '<span class="text-xs text-gray-500">差分なし</span>';
+  return _diffDraft.map((d, i) => `
+    <div class="flex items-center gap-1 mb-1">
+      <span class="text-xs text-gray-300 flex-1">${esc(d.date)} ${esc(d.type)}</span>
+      <button data-remove-diff="${i}" class="text-xs text-red-400 hover:text-red-300 px-1 leading-none">✕</button>
+    </div>
+  `).join('');
 }
 
 // ── Render: Header ─────────────────────────────────────────
@@ -110,7 +124,7 @@ function renderMainGrid() {
   }
 
   // カテゴリー別にグループ化（sortItems で sortOrder / 品名順を適用）
-  const groups = new Map(); // category => item[]
+  const groups = new Map();
   for (const item of sortItems(items)) {
     const cat = item.category || 'その他';
     if (!groups.has(cat)) groups.set(cat, []);
@@ -168,24 +182,44 @@ function renderItemCell(item, isPrimary, isMulti) {
 // ── Render: Right Panel ────────────────────────────────────
 
 function renderRightPanel() {
-  const { selectedTruckId, selectedItemId, itemsCache } = adminState;
+  const { rightPanelMode, selectedTruckId, selectedItemId, itemsCache } = adminState;
 
-  if (!selectedItemId) {
-    elRightContent.innerHTML = '<p class="text-sm text-gray-500">品目を選択してください</p>';
-    return;
+  const items = selectedTruckId ? (itemsCache[selectedTruckId] ?? []) : [];
+  const item  = selectedItemId  ? items.find(i => i.id === selectedItemId) : null;
+
+  if (rightPanelMode === 'view' && item) {
+    _renderViewPanel(item);
+  } else if (rightPanelMode === 'edit' && item) {
+    _renderFormPanel('edit', item);
+  } else if (rightPanelMode === 'new') {
+    _renderFormPanel('new', null);
+  } else {
+    // idle
+    elRightContent.innerHTML = `
+      <p class="text-sm text-gray-500 mb-4">品目を選択してください</p>
+      ${selectedTruckId ? `
+        <button data-rp-action="new"
+          class="w-full text-sm bg-blue-700 hover:bg-blue-600 text-white py-2 rounded font-medium">
+          ＋ 新規登録
+        </button>
+      ` : ''}
+    `;
   }
+}
 
-  const items = itemsCache[selectedTruckId] ?? [];
-  const item  = items.find(i => i.id === selectedItemId);
+function _renderViewPanel(item) {
+  const name  = getItemDisplayName(item);
+  const diffs = item.diffs ?? [];
 
-  if (!item) {
-    elRightContent.innerHTML = '<p class="text-sm text-gray-500">品目が見つかりません</p>';
-    return;
-  }
+  const diffsHtml = diffs.length
+    ? diffs.map(d =>
+        `<span class="inline-block text-xs bg-orange-700 text-orange-100 px-1.5 py-0.5 rounded mr-1 mb-1">${esc(d.date)} ${esc(d.type)}</span>`
+      ).join('')
+    : '<span class="text-gray-500 text-xs">なし</span>';
 
   const rows = [
-    ['品名',       item.name],
-    ['数量',       `${item.quantity} ${item.unit}`],
+    ['品名',       name],
+    ['数量',       `${item.quantity ?? ''} ${item.unit ?? ''}`],
     ['カテゴリー', item.category || '—'],
     ['チェック',   item.checked ? '済' : '未'],
     ['注意事項',   item.cautionNote || '—'],
@@ -193,13 +227,21 @@ function renderRightPanel() {
     ['並び順',     item.sortOrder ?? '—'],
   ];
 
-  const diffsHtml = item.diffs?.length
-    ? item.diffs.map(d =>
-        `<span class="inline-block text-xs bg-orange-700 text-orange-100 px-1.5 py-0.5 rounded mr-1 mb-1">${esc(d.date)} ${esc(d.type)}</span>`
-      ).join('')
-    : '<span class="text-gray-500 text-xs">なし</span>';
-
   elRightContent.innerHTML = `
+    <div class="flex gap-1.5 mb-4">
+      <button data-rp-action="edit"
+        class="flex-1 text-xs bg-gray-700 hover:bg-gray-600 text-white py-1.5 rounded">
+        編集
+      </button>
+      <button data-rp-action="new"
+        class="flex-1 text-xs bg-blue-700 hover:bg-blue-600 text-white py-1.5 rounded">
+        ＋ 新規
+      </button>
+      <button data-rp-action="delete"
+        class="text-xs bg-red-900 hover:bg-red-800 text-red-200 px-2.5 py-1.5 rounded">
+        削除
+      </button>
+    </div>
     <dl class="space-y-3">
       ${rows.map(([label, value]) => `
         <div>
@@ -215,12 +257,232 @@ function renderRightPanel() {
   `;
 }
 
-// ── Actions ────────────────────────────────────────────────
+function _renderFormPanel(mode, item) {
+  const isEdit    = mode === 'edit';
+  const np        = item?.nameParts ?? {};
+  const inp       = (extra = '') =>
+    `w-full bg-gray-700 text-gray-100 rounded px-2 py-1 mt-0.5 text-sm ${extra}`;
+
+  const catOptions = CATEGORY_ORDER.map(c =>
+    `<option value="${esc(c)}" ${item?.category === c ? 'selected' : ''}>${esc(c)}</option>`
+  ).join('');
+
+  elRightContent.innerHTML = `
+    <div class="flex gap-1.5 mb-4">
+      <button data-rp-action="save"
+        class="flex-1 text-xs ${isEdit ? 'bg-green-700 hover:bg-green-600' : 'bg-blue-700 hover:bg-blue-600'} text-white py-1.5 rounded font-medium">
+        ${isEdit ? '更新' : '登録'}
+      </button>
+      <button data-rp-action="cancel"
+        class="flex-1 text-xs bg-gray-700 hover:bg-gray-600 text-white py-1.5 rounded">
+        キャンセル
+      </button>
+      ${isEdit ? `
+        <button data-rp-action="delete"
+          class="text-xs bg-red-900 hover:bg-red-800 text-red-200 px-2.5 py-1.5 rounded">
+          削除
+        </button>
+      ` : ''}
+    </div>
+
+    <div class="space-y-2.5 text-sm">
+      <p class="text-xs font-semibold text-gray-400 tracking-widest">品名パーツ</p>
+
+      <div>
+        <label class="text-xs text-gray-400">prefix</label>
+        <input id="rp-prefix" type="text" value="${esc(np.prefix?.value ?? '')}"
+          class="${inp()}" placeholder="例: 2S">
+      </div>
+      <div>
+        <label class="text-xs text-gray-400">baseName <span class="text-red-400">*</span></label>
+        <input id="rp-baseName" type="text" value="${esc(np.baseName?.value ?? item?.name ?? '')}"
+          class="${inp()}" placeholder="例: G500">
+      </div>
+      <div class="flex gap-1.5">
+        <div class="w-20 shrink-0">
+          <label class="text-xs text-gray-400">separator</label>
+          <input id="rp-separator" type="text" value="${esc(np.separator?.value ?? '-')}"
+            class="${inp()}" placeholder="-">
+        </div>
+        <div class="flex-1">
+          <label class="text-xs text-gray-400">suffix</label>
+          <input id="rp-suffix" type="text" value="${esc(np.suffix?.value ?? '')}"
+            class="${inp()}" placeholder="例: 1">
+        </div>
+      </div>
+      <div>
+        <label class="text-xs text-gray-400">note</label>
+        <input id="rp-note" type="text" value="${esc(np.note?.value ?? '')}"
+          class="${inp()}" placeholder="×4 など">
+      </div>
+
+      <hr class="border-gray-700 my-1">
+      <p class="text-xs font-semibold text-gray-400 tracking-widest">詳細</p>
+
+      <div>
+        <label class="text-xs text-gray-400">カテゴリー</label>
+        <select id="rp-category" class="${inp()}">
+          <option value="">— 未選択 —</option>
+          ${catOptions}
+        </select>
+      </div>
+      <div>
+        <label class="text-xs text-gray-400">数量 / 単位</label>
+        <div class="flex gap-1 mt-0.5">
+          <input id="rp-quantity" type="number" value="${esc(item?.quantity ?? '')}"
+            class="flex-1 bg-gray-700 text-gray-100 rounded px-2 py-1 text-sm" placeholder="0">
+          <input id="rp-unit" type="text" value="${esc(item?.unit ?? '本')}"
+            class="w-14 bg-gray-700 text-gray-100 rounded px-2 py-1 text-sm" placeholder="本">
+        </div>
+      </div>
+      <div>
+        <label class="text-xs text-gray-400">注意事項</label>
+        <textarea id="rp-cautionNote" rows="2"
+          class="${inp('resize-none')}"
+          placeholder="注意事項">${esc(item?.cautionNote ?? '')}</textarea>
+      </div>
+      <div>
+        <label class="text-xs text-gray-400">積込指示</label>
+        <textarea id="rp-loadingInstruction" rows="2"
+          class="${inp('resize-none')}"
+          placeholder="積込指示">${esc(item?.loadingInstruction ?? '')}</textarea>
+      </div>
+
+      <hr class="border-gray-700 my-1">
+      <p class="text-xs font-semibold text-gray-400 tracking-widest">差分</p>
+
+      <div id="rp-diff-list" class="mb-1">${_diffDraftListHtml()}</div>
+      <div class="flex gap-1">
+        <input id="rp-diff-date" type="date"
+          class="flex-1 bg-gray-700 text-gray-100 rounded px-2 py-1 text-xs">
+        <select id="rp-diff-type"
+          class="bg-gray-700 text-gray-100 rounded px-2 py-1 text-xs">
+          <option value="追加">追加</option>
+          <option value="変更">変更</option>
+          <option value="削除">削除</option>
+        </select>
+        <button data-rp-action="diff-add"
+          class="text-xs bg-gray-600 hover:bg-gray-500 text-white px-2 py-1 rounded">＋</button>
+      </div>
+    </div>
+  `;
+}
+
+// ── Right Panel: form helpers ──────────────────────────────
+
+function _readFormData() {
+  const q = id => elRightContent.querySelector(id);
+  return {
+    prefix:             q('#rp-prefix')?.value.trim()             ?? '',
+    baseName:           q('#rp-baseName')?.value.trim()           ?? '',
+    separator:          q('#rp-separator')?.value                 ?? '-',
+    suffix:             q('#rp-suffix')?.value.trim()             ?? '',
+    note:               q('#rp-note')?.value.trim()               ?? '',
+    category:           q('#rp-category')?.value                  ?? '',
+    quantity:           parseFloat(q('#rp-quantity')?.value)      || 0,
+    unit:               q('#rp-unit')?.value.trim()               || '本',
+    cautionNote:        q('#rp-cautionNote')?.value.trim()        ?? '',
+    loadingInstruction: q('#rp-loadingInstruction')?.value.trim() ?? '',
+  };
+}
+
+async function _handleSave() {
+  const {
+    rightPanelMode, selectedProjectId, selectedPlanId,
+    selectedTruckId, selectedItemId, itemsCache,
+  } = adminState;
+
+  const f = _readFormData();
+
+  if (!f.baseName) {
+    const el = elRightContent.querySelector('#rp-baseName');
+    el?.focus();
+    el?.classList.add('ring-1', 'ring-red-500');
+    return;
+  }
+
+  const nameParts = {
+    prefix:    { value: f.prefix },
+    baseName:  { value: f.baseName },
+    separator: { value: f.separator || '-' },
+    suffix:    { value: f.suffix },
+    note:      { value: f.note },
+  };
+
+  const items = itemsCache[selectedTruckId] ?? [];
+
+  const itemData = {
+    nameParts,
+    name:               buildItemName(nameParts), // 表示名キャッシュ
+    category:           f.category,
+    quantity:           f.quantity,
+    unit:               f.unit,
+    cautionNote:        f.cautionNote,
+    loadingInstruction: f.loadingInstruction,
+    diffs:              [..._diffDraft],
+  };
+
+  if (rightPanelMode === 'new') {
+    const maxOrder     = items.reduce((m, i) => Math.max(m, i.sortOrder ?? 0), 0);
+    itemData.sortOrder = maxOrder + 10;
+    itemData.checked   = false;
+
+    const created = await createItem(selectedProjectId, selectedPlanId, selectedTruckId, itemData);
+    addItemToState(selectedTruckId, created);
+    adminState.selectedItemId = created.id;
+    adminState.rightPanelMode = 'view';
+
+  } else {
+    // edit
+    const existing     = items.find(i => i.id === selectedItemId);
+    itemData.sortOrder = existing?.sortOrder ?? 0;
+    itemData.checked   = existing?.checked   ?? false;
+
+    await updateItem(selectedProjectId, selectedPlanId, selectedTruckId, selectedItemId, itemData);
+    updateItemInState(selectedTruckId, { id: selectedItemId, ...itemData });
+    adminState.rightPanelMode = 'view';
+  }
+
+  _diffDraft = [];
+  renderMainGrid();
+  renderRightPanel();
+}
+
+async function _handleDelete() {
+  const {
+    selectedProjectId, selectedPlanId,
+    selectedTruckId, selectedItemId, multiSelectedItemIds,
+  } = adminState;
+  if (!selectedTruckId || !selectedItemId) return;
+
+  const idsToDelete = multiSelectedItemIds.length > 0
+    ? [...multiSelectedItemIds]
+    : [selectedItemId];
+
+  // Optimistic: state 先更新 → 即再描画
+  for (const id of idsToDelete) removeItemFromState(selectedTruckId, id);
+  adminState.selectedItemId       = null;
+  adminState.multiSelectedItemIds = [];
+  adminState.rightPanelMode       = 'idle';
+  _diffDraft = [];
+
+  renderMainGrid();
+  renderRightPanel();
+
+  // Firestore 書き込み（DEV_MODE 時はスタブ）
+  for (const id of idsToDelete) {
+    await deleteItem(selectedProjectId, selectedPlanId, selectedTruckId, id);
+  }
+}
+
+// ── Actions: Truck / Item ───────────────────────────────────
 
 async function selectTruck(truckId) {
-  adminState.selectedTruckId       = truckId;
-  adminState.selectedItemId        = null;
-  adminState.multiSelectedItemIds  = [];
+  adminState.selectedTruckId      = truckId;
+  adminState.selectedItemId       = null;
+  adminState.multiSelectedItemIds = [];
+  adminState.rightPanelMode       = 'idle';
+  _diffDraft = [];
 
   if (!adminState.itemsCache[truckId]) {
     const items = await getItemsForTruck(
@@ -268,9 +530,10 @@ function selectItem(itemId, e = {}) {
     adminState.selectedItemId = itemId;
 
   } else {
-    // 単クリック: 単一選択
+    // 単クリック: 単一選択 → view モードへ
     adminState.selectedItemId       = itemId;
     adminState.multiSelectedItemIds = [];
+    adminState.rightPanelMode       = 'view';
   }
 
   renderMainGrid();
@@ -290,27 +553,72 @@ function bindEvents() {
     if (cell) selectItem(cell.dataset.itemId, e);
   });
 
-  // Delete キー: 選択品目を削除（Firestore + state）
+  // 右パネル: イベント委譲
+  elRightContent.addEventListener('click', async e => {
+    // diff-remove は data-rp-action を持たないため先に処理
+    const removeBtn = e.target.closest('[data-remove-diff]');
+    if (removeBtn) {
+      const idx = parseInt(removeBtn.dataset.removeDiff, 10);
+      _diffDraft.splice(idx, 1);
+      const listEl = elRightContent.querySelector('#rp-diff-list');
+      if (listEl) listEl.innerHTML = _diffDraftListHtml();
+      return;
+    }
+
+    const action = e.target.closest('[data-rp-action]')?.dataset.rpAction;
+    if (!action) return;
+
+    if (action === 'new') {
+      _diffDraft = [];
+      adminState.rightPanelMode = 'new';
+      renderRightPanel();
+      return;
+    }
+
+    if (action === 'edit') {
+      const items = adminState.itemsCache[adminState.selectedTruckId] ?? [];
+      const item  = items.find(i => i.id === adminState.selectedItemId);
+      _diffDraft = item ? [...(item.diffs ?? [])] : [];
+      adminState.rightPanelMode = 'edit';
+      renderRightPanel();
+      return;
+    }
+
+    if (action === 'cancel') {
+      _diffDraft = [];
+      adminState.rightPanelMode = adminState.selectedItemId ? 'view' : 'idle';
+      renderRightPanel();
+      return;
+    }
+
+    if (action === 'save') {
+      await _handleSave();
+      return;
+    }
+
+    if (action === 'delete') {
+      await _handleDelete();
+      return;
+    }
+
+    if (action === 'diff-add') {
+      const date = elRightContent.querySelector('#rp-diff-date')?.value;
+      const type = elRightContent.querySelector('#rp-diff-type')?.value;
+      if (!date || !type) return;
+      _diffDraft.push({ date, type });
+      elRightContent.querySelector('#rp-diff-date').value = '';
+      const listEl = elRightContent.querySelector('#rp-diff-list');
+      if (listEl) listEl.innerHTML = _diffDraftListHtml();
+    }
+  });
+
+  // Delete キー: フォーム編集中は無効化、それ以外は品目削除
   document.addEventListener('keydown', async e => {
     if (e.key !== 'Delete') return;
-    const { selectedProjectId, selectedPlanId, selectedTruckId, selectedItemId, multiSelectedItemIds } = adminState;
-    if (!selectedTruckId || !selectedItemId) return;
-
-    const idsToDelete = multiSelectedItemIds.length > 0 ? [...multiSelectedItemIds] : [selectedItemId];
-
-    // Optimistic: state を先に更新して即座に再描画
-    for (const id of idsToDelete) {
-      removeItemFromState(selectedTruckId, id);
-    }
-    adminState.selectedItemId       = null;
-    adminState.multiSelectedItemIds = [];
-    renderMainGrid();
-    renderRightPanel();
-
-    // Firestore 書き込み（DEV_MODE 時はスタブ）
-    for (const id of idsToDelete) {
-      await deleteItem(selectedProjectId, selectedPlanId, selectedTruckId, id);
-    }
+    const mode = adminState.rightPanelMode;
+    if (mode === 'edit' || mode === 'new') return; // フォーム入力中は誤削除防止
+    if (!adminState.selectedTruckId || !adminState.selectedItemId) return;
+    await _handleDelete();
   });
 }
 
