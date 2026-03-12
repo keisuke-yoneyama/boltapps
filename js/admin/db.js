@@ -17,7 +17,7 @@ export {
   getItemsForTruck,
 } from '../modules/delivery-db.js';
 
-const DEV_MODE = true;
+const DEV_MODE = false;
 
 function itemsCol(projectId, planId, truckId) {
   return collection(db, `projects/${projectId}/deliveryPlans/${planId}/trucks/${truckId}/items`);

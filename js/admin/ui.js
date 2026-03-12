@@ -30,13 +30,6 @@ const elHeaderInfo   = document.getElementById('admin-header-info');
 
 // ── Helpers ────────────────────────────────────────────────
 
-const PROGRESS_LABEL = { pending: '未着手', in_progress: '進行中', done: '完了' };
-const PROGRESS_CLS   = {
-  pending:     'bg-gray-600 text-gray-200',
-  in_progress: 'bg-yellow-600 text-yellow-100',
-  done:        'bg-green-600 text-green-100',
-};
-
 function esc(s) {
   return String(s ?? '')
     .replace(/&/g, '&amp;')
@@ -87,8 +80,6 @@ function renderTruckList() {
 
   elTruckList.innerHTML = trucks.map(t => {
     const isSelected = t.id === selectedTruckId;
-    const pLabel = PROGRESS_LABEL[t.progressStatus] ?? t.progressStatus ?? '';
-    const pCls   = PROGRESS_CLS[t.progressStatus]   ?? 'bg-gray-700 text-gray-300';
 
     return `
       <li>
@@ -99,7 +90,6 @@ function renderTruckList() {
         >
           <span class="font-semibold text-sm">${esc(t.truckNo)}号車</span>
           <span class="text-xs ${isSelected ? 'text-blue-200' : 'text-gray-400'} truncate">${esc(t.vehicleType ?? '')}</span>
-          <span class="text-xs mt-0.5 px-1.5 py-0.5 rounded inline-block w-fit ${pCls}">${esc(pLabel)}</span>
         </button>
       </li>
     `;
@@ -195,14 +185,17 @@ function renderRightPanel() {
     _renderFormPanel('new', null);
   } else {
     // idle
-    elRightContent.innerHTML = `
-      <p class="text-sm text-gray-500 mb-4">品目を選択してください</p>
-      ${selectedTruckId ? `
+    elRightContent.innerHTML = selectedTruckId ? `
+      <div class="space-y-3">
+        <p class="text-sm text-gray-500">品目を選択してください</p>
+        <p class="text-xs text-gray-600">または新規登録を開始してください</p>
         <button data-rp-action="new"
           class="w-full text-sm bg-blue-700 hover:bg-blue-600 text-white py-2 rounded font-medium">
           ＋ 新規登録
         </button>
-      ` : ''}
+      </div>
+    ` : `
+      <p class="text-sm text-gray-500">号車を選択してください</p>
     `;
   }
 }
