@@ -38,9 +38,49 @@ export async function createTruck(projectId, planId, truck) {
 }
 
 export {
+  getDeliveryProjects,
+  getPlansForMonth,
   getTrucksForPlan,
   getItemsForTruck,
 } from '../modules/delivery-db.js';
+
+function projectsCol() {
+  return collection(db, 'projects');
+}
+
+function plansCol(projectId) {
+  return collection(db, `projects/${projectId}/deliveryPlans`);
+}
+
+/**
+ * 工事（プロジェクト）を新規作成する
+ * @param {object} data - projectName, projectCode, isActive
+ * @returns {Promise<object>} 作成されたプロジェクト（id 付き）
+ */
+export async function createProject(data) {
+  const ref = await addDoc(projectsCol(), {
+    ...data,
+    createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp(),
+  });
+  return { id: ref.id, ...data };
+}
+
+/**
+ * 搬入計画を新規作成する
+ * @param {string} projectId
+ * @param {object} planData - deliveryDate, constructionDay, drawingNo, status, truckCount, etc.
+ * @returns {Promise<object>} 作成された計画（id 付き）
+ */
+export async function createPlan(projectId, planData) {
+  const ref = await addDoc(plansCol(projectId), {
+    ...planData,
+    projectId,
+    createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp(),
+  });
+  return { id: ref.id, projectId, ...planData };
+}
 
 const DEV_MODE = false;
 

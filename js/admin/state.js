@@ -1,9 +1,23 @@
 // 管理画面 状態管理
 
 export const adminState = {
-  // 選択中の計画（起動時は DEV_MODE のデフォルト値）
-  selectedProjectId: 'dev-project-1',
-  selectedPlanId:    'dev-plan-1',
+  // ── 画面管理 ──────────────────────────────────────────────
+  // 'calendar' | 'plan-form' | 'grid'
+  adminScreen: 'calendar',
+
+  // カレンダー表示月（月初日で管理）
+  displayMonth: new Date(new Date().getFullYear(), new Date().getMonth(), 1),
+
+  // カレンダーで選択中の日付 'YYYY-MM-DD'
+  selectedDate: null,
+
+  // ── カレンダー用データ ────────────────────────────────────
+  projects:   [],   // getDeliveryProjects の結果
+  plansCache: {},   // { 'YYYY-MM': plan[] }
+
+  // ── 選択中の計画 ──────────────────────────────────────────
+  selectedProjectId: null,
+  selectedPlanId:    null,
 
   // 選択中の号車・品目
   selectedTruckId:      null,

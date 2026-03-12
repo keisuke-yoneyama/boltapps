@@ -44,6 +44,9 @@ function getItemDisplayName(item) {
   return item.name || item.itemName || item.itemCode || '品目名不明';
 }
 
+// ── bindEvents ガード（複数回呼び出し防止） ────────────────
+let _eventsBound = false;
+
 // ── Right Panel: draft state ───────────────────────────────
 
 let _diffDraft = [];
@@ -1071,6 +1074,9 @@ function selectItem(itemId, e = {}) {
 // ── Event Delegation ───────────────────────────────────────
 
 function bindEvents() {
+  if (_eventsBound) return;
+  _eventsBound = true;
+
   elTruckList.addEventListener('click', async e => {
     const copyBtn = e.target.closest('[data-copy-truck]');
     if (copyBtn) { await _handleCopyTruck(copyBtn.dataset.copyTruck); return; }
@@ -1225,22 +1231,41 @@ function bindEvents() {
 
 // ── Init ───────────────────────────────────────────────────
 
-export async function initAdmin() {
-  renderHeader();
-  bindEvents();
+/**
+ * 品目グリッド画面（A2）を指定計画で初期化する
+ * calendar.js から呼ばれる。ヘッダー更新は呼び出し元が行う。
+ * @param {string} projectId
+ * @param {string} planId
+ */
+export async function initGridScreen(projectId, planId) {
+  adminState.selectedProjectId    = projectId;
+  adminState.selectedPlanId       = planId;
+  adminState.selectedTruckId      = null;
+  adminState.selectedItemId       = null;
+  adminState.multiSelectedItemIds = [];
+  adminState.rightPanelMode       = 'idle';
+  adminState.trucks               = [];
+  adminState.itemsCache           = {};
 
-  const trucks = await getTrucksForPlan(
-    adminState.selectedProjectId,
-    adminState.selectedPlanId,
-  );
+  bindEvents(); // 2回目以降は no-op
+
+  const trucks = await getTrucksForPlan(projectId, planId);
   adminState.trucks = trucks;
 
-  // 最初の号車を自動選択
-  if (trucks.length > 0 && !adminState.selectedTruckId) {
+  if (trucks.length > 0) {
     await selectTruck(trucks[0].id);
   } else {
     renderTruckList();
     renderMainGrid();
     renderRightPanel();
   }
+}
+
+/** 後方互換: DEV デフォルト計画で直接グリッドを開く */
+export async function initAdmin() {
+  renderHeader();
+  await initGridScreen(
+    adminState.selectedProjectId ?? 'dev-project-1',
+    adminState.selectedPlanId    ?? 'dev-plan-1',
+  );
 }

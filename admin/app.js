@@ -1,2 +1,2 @@
-import { initAdmin } from '../js/admin/ui.js';
-initAdmin();
+import { initAdminApp } from '../js/admin/calendar.js';
+initAdminApp();
