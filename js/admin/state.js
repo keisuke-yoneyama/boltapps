@@ -19,6 +19,14 @@ export const adminState = {
 };
 
 /**
+ * 号車を trucks 配列に追加する（createTruck 後に呼ぶ）
+ * @param {object} truck - id 付き号車オブジェクト
+ */
+export function addTruckToState(truck) {
+  adminState.trucks = [...adminState.trucks, truck];
+}
+
+/**
  * 品目をキャッシュに追加する（createItem 後に呼ぶ）
  * @param {string} truckId
  * @param {object} item - id 付き品目オブジェクト

@@ -12,6 +12,31 @@ import {
   serverTimestamp,
 } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js';
 
+function trucksCol(projectId, planId) {
+  return collection(db, `projects/${projectId}/deliveryPlans/${planId}/trucks`);
+}
+
+/**
+ * 号車を新規作成する
+ * @param {string} projectId
+ * @param {string} planId
+ * @param {object} truck - truckNo, truckOrder, vehicleType, etc.
+ * @returns {Promise<object>} 作成された号車（id 付き）
+ */
+export async function createTruck(projectId, planId, truck) {
+  if (DEV_MODE) {
+    const newId = `mock-truck-${Date.now()}`;
+    console.log('[admin-db] createTruck DEV stub', { projectId, planId, truck });
+    return { id: newId, ...truck };
+  }
+  const ref = await addDoc(trucksCol(projectId, planId), {
+    ...truck,
+    createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp(),
+  });
+  return { id: ref.id, ...truck };
+}
+
 export {
   getTrucksForPlan,
   getItemsForTruck,

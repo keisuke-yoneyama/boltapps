@@ -1,7 +1,7 @@
 // 管理画面 UI / イベント
 
-import { adminState, addItemToState, updateItemInState, removeItemFromState } from './state.js';
-import { getTrucksForPlan, getItemsForTruck, createItem, updateItem, deleteItem } from './db.js';
+import { adminState, addItemToState, updateItemInState, removeItemFromState, addTruckToState } from './state.js';
+import { getTrucksForPlan, getItemsForTruck, createItem, updateItem, deleteItem, createTruck } from './db.js';
 import { sortItems, buildItemName } from '../../packages/shared-domain/src/index.js';
 import { getSuggestions } from './suggest-data.js';
 
@@ -216,15 +216,23 @@ function renderTruckList() {
     const isSelected = t.id === selectedTruckId;
 
     return `
-      <li>
+      <li class="relative group">
         <button
           data-truck-id="${esc(t.id)}"
-          class="w-full text-left px-3 py-2.5 flex flex-col gap-0.5 transition-colors
+          class="w-full text-left px-3 py-2.5 pr-8 flex flex-col gap-0.5 transition-colors
             ${isSelected ? 'bg-blue-700 text-white' : 'hover:bg-gray-700 text-gray-200'}"
         >
           <span class="font-semibold text-sm">${esc(t.truckNo)}号車</span>
           <span class="text-xs ${isSelected ? 'text-blue-200' : 'text-gray-400'} truncate">${esc(t.vehicleType ?? '')}</span>
         </button>
+        <button
+          data-copy-truck="${esc(t.id)}"
+          title="この号車を複製"
+          class="absolute top-1/2 -translate-y-1/2 right-1.5
+            ${isSelected ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'} transition-opacity
+            w-6 h-6 flex items-center justify-center rounded
+            text-xs ${isSelected ? 'text-blue-200 hover:text-white hover:bg-blue-600' : 'text-gray-500 hover:text-blue-300 hover:bg-gray-600'}"
+        >⧉</button>
       </li>
     `;
   }).join('');
@@ -929,6 +937,72 @@ async function _handleBulkSave() {
 
 // ── Actions: Truck / Item ───────────────────────────────────
 
+/**
+ * 号車を複製する
+ * - truck 基本情報（vehicleType / loadSummary / cautionNotes / loadingInstruction）をコピー
+ * - items 全件をコピー（checked=false にリセット、sortOrder は維持）
+ * - progressStatus / checkedCount / diffs はリセット
+ * - 新しい truckNo = 既存最大 + 1
+ */
+async function _handleCopyTruck(sourceTruckId) {
+  const { selectedProjectId, selectedPlanId, trucks, itemsCache } = adminState;
+  const sourceTruck = trucks.find(t => t.id === sourceTruckId);
+  if (!sourceTruck) return;
+
+  // items が未ロードなら先にフェッチ
+  let sourceItems = itemsCache[sourceTruckId];
+  if (!sourceItems) {
+    sourceItems = await getItemsForTruck(selectedProjectId, selectedPlanId, sourceTruckId);
+    adminState.itemsCache[sourceTruckId] = sourceItems;
+  }
+
+  // 新しい truckNo / truckOrder
+  const maxNo    = Math.max(0, ...trucks.map(t => parseInt(t.truckNo) || 0));
+  const maxOrder = Math.max(0, ...trucks.map(t => t.truckOrder ?? 0));
+
+  const newTruckData = {
+    truckNo:              String(maxNo + 1),
+    truckOrder:           maxOrder + 1,
+    // コピー対象フィールド
+    vehicleType:          sourceTruck.vehicleType         ?? '',
+    loadSummary:          sourceTruck.loadSummary         ?? '',
+    cautionNotes:         sourceTruck.cautionNotes        ?? '',
+    hasCaution:           !!(sourceTruck.cautionNotes),
+    loadingInstruction:   sourceTruck.loadingInstruction  ?? '',
+    hasLoadingInstruction: !!(sourceTruck.loadingInstruction),
+    constructionDay:      sourceTruck.constructionDay     ?? 1,
+    // リセット
+    progressStatus:       'pending',
+    diffs:                [],
+    itemCount:            sourceItems.length,
+    checkedCount:         0,
+  };
+
+  const newTruck = await createTruck(selectedProjectId, selectedPlanId, newTruckData);
+  addTruckToState(newTruck);
+
+  // items を順番に複製（checked リセット、sortOrder 維持）
+  const newItems = [];
+  for (const item of sourceItems) {
+    const itemData = {
+      nameParts:          item.nameParts          ?? {},
+      name:               item.name               ?? '',
+      category:           item.category           ?? '',
+      cautionNote:        item.cautionNote        ?? '',
+      loadingInstruction: item.loadingInstruction ?? '',
+      diffs:              item.diffs              ?? [],
+      sortOrder:          item.sortOrder          ?? 0,
+      checked:            false,
+    };
+    const created = await createItem(selectedProjectId, selectedPlanId, newTruck.id, itemData);
+    newItems.push(created);
+  }
+  adminState.itemsCache[newTruck.id] = newItems;
+
+  // 複製した号車を選択（itemsCache 設定済みなので再フェッチなし）
+  await selectTruck(newTruck.id);
+}
+
 async function selectTruck(truckId) {
   adminState.selectedTruckId      = truckId;
   adminState.selectedItemId       = null;
@@ -997,7 +1071,10 @@ function selectItem(itemId, e = {}) {
 // ── Event Delegation ───────────────────────────────────────
 
 function bindEvents() {
-  elTruckList.addEventListener('click', e => {
+  elTruckList.addEventListener('click', async e => {
+    const copyBtn = e.target.closest('[data-copy-truck]');
+    if (copyBtn) { await _handleCopyTruck(copyBtn.dataset.copyTruck); return; }
+
     const btn = e.target.closest('[data-truck-id]');
     if (btn) selectTruck(btn.dataset.truckId);
   });
