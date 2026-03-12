@@ -189,6 +189,69 @@ function renderDateDetail(dateStr) {
 
 // ── Plan Form (A1) ─────────────────────────────────────────
 
+/**
+ * 搬入日リストを生成する
+ * @param {string} startDateStr - 'YYYY-MM-DD'
+ * @param {number} count
+ * @param {'continuous'|'weekday'} mode
+ * @returns {{ dayIndex: number, date: string, dayLabel: string, drawingNo: string }[]}
+ */
+function generateDays(startDateStr, count, mode) {
+  const days = [];
+  const [y, mo, d] = startDateStr.split('-').map(Number);
+  const cur = new Date(y, mo - 1, d);
+  let idx = 1;
+
+  while (days.length < count) {
+    const dow = cur.getDay();
+    if (mode !== 'weekday' || (dow !== 0 && dow !== 6)) {
+      days.push({
+        dayIndex: idx,
+        date: toDateStr(cur),
+        dayLabel: `搬入${idx}日目`,
+        drawingNo: '',
+      });
+      idx++;
+    }
+    cur.setDate(cur.getDate() + 1);
+  }
+  return days;
+}
+
+function renderPreviewTable(days) {
+  if (!days.length) return '<p class="text-xs text-gray-500">（日付なし）</p>';
+
+  const inp = 'bg-gray-700 text-gray-100 rounded px-2 py-1 text-xs w-full';
+  const rows = days.map(({ dayIndex, date, dayLabel, drawingNo }) => `
+    <tr data-day-index="${dayIndex}" class="border-t border-gray-700">
+      <td class="px-2 py-1.5 text-xs text-gray-400 text-center whitespace-nowrap">${dayIndex}</td>
+      <td class="px-2 py-1.5">
+        <input type="date" name="date" value="${esc(date)}" class="${inp}">
+      </td>
+      <td class="px-2 py-1.5">
+        <input type="text" name="dayLabel" value="${esc(dayLabel)}" class="${inp}" placeholder="日名称">
+      </td>
+      <td class="px-2 py-1.5">
+        <input type="text" name="drawingNo" value="${esc(drawingNo)}" class="${inp}" placeholder="DWG-001">
+      </td>
+    </tr>
+  `).join('');
+
+  return `
+    <table class="w-full text-sm">
+      <thead>
+        <tr class="text-xs text-gray-500">
+          <th class="px-2 py-1 text-center w-10">日目</th>
+          <th class="px-2 py-1 text-left">日付</th>
+          <th class="px-2 py-1 text-left">日名称</th>
+          <th class="px-2 py-1 text-left">計画図番</th>
+        </tr>
+      </thead>
+      <tbody>${rows}</tbody>
+    </table>
+  `;
+}
+
 function showPlanForm(dateStr) {
   if (dateStr) adminState.selectedDate = dateStr;
   showScreen('plan-form');
@@ -210,6 +273,12 @@ function renderPlanForm() {
 
   const inp = 'w-full bg-gray-700 text-gray-100 rounded px-3 py-2 text-sm';
 
+  const startDateLabel = selectedDate
+    ? (() => { const [, m, d] = selectedDate.split('-'); return `${parseInt(m)}月${parseInt(d)}日`; })()
+    : '未選択';
+
+  const previewDays = selectedDate ? generateDays(selectedDate, 1, 'continuous') : [];
+
   el.innerHTML = `
     <h2 class="text-lg font-semibold text-gray-100 mb-6">搬入計画 登録</h2>
     <div class="space-y-4">
@@ -226,31 +295,40 @@ function renderPlanForm() {
           <label class="text-xs text-gray-400 block mb-1">新規工事名 <span class="text-red-400">*</span></label>
           <input id="pf-new-project-name" type="text" class="${inp}" placeholder="例: ○○ビル新築工事">
         </div>
-        <div>
-          <label class="text-xs text-gray-400 block mb-1">工事コード</label>
-          <input id="pf-new-project-code" type="text" class="${inp}" placeholder="例: PROJ-001">
-        </div>
       </div>
 
       <div>
-        <label class="text-xs text-gray-400 block mb-1">搬入日 <span class="text-red-400">*</span></label>
-        <input id="pf-date" type="date" value="${esc(selectedDate || '')}" class="${inp}">
+        <label class="text-xs text-gray-400 block mb-1">搬入開始日</label>
+        <div class="px-3 py-2 text-sm text-gray-300 bg-gray-800 rounded border border-gray-700">
+          ${esc(startDateLabel)}
+        </div>
       </div>
 
-      <div class="flex gap-3">
+      <div class="flex gap-4 items-end">
         <div class="flex-1">
-          <label class="text-xs text-gray-400 block mb-1">建方○日目</label>
-          <input id="pf-construction-day" type="number" min="1" value="1" class="${inp}">
-        </div>
-        <div class="flex-1">
-          <label class="text-xs text-gray-400 block mb-1">搬入日数</label>
+          <label class="text-xs text-gray-400 block mb-1">搬入日数 <span class="text-red-400">*</span></label>
           <input id="pf-delivery-days" type="number" min="1" max="30" value="1" class="${inp}">
         </div>
+        <div class="flex-1">
+          <label class="text-xs text-gray-400 block mb-1">日付割当モード</label>
+          <div class="flex gap-4 py-2">
+            <label class="flex items-center gap-1.5 text-sm text-gray-300 cursor-pointer">
+              <input type="radio" name="pf-day-mode" value="continuous" checked
+                class="accent-blue-500"> 連続
+            </label>
+            <label class="flex items-center gap-1.5 text-sm text-gray-300 cursor-pointer">
+              <input type="radio" name="pf-day-mode" value="weekday"
+                class="accent-blue-500"> 平日のみ
+            </label>
+          </div>
+        </div>
       </div>
 
       <div>
-        <label class="text-xs text-gray-400 block mb-1">計画図番</label>
-        <input id="pf-drawing-no" type="text" class="${inp}" placeholder="例: DWG-2026-001">
+        <label class="text-xs text-gray-400 block mb-2">搬入日プレビュー</label>
+        <div id="pf-preview" class="bg-gray-800 border border-gray-700 rounded overflow-x-auto">
+          ${renderPreviewTable(previewDays)}
+        </div>
       </div>
 
       <div class="flex gap-3 pt-2">
@@ -272,56 +350,83 @@ function renderPlanForm() {
     document.getElementById('pf-new-project-area').classList.toggle('hidden', e.target.value !== '__new__');
   });
 
+  // 日数・モード変更 → プレビュー再生成
+  function refreshPreview() {
+    const count = Math.max(1, Math.min(30, parseInt(document.getElementById('pf-delivery-days').value) || 1));
+    const mode  = document.querySelector('input[name="pf-day-mode"]:checked')?.value ?? 'continuous';
+    const days  = adminState.selectedDate ? generateDays(adminState.selectedDate, count, mode) : [];
+    document.getElementById('pf-preview').innerHTML = renderPreviewTable(days);
+  }
+
+  document.getElementById('pf-delivery-days').addEventListener('input', refreshPreview);
+  el.querySelectorAll('input[name="pf-day-mode"]').forEach(r => r.addEventListener('change', refreshPreview));
+
   document.getElementById('pf-save').addEventListener('click', handlePlanFormSave);
   document.getElementById('pf-cancel').addEventListener('click', goToCalendar);
 }
 
 async function handlePlanFormSave() {
-  const projectSel     = document.getElementById('pf-project').value;
-  const deliveryDate   = document.getElementById('pf-date').value;
-  const constructionDay = parseInt(document.getElementById('pf-construction-day').value) || 1;
-  const drawingNo      = document.getElementById('pf-drawing-no').value.trim();
+  const projectSel = document.getElementById('pf-project').value;
 
-  // 簡易バリデーション
-  let valid = true;
   if (!projectSel) {
     document.getElementById('pf-project').classList.add('ring-1', 'ring-red-500');
-    valid = false;
+    return;
   }
-  if (!deliveryDate) {
-    document.getElementById('pf-date').classList.add('ring-1', 'ring-red-500');
-    valid = false;
-  }
-  if (!valid) return;
 
   let projectId = projectSel;
 
   // 新規工事作成
   if (projectSel === '__new__') {
     const newName = document.getElementById('pf-new-project-name').value.trim();
-    const newCode = document.getElementById('pf-new-project-code').value.trim();
     if (!newName) {
       document.getElementById('pf-new-project-name').classList.add('ring-1', 'ring-red-500');
       return;
     }
-    const created = await createProject({ projectName: newName, projectCode: newCode, isActive: true });
+    const created = await createProject({ projectName: newName, isActive: true });
     adminState.projects.push(created);
     projectId = created.id;
   }
 
-  await createPlan(projectId, {
-    deliveryDate,
-    constructionDay,
-    drawingNo: drawingNo || null,
-    status:    'active',
-    truckCount: 0,
-  });
+  // プレビュー表の各行を読み取る
+  const rows = document.querySelectorAll('#pf-preview tr[data-day-index]');
+  if (!rows.length) {
+    alert('搬入日が1件もありません');
+    return;
+  }
 
-  // キャッシュを無効化して再ロード（登録した月）
-  const [y, m] = deliveryDate.split('-');
-  delete adminState.plansCache[`${y}-${m}`];
+  const saveBtn = document.getElementById('pf-save');
+  saveBtn.disabled = true;
+  saveBtn.textContent = '登録中…';
 
-  adminState.selectedDate = deliveryDate;
+  const affectedMonths = new Set();
+
+  for (const row of rows) {
+    const dayIndex = parseInt(row.dataset.dayIndex);
+    const deliveryDate = row.querySelector('input[name="date"]').value;
+    const dayLabel     = row.querySelector('input[name="dayLabel"]').value.trim();
+    const drawingNo    = row.querySelector('input[name="drawingNo"]').value.trim();
+
+    if (!deliveryDate) continue;
+
+    await createPlan(projectId, {
+      deliveryDate,
+      dayIndex,
+      dayLabel:  dayLabel  || null,
+      drawingNo: drawingNo || null,
+      status:    'active',
+      truckCount: 0,
+    });
+
+    const [y, m] = deliveryDate.split('-');
+    affectedMonths.add(`${y}-${m}`);
+  }
+
+  // 影響月のキャッシュを無効化
+  for (const key of affectedMonths) {
+    delete adminState.plansCache[key];
+  }
+
+  adminState.selectedDate = adminState.selectedDate; // keep current date
   await goToCalendar();
 }
 
