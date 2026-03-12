@@ -47,6 +47,8 @@ function getItemDisplayName(item) {
 
 let _diffDraft = [];
 let _bulkDraft = []; // { name: string, nameParts: object }[]
+let _inputHistoryTab  = 'input'; // 'input' | 'history'
+let _pendingRestoreEntry = null;
 
 function _diffDraftListHtml() {
   if (!_diffDraft.length) return '<span class="text-xs text-gray-500">差分なし</span>';
@@ -56,6 +58,59 @@ function _diffDraftListHtml() {
       <button data-remove-diff="${i}" class="text-xs text-red-400 hover:text-red-300 px-1 leading-none">✕</button>
     </div>
   `).join('');
+}
+
+// ── History: localStorage ──────────────────────────────────
+
+const HISTORY_KEY = 'admin_input_history';
+const HISTORY_MAX = 50;
+
+function _loadHistory() {
+  try { return JSON.parse(localStorage.getItem(HISTORY_KEY) ?? '[]'); }
+  catch { return []; }
+}
+
+function _saveToHistory(entry) {
+  const list = _loadHistory();
+  list.unshift(entry);
+  if (list.length > HISTORY_MAX) list.splice(HISTORY_MAX);
+  localStorage.setItem(HISTORY_KEY, JSON.stringify(list));
+}
+
+function _deleteFromHistory(idx) {
+  const list = _loadHistory();
+  list.splice(idx, 1);
+  localStorage.setItem(HISTORY_KEY, JSON.stringify(list));
+}
+
+function _historyDate(ts) {
+  if (!ts) return '';
+  const d = new Date(ts);
+  return `${d.getMonth() + 1}/${d.getDate()} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+}
+
+function _historyListHtml(mode) {
+  const all  = _loadHistory();
+  const rows = all.map((e, i) => ({ e, i })).filter(({ e }) => e.mode === mode);
+  if (!rows.length) return '<p class="text-xs text-gray-500 px-1 py-2">履歴がありません</p>';
+  return rows.map(({ e, i }) => `
+    <div class="flex items-center gap-1 py-1 border-b border-gray-800 last:border-0">
+      <div class="flex-1 min-w-0 cursor-pointer rounded px-1 py-0.5 hover:bg-gray-800"
+           data-history-apply="${i}">
+        <div class="text-xs text-gray-200 truncate">${esc(e.displayName)}</div>
+        <div class="text-xs text-gray-600">${esc(e.category || '—')} · ${_historyDate(e.savedAt)}</div>
+      </div>
+      <button data-history-del="${i}"
+        class="text-xs text-red-400 hover:text-red-300 px-1 shrink-0 leading-none">✕</button>
+    </div>
+  `).join('');
+}
+
+function _applyHistoryEntry(entry) {
+  _pendingRestoreEntry = entry;
+  _inputHistoryTab     = 'input';
+  adminState.rightPanelMode = entry.mode === 'bulk' ? 'bulk' : 'new';
+  renderRightPanel();
 }
 
 // ── Render: Header ─────────────────────────────────────────
@@ -254,113 +309,147 @@ function _renderViewPanel(item) {
 }
 
 function _renderFormPanel(mode, item) {
-  const isEdit    = mode === 'edit';
-  const np        = item?.nameParts ?? {};
-  const inp       = (extra = '') =>
+  const isEdit  = mode === 'edit';
+  const restore = _pendingRestoreEntry;
+  _pendingRestoreEntry = null;
+
+  const np  = item?.nameParts ?? {};
+  const inp = (extra = '') =>
     `w-full bg-gray-700 text-gray-100 rounded px-2 py-1 mt-0.5 text-sm ${extra}`;
 
+  const defPrefix    = restore?.prefix             ?? np.prefix?.value    ?? '';
+  const defBaseName  = restore?.baseName           ?? np.baseName?.value  ?? item?.name ?? '';
+  const defSeparator = restore?.separator          ?? np.separator?.value ?? '-';
+  const defSuffix    = restore?.suffix             ?? np.suffix?.value    ?? '';
+  const defNote      = restore?.note               ?? np.note?.value      ?? '';
+  const defCategory  = restore?.category           ?? item?.category      ?? '';
+  const defCaution   = restore?.cautionNote        ?? item?.cautionNote   ?? '';
+  const defLoading   = restore?.loadingInstruction ?? item?.loadingInstruction ?? '';
+
+  const showTabs  = !isEdit;
+  const isHistTab = showTabs && _inputHistoryTab === 'history';
+
   const catOptions = CATEGORY_ORDER.map(c =>
-    `<option value="${esc(c)}" ${item?.category === c ? 'selected' : ''}>${esc(c)}</option>`
+    `<option value="${esc(c)}" ${defCategory === c ? 'selected' : ''}>${esc(c)}</option>`
   ).join('');
 
   elRightContent.innerHTML = `
-    ${!isEdit ? `
-      <div class="flex gap-0.5 mb-3 bg-gray-900 rounded-md p-0.5">
+    ${showTabs ? `
+      <div class="flex gap-0.5 mb-2 bg-gray-900 rounded-md p-0.5">
         <button data-rp-action="mode-single"
           class="flex-1 text-xs py-1 rounded bg-gray-600 text-white font-medium">単品</button>
         <button data-rp-action="mode-bulk"
           class="flex-1 text-xs py-1 rounded text-gray-400 hover:text-gray-200">一括</button>
       </div>
+      <div class="flex gap-0.5 mb-3 bg-gray-900 rounded-md p-0.5">
+        <button data-rp-action="history-tab-input"
+          class="flex-1 text-xs py-1 rounded ${!isHistTab ? 'bg-gray-600 text-white font-medium' : 'text-gray-400 hover:text-gray-200'}">入力</button>
+        <button data-rp-action="history-tab-history"
+          class="flex-1 text-xs py-1 rounded ${isHistTab ? 'bg-gray-600 text-white font-medium' : 'text-gray-400 hover:text-gray-200'}">履歴</button>
+      </div>
     ` : ''}
-    <div class="flex gap-1.5 mb-4">
-      <button data-rp-action="save"
-        class="flex-1 text-xs ${isEdit ? 'bg-green-700 hover:bg-green-600' : 'bg-blue-700 hover:bg-blue-600'} text-white py-1.5 rounded font-medium">
-        ${isEdit ? '更新' : '登録'}
-      </button>
-      <button data-rp-action="cancel"
-        class="flex-1 text-xs bg-gray-700 hover:bg-gray-600 text-white py-1.5 rounded">
-        キャンセル
-      </button>
-      ${isEdit ? `
-        <button data-rp-action="delete"
-          class="text-xs bg-red-900 hover:bg-red-800 text-red-200 px-2.5 py-1.5 rounded">
-          削除
+
+    ${!isHistTab ? `
+      <div class="flex gap-1.5 mb-4">
+        <button data-rp-action="save"
+          class="flex-1 text-xs ${isEdit ? 'bg-green-700 hover:bg-green-600' : 'bg-blue-700 hover:bg-blue-600'} text-white py-1.5 rounded font-medium">
+          ${isEdit ? '更新' : '登録'}
         </button>
-      ` : ''}
-    </div>
-
-    <div class="space-y-2.5 text-sm">
-      <div>
-        <label class="text-xs text-gray-400">カテゴリー</label>
-        <select id="rp-category" class="${inp()}">
-          <option value="">— 未選択 —</option>
-          ${catOptions}
-        </select>
+        <button data-rp-action="cancel"
+          class="flex-1 text-xs bg-gray-700 hover:bg-gray-600 text-white py-1.5 rounded">
+          キャンセル
+        </button>
+        ${isEdit ? `
+          <button data-rp-action="delete"
+            class="text-xs bg-red-900 hover:bg-red-800 text-red-200 px-2.5 py-1.5 rounded">
+            削除
+          </button>
+        ` : ''}
       </div>
 
-      <hr class="border-gray-700 my-1">
-      <p class="text-xs font-semibold text-gray-400 tracking-widest">品名パーツ</p>
-
-      <div>
-        <label class="text-xs text-gray-400">接頭</label>
-        <input id="rp-prefix" type="text" value="${esc(np.prefix?.value ?? '')}"
-          class="${inp()}" placeholder="例: 2S">
-      </div>
-      <div>
-        <label class="text-xs text-gray-400">品名 <span class="text-red-400">*</span></label>
-        <input id="rp-baseName" type="text" value="${esc(np.baseName?.value ?? item?.name ?? '')}"
-          class="${inp()}" placeholder="例: G500">
-      </div>
-      <div class="flex gap-1.5">
-        <div class="w-20 shrink-0">
-          <label class="text-xs text-gray-400">区切り</label>
-          <input id="rp-separator" type="text" value="${esc(np.separator?.value ?? '-')}"
-            class="${inp()}" placeholder="-">
+      <div class="space-y-2.5 text-sm">
+        <div>
+          <label class="text-xs text-gray-400">カテゴリー</label>
+          <select id="rp-category" class="${inp()}">
+            <option value="">— 未選択 —</option>
+            ${catOptions}
+          </select>
         </div>
-        <div class="flex-1">
-          <label class="text-xs text-gray-400">枝番</label>
-          <input id="rp-suffix" type="text" value="${esc(np.suffix?.value ?? '')}"
-            class="${inp()}" placeholder="例: 1">
+
+        <hr class="border-gray-700 my-1">
+        <p class="text-xs font-semibold text-gray-400 tracking-widest">品名パーツ</p>
+
+        <div>
+          <label class="text-xs text-gray-400">接頭</label>
+          <input id="rp-prefix" type="text" value="${esc(defPrefix)}"
+            class="${inp()}" placeholder="例: 2S">
+        </div>
+        <div>
+          <label class="text-xs text-gray-400">品名 <span class="text-red-400">*</span></label>
+          <input id="rp-baseName" type="text" value="${esc(defBaseName)}"
+            class="${inp()}" placeholder="例: G500">
+        </div>
+        <div class="flex gap-1.5">
+          <div class="w-20 shrink-0">
+            <label class="text-xs text-gray-400">区切り</label>
+            <input id="rp-separator" type="text" value="${esc(defSeparator)}"
+              class="${inp()}" placeholder="-">
+          </div>
+          <div class="flex-1">
+            <label class="text-xs text-gray-400">枝番</label>
+            <input id="rp-suffix" type="text" value="${esc(defSuffix)}"
+              class="${inp()}" placeholder="例: 1">
+          </div>
+        </div>
+        <div>
+          <label class="text-xs text-gray-400">補足</label>
+          <input id="rp-note" type="text" value="${esc(defNote)}"
+            class="${inp()}" placeholder="×4 など">
+        </div>
+
+        <hr class="border-gray-700 my-1">
+
+        <div>
+          <label class="text-xs text-gray-400">注意事項</label>
+          <textarea id="rp-cautionNote" rows="2"
+            class="${inp('resize-none')}"
+            placeholder="注意事項">${esc(defCaution)}</textarea>
+        </div>
+        <div>
+          <label class="text-xs text-gray-400">積込指示</label>
+          <textarea id="rp-loadingInstruction" rows="2"
+            class="${inp('resize-none')}"
+            placeholder="積込指示">${esc(defLoading)}</textarea>
+        </div>
+
+        <hr class="border-gray-700 my-1">
+        <p class="text-xs font-semibold text-gray-400 tracking-widest">差分</p>
+
+        <div id="rp-diff-list" class="mb-1">${_diffDraftListHtml()}</div>
+        <div class="flex gap-1">
+          <input id="rp-diff-date" type="date"
+            class="flex-1 bg-gray-700 text-gray-100 rounded px-2 py-1 text-xs">
+          <select id="rp-diff-type"
+            class="bg-gray-700 text-gray-100 rounded px-2 py-1 text-xs">
+            <option value="追加">追加</option>
+            <option value="変更">変更</option>
+            <option value="削除">削除</option>
+          </select>
+          <button data-rp-action="diff-add"
+            class="text-xs bg-gray-600 hover:bg-gray-500 text-white px-2 py-1 rounded">＋</button>
         </div>
       </div>
-      <div>
-        <label class="text-xs text-gray-400">補足</label>
-        <input id="rp-note" type="text" value="${esc(np.note?.value ?? '')}"
-          class="${inp()}" placeholder="×4 など">
+    ` : `
+      <div class="flex gap-1.5 mb-3">
+        <button data-rp-action="cancel"
+          class="flex-1 text-xs bg-gray-700 hover:bg-gray-600 text-white py-1.5 rounded">
+          キャンセル
+        </button>
       </div>
-
-      <hr class="border-gray-700 my-1">
-
-      <div>
-        <label class="text-xs text-gray-400">注意事項</label>
-        <textarea id="rp-cautionNote" rows="2"
-          class="${inp('resize-none')}"
-          placeholder="注意事項">${esc(item?.cautionNote ?? '')}</textarea>
+      <div id="rp-history-list" class="space-y-0.5">
+        ${_historyListHtml('single')}
       </div>
-      <div>
-        <label class="text-xs text-gray-400">積込指示</label>
-        <textarea id="rp-loadingInstruction" rows="2"
-          class="${inp('resize-none')}"
-          placeholder="積込指示">${esc(item?.loadingInstruction ?? '')}</textarea>
-      </div>
-
-      <hr class="border-gray-700 my-1">
-      <p class="text-xs font-semibold text-gray-400 tracking-widest">差分</p>
-
-      <div id="rp-diff-list" class="mb-1">${_diffDraftListHtml()}</div>
-      <div class="flex gap-1">
-        <input id="rp-diff-date" type="date"
-          class="flex-1 bg-gray-700 text-gray-100 rounded px-2 py-1 text-xs">
-        <select id="rp-diff-type"
-          class="bg-gray-700 text-gray-100 rounded px-2 py-1 text-xs">
-          <option value="追加">追加</option>
-          <option value="変更">変更</option>
-          <option value="削除">削除</option>
-        </select>
-        <button data-rp-action="diff-add"
-          class="text-xs bg-gray-600 hover:bg-gray-500 text-white px-2 py-1 rounded">＋</button>
-      </div>
-    </div>
+    `}
   `;
 }
 
@@ -466,93 +555,127 @@ function _confirmBulkRowEdit(idx) {
 }
 
 function _renderBulkPanel() {
+  const restore = _pendingRestoreEntry;
+  _pendingRestoreEntry = null;
+
   const inp = (extra = '') =>
     `w-full bg-gray-700 text-gray-100 rounded px-2 py-1 mt-0.5 text-sm ${extra}`;
   const catOptions = CATEGORY_ORDER.map(c =>
     `<option value="${esc(c)}">${esc(c)}</option>`
   ).join('');
 
+  const isHistTab      = _inputHistoryTab === 'history';
+  const defPrefix      = restore?.prefix       ?? '';
+  const defBaseName    = restore?.baseName      ?? '';
+  const defSeparator   = restore?.separator     ?? '-';
+  const defSuffixStart = restore?.suffixStart   ?? '1';
+  const defNote        = restore?.note          ?? '';
+  const defCount       = restore?.count         ?? '3';
+  const defAutoInc     = restore?.autoIncrement ?? true;
+
   elRightContent.innerHTML = `
-    <div class="flex gap-0.5 mb-3 bg-gray-900 rounded-md p-0.5">
+    <div class="flex gap-0.5 mb-2 bg-gray-900 rounded-md p-0.5">
       <button data-rp-action="mode-single"
         class="flex-1 text-xs py-1 rounded text-gray-400 hover:text-gray-200">単品</button>
       <button data-rp-action="mode-bulk"
         class="flex-1 text-xs py-1 rounded bg-gray-600 text-white font-medium">一括</button>
     </div>
-    <div class="flex gap-1.5 mb-4">
-      <button data-rp-action="bulk-save"
-        class="flex-1 text-xs bg-blue-700 hover:bg-blue-600 text-white py-1.5 rounded font-medium">
-        一括登録
-      </button>
-      <button data-rp-action="cancel"
-        class="flex-1 text-xs bg-gray-700 hover:bg-gray-600 text-white py-1.5 rounded">
-        キャンセル
-      </button>
+    <div class="flex gap-0.5 mb-3 bg-gray-900 rounded-md p-0.5">
+      <button data-rp-action="history-tab-input"
+        class="flex-1 text-xs py-1 rounded ${!isHistTab ? 'bg-gray-600 text-white font-medium' : 'text-gray-400 hover:text-gray-200'}">入力</button>
+      <button data-rp-action="history-tab-history"
+        class="flex-1 text-xs py-1 rounded ${isHistTab ? 'bg-gray-600 text-white font-medium' : 'text-gray-400 hover:text-gray-200'}">履歴</button>
     </div>
 
-    <div class="space-y-2.5 text-sm">
-      <div>
-        <label class="text-xs text-gray-400">カテゴリー</label>
-        <select id="rp-bulk-category" class="${inp()}">
-          <option value="">— 未選択 —</option>
-          ${catOptions}
-        </select>
+    ${!isHistTab ? `
+      <div class="flex gap-1.5 mb-4">
+        <button data-rp-action="bulk-save"
+          class="flex-1 text-xs bg-blue-700 hover:bg-blue-600 text-white py-1.5 rounded font-medium">
+          一括登録
+        </button>
+        <button data-rp-action="cancel"
+          class="flex-1 text-xs bg-gray-700 hover:bg-gray-600 text-white py-1.5 rounded">
+          キャンセル
+        </button>
       </div>
 
-      <hr class="border-gray-700 my-1">
-      <p class="text-xs font-semibold text-gray-400 tracking-widest">品名パーツ</p>
-
-      <div>
-        <label class="text-xs text-gray-400">接頭</label>
-        <input id="rp-bulk-prefix" type="text" value=""
-          class="${inp()}" placeholder="例: 2S">
-      </div>
-      <div>
-        <label class="text-xs text-gray-400">品名 <span class="text-red-400">*</span></label>
-        <input id="rp-bulk-baseName" type="text" value=""
-          class="${inp()}" placeholder="例: B198">
-      </div>
-      <div class="flex gap-1.5">
-        <div class="w-20 shrink-0">
-          <label class="text-xs text-gray-400">区切り</label>
-          <input id="rp-bulk-separator" type="text" value="-"
-            class="${inp()}" placeholder="-">
+      <div class="space-y-2.5 text-sm">
+        <div>
+          <label class="text-xs text-gray-400">カテゴリー</label>
+          <select id="rp-bulk-category" class="${inp()}">
+            <option value="">— 未選択 —</option>
+            ${catOptions}
+          </select>
         </div>
-        <div class="flex-1">
-          <label class="text-xs text-gray-400">枝番 開始</label>
-          <input id="rp-bulk-suffixStart" type="text" value="1"
-            class="${inp()}" placeholder="1">
+
+        <hr class="border-gray-700 my-1">
+        <p class="text-xs font-semibold text-gray-400 tracking-widest">品名パーツ</p>
+
+        <div>
+          <label class="text-xs text-gray-400">接頭</label>
+          <input id="rp-bulk-prefix" type="text" value="${esc(defPrefix)}"
+            class="${inp()}" placeholder="例: 2S">
+        </div>
+        <div>
+          <label class="text-xs text-gray-400">品名 <span class="text-red-400">*</span></label>
+          <input id="rp-bulk-baseName" type="text" value="${esc(defBaseName)}"
+            class="${inp()}" placeholder="例: B198">
+        </div>
+        <div class="flex gap-1.5">
+          <div class="w-20 shrink-0">
+            <label class="text-xs text-gray-400">区切り</label>
+            <input id="rp-bulk-separator" type="text" value="${esc(defSeparator)}"
+              class="${inp()}" placeholder="-">
+          </div>
+          <div class="flex-1">
+            <label class="text-xs text-gray-400">枝番 開始</label>
+            <input id="rp-bulk-suffixStart" type="text" value="${esc(defSuffixStart)}"
+              class="${inp()}" placeholder="1">
+          </div>
+        </div>
+        <div>
+          <label class="text-xs text-gray-400">補足</label>
+          <input id="rp-bulk-note" type="text" value="${esc(defNote)}"
+            class="${inp()}" placeholder="×4 など">
+        </div>
+
+        <hr class="border-gray-700 my-1">
+        <p class="text-xs font-semibold text-gray-400 tracking-widest">生成設定</p>
+
+        <div class="flex items-end gap-3">
+          <div class="flex-1">
+            <label class="text-xs text-gray-400">登録個数（2〜30）</label>
+            <input id="rp-bulk-count" type="number" min="2" max="30" value="${esc(defCount)}"
+              class="${inp()}" placeholder="3">
+          </div>
+          <label class="flex items-center gap-1.5 pb-1.5 cursor-pointer shrink-0">
+            <input id="rp-bulk-auto" type="checkbox" ${defAutoInc ? 'checked' : ''} class="accent-blue-500">
+            <span class="text-xs text-gray-400">枝番連番</span>
+          </label>
+        </div>
+
+        <hr class="border-gray-700 my-1">
+        <p class="text-xs font-semibold text-gray-400 tracking-widest">プレビュー</p>
+
+        <div id="rp-bulk-preview" class="rounded bg-gray-950 px-2 py-1.5 min-h-[48px]">
+          <p class="text-xs text-gray-600">品名を入力すると一覧が表示されます</p>
         </div>
       </div>
-      <div>
-        <label class="text-xs text-gray-400">補足</label>
-        <input id="rp-bulk-note" type="text" value=""
-          class="${inp()}" placeholder="×4 など">
+    ` : `
+      <div class="flex gap-1.5 mb-3">
+        <button data-rp-action="cancel"
+          class="flex-1 text-xs bg-gray-700 hover:bg-gray-600 text-white py-1.5 rounded">
+          キャンセル
+        </button>
       </div>
-
-      <hr class="border-gray-700 my-1">
-      <p class="text-xs font-semibold text-gray-400 tracking-widest">生成設定</p>
-
-      <div class="flex items-end gap-3">
-        <div class="flex-1">
-          <label class="text-xs text-gray-400">登録個数（2〜30）</label>
-          <input id="rp-bulk-count" type="number" min="2" max="30" value="3"
-            class="${inp()}" placeholder="3">
-        </div>
-        <label class="flex items-center gap-1.5 pb-1.5 cursor-pointer shrink-0">
-          <input id="rp-bulk-auto" type="checkbox" checked class="accent-blue-500">
-          <span class="text-xs text-gray-400">枝番連番</span>
-        </label>
+      <div id="rp-history-list" class="space-y-0.5">
+        ${_historyListHtml('bulk')}
       </div>
-
-      <hr class="border-gray-700 my-1">
-      <p class="text-xs font-semibold text-gray-400 tracking-widest">プレビュー</p>
-
-      <div id="rp-bulk-preview" class="rounded bg-gray-950 px-2 py-1.5 min-h-[48px]">
-        <p class="text-xs text-gray-600">品名を入力すると一覧が表示されます</p>
-      </div>
-    </div>
+    `}
   `;
+
+  // restore 後はプレビューを更新
+  if (!isHistTab && defBaseName) _updateBulkPreview();
 }
 
 async function _handleSave() {
@@ -598,6 +721,21 @@ async function _handleSave() {
     addItemToState(selectedTruckId, created);
     adminState.selectedItemId = created.id;
     adminState.rightPanelMode = 'view';
+
+    _saveToHistory({
+      id:                 Date.now(),
+      mode:               'single',
+      prefix:             f.prefix,
+      baseName:           f.baseName,
+      separator:          f.separator,
+      suffix:             f.suffix,
+      note:               f.note,
+      category:           f.category,
+      cautionNote:        f.cautionNote,
+      loadingInstruction: f.loadingInstruction,
+      displayName:        buildItemName(nameParts),
+      savedAt:            Date.now(),
+    });
 
   } else {
     // edit
@@ -648,7 +786,7 @@ async function _handleBulkSave() {
     return;
   }
 
-  const f = _readBulkFormData(); // category のみ使用
+  const f = _readBulkFormData(); // category ほか使用
   const { selectedProjectId, selectedPlanId, selectedTruckId, itemsCache } = adminState;
   const items    = itemsCache[selectedTruckId] ?? [];
   let maxOrder   = items.reduce((m, i) => Math.max(m, i.sortOrder ?? 0), 0);
@@ -672,6 +810,23 @@ async function _handleBulkSave() {
     lastCreatedId = created.id;
   }
 
+  if (lastCreatedId) {
+    _saveToHistory({
+      id:            Date.now(),
+      mode:          'bulk',
+      prefix:        f.prefix,
+      baseName:      f.baseName,
+      separator:     f.separator,
+      suffixStart:   f.suffixStart,
+      note:          f.note,
+      count:         f.count,
+      autoIncrement: f.autoIncrement,
+      category:      f.category,
+      displayName:   `${f.prefix}${f.baseName}`,
+      savedAt:       Date.now(),
+    });
+  }
+
   _bulkDraft = [];
   adminState.selectedItemId = lastCreatedId;
   adminState.rightPanelMode = lastCreatedId ? 'view' : 'idle';
@@ -686,8 +841,9 @@ async function selectTruck(truckId) {
   adminState.selectedItemId       = null;
   adminState.multiSelectedItemIds = [];
   adminState.rightPanelMode       = 'idle';
-  _diffDraft = [];
-  _bulkDraft = [];
+  _diffDraft       = [];
+  _bulkDraft       = [];
+  _inputHistoryTab = 'input';
 
   if (!adminState.itemsCache[truckId]) {
     const items = await getItemsForTruck(
@@ -784,6 +940,25 @@ function bindEvents() {
       return;
     }
 
+    // 履歴 apply / delete
+    const histApply = e.target.closest('[data-history-apply]');
+    if (histApply) {
+      const idx  = parseInt(histApply.dataset.historyApply, 10);
+      const list = _loadHistory();
+      if (list[idx]) _applyHistoryEntry(list[idx]);
+      return;
+    }
+
+    const histDel = e.target.closest('[data-history-del]');
+    if (histDel) {
+      const idx = parseInt(histDel.dataset.historyDel, 10);
+      _deleteFromHistory(idx);
+      const mode    = adminState.rightPanelMode === 'bulk' ? 'bulk' : 'single';
+      const listEl  = elRightContent.querySelector('#rp-history-list');
+      if (listEl) listEl.innerHTML = _historyListHtml(mode);
+      return;
+    }
+
     const action = e.target.closest('[data-rp-action]')?.dataset.rpAction;
     if (!action) return;
 
@@ -832,13 +1007,15 @@ function bindEvents() {
     }
 
     if (action === 'mode-single') {
-      _bulkDraft = [];
+      _bulkDraft       = [];
+      _inputHistoryTab = 'input';
       adminState.rightPanelMode = 'new';
       renderRightPanel();
       return;
     }
 
     if (action === 'mode-bulk') {
+      _inputHistoryTab = 'input';
       adminState.rightPanelMode = 'bulk';
       renderRightPanel();
       return;
@@ -846,6 +1023,18 @@ function bindEvents() {
 
     if (action === 'bulk-save') {
       await _handleBulkSave();
+      return;
+    }
+
+    if (action === 'history-tab-input') {
+      _inputHistoryTab = 'input';
+      renderRightPanel();
+      return;
+    }
+
+    if (action === 'history-tab-history') {
+      _inputHistoryTab = 'history';
+      renderRightPanel();
       return;
     }
   });
