@@ -3,6 +3,7 @@
 import { adminState, addItemToState, updateItemInState, removeItemFromState } from './state.js';
 import { getTrucksForPlan, getItemsForTruck, createItem, updateItem, deleteItem } from './db.js';
 import { sortItems, buildItemName } from '../../packages/shared-domain/src/index.js';
+import { getSuggestions } from './suggest-data.js';
 
 // ── 種別順（ボルトアプリ準拠） ─────────────────────────────
 const CATEGORY_ORDER = [
@@ -104,6 +105,83 @@ function _historyListHtml(mode) {
         class="text-xs text-red-400 hover:text-red-300 px-1 shrink-0 leading-none">✕</button>
     </div>
   `).join('');
+}
+
+// ── Suggest: baseName サジェスト ───────────────────────────
+
+/**
+ * baseName 入力欄にサジェストを attach する
+ * - input イベントで候補を動的生成（動的候補主力 + 静的カタログ補完）
+ * - mousedown で blur より先にクリック処理して選択確定
+ * - blur / Escape でリストを閉じる
+ *
+ * @param {HTMLInputElement}  inputEl  baseName input
+ * @param {HTMLSelectElement} catEl    category select（category 自動反映 + 種別優先に使用）
+ */
+function _attachSuggest(inputEl, catEl) {
+  if (!inputEl) return;
+
+  // input の親 div を relative にして absolute ドロップダウンの基点にする
+  const container = inputEl.parentElement;
+  container.style.position = 'relative';
+
+  const suggEl = document.createElement('div');
+  suggEl.className = [
+    'absolute z-50 left-0 right-0 top-full mt-px',
+    'bg-gray-800 border border-gray-600 rounded shadow-lg',
+    'max-h-48 overflow-y-auto hidden',
+  ].join(' ');
+  container.appendChild(suggEl);
+
+  let _results = [];
+
+  function show() {
+    const val = inputEl.value;
+    const cat = catEl?.value ?? '';
+    _results = getSuggestions(val, cat, adminState.itemsCache);
+    if (!_results.length || !val) { hide(); return; }
+
+    suggEl.innerHTML = _results.map((r, i) => `
+      <div data-si="${i}"
+        class="px-2 py-1.5 text-xs cursor-pointer hover:bg-gray-700 flex items-center justify-between gap-2">
+        <span class="text-gray-100 font-medium">${esc(r.baseName)}</span>
+        <span class="text-gray-500 shrink-0">${esc(r.category)}</span>
+      </div>
+    `).join('');
+    suggEl.classList.remove('hidden');
+  }
+
+  function hide() {
+    suggEl.classList.add('hidden');
+  }
+
+  function apply(idx) {
+    const chosen = _results[idx];
+    if (!chosen) return;
+    inputEl.value = chosen.baseName;
+    if (catEl && chosen.category) catEl.value = chosen.category;
+    hide();
+    // 一括モードはプレビューを即時更新
+    if (adminState.rightPanelMode === 'bulk') _updateBulkPreview();
+  }
+
+  inputEl.addEventListener('input', show);
+
+  // カテゴリー変更時も候補の並び順を更新
+  catEl?.addEventListener('change', () => { if (inputEl.value) show(); });
+
+  // mousedown で e.preventDefault() → blur を抑止してから apply
+  suggEl.addEventListener('mousedown', e => {
+    e.preventDefault();
+    const row = e.target.closest('[data-si]');
+    if (row) apply(parseInt(row.dataset.si, 10));
+  });
+
+  inputEl.addEventListener('blur', hide);
+
+  inputEl.addEventListener('keydown', e => {
+    if (e.key === 'Escape') hide();
+  });
 }
 
 function _applyHistoryEntry(entry) {
@@ -451,6 +529,14 @@ function _renderFormPanel(mode, item) {
       </div>
     `}
   `;
+
+  // サジェスト attach（履歴タブ以外で常に実行）
+  if (!isHistTab) {
+    _attachSuggest(
+      elRightContent.querySelector('#rp-baseName'),
+      elRightContent.querySelector('#rp-category'),
+    );
+  }
 }
 
 // ── Right Panel: form helpers ──────────────────────────────
@@ -674,8 +760,15 @@ function _renderBulkPanel() {
     `}
   `;
 
-  // restore 後はプレビューを更新
-  if (!isHistTab && defBaseName) _updateBulkPreview();
+  if (!isHistTab) {
+    // サジェスト attach
+    _attachSuggest(
+      elRightContent.querySelector('#rp-bulk-baseName'),
+      elRightContent.querySelector('#rp-bulk-category'),
+    );
+    // restore 後はプレビューを更新
+    if (defBaseName) _updateBulkPreview();
+  }
 }
 
 async function _handleSave() {
