@@ -279,6 +279,15 @@ function _renderFormPanel(mode, item) {
     </div>
 
     <div class="space-y-2.5 text-sm">
+      <div>
+        <label class="text-xs text-gray-400">カテゴリー</label>
+        <select id="rp-category" class="${inp()}">
+          <option value="">— 未選択 —</option>
+          ${catOptions}
+        </select>
+      </div>
+
+      <hr class="border-gray-700 my-1">
       <p class="text-xs font-semibold text-gray-400 tracking-widest">品名パーツ</p>
 
       <div>
@@ -310,24 +319,7 @@ function _renderFormPanel(mode, item) {
       </div>
 
       <hr class="border-gray-700 my-1">
-      <p class="text-xs font-semibold text-gray-400 tracking-widest">詳細</p>
 
-      <div>
-        <label class="text-xs text-gray-400">カテゴリー</label>
-        <select id="rp-category" class="${inp()}">
-          <option value="">— 未選択 —</option>
-          ${catOptions}
-        </select>
-      </div>
-      <div>
-        <label class="text-xs text-gray-400">数量 / 単位</label>
-        <div class="flex gap-1 mt-0.5">
-          <input id="rp-quantity" type="number" value="${esc(item?.quantity ?? '')}"
-            class="flex-1 bg-gray-700 text-gray-100 rounded px-2 py-1 text-sm" placeholder="0">
-          <input id="rp-unit" type="text" value="${esc(item?.unit ?? '本')}"
-            class="w-14 bg-gray-700 text-gray-100 rounded px-2 py-1 text-sm" placeholder="本">
-        </div>
-      </div>
       <div>
         <label class="text-xs text-gray-400">注意事項</label>
         <textarea id="rp-cautionNote" rows="2"
@@ -372,8 +364,6 @@ function _readFormData() {
     suffix:             q('#rp-suffix')?.value.trim()             ?? '',
     note:               q('#rp-note')?.value.trim()               ?? '',
     category:           q('#rp-category')?.value                  ?? '',
-    quantity:           parseFloat(q('#rp-quantity')?.value)      || 0,
-    unit:               q('#rp-unit')?.value.trim()               || '本',
     cautionNote:        q('#rp-cautionNote')?.value.trim()        ?? '',
     loadingInstruction: q('#rp-loadingInstruction')?.value.trim() ?? '',
   };
@@ -408,8 +398,6 @@ async function _handleSave() {
     nameParts,
     name:               buildItemName(nameParts), // 表示名キャッシュ
     category:           f.category,
-    quantity:           f.quantity,
-    unit:               f.unit,
     cautionNote:        f.cautionNote,
     loadingInstruction: f.loadingInstruction,
     diffs:              [..._diffDraft],
