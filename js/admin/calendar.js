@@ -102,8 +102,8 @@ function renderBarItem({ position, color, name, planId, projectId }) {
 // Screen management
 // ══════════════════════════════════════════════════════════
 
-// A2（グリッド）は flex で表示する必要があるため個別に指定
-const SCREEN_DISPLAY = { calendar: 'block', 'plan-form': 'block', grid: 'flex' };
+// calendar は左右2ペイン（flex row）、A2 も flex。plan-form は block
+const SCREEN_DISPLAY = { calendar: 'flex', 'plan-form': 'block', grid: 'flex' };
 
 function showScreen(name) {
   adminState.adminScreen = name;
