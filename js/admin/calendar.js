@@ -7,6 +7,8 @@ import {
   createPlan,
   createProject,
   updatePlan,
+  deletePlan,
+  deletePlansBySeriesId,
 } from './db.js';
 import { initGridScreen } from './ui.js';
 
@@ -262,6 +264,119 @@ function closeA0EditSidebar() {
 }
 
 /**
+ * 現在のサイドバー編集対象の削除情報を返す
+ * @returns {{ projectId, planId, deliverySeriesId, isSeries, seriesLength } | null}
+ */
+function getSidebarDeleteTarget() {
+  const { plans, projectId } = adminState.a0edit;
+  if (!plans.length || !projectId) return null;
+  const first = plans[0];
+  const hasSeries = !!first.deliverySeriesId;
+  return {
+    projectId,
+    planId:           first.id,
+    deliverySeriesId: first.deliverySeriesId || null,
+    isSeries:         hasSeries && plans.length > 1,
+    seriesLength:     plans.length,
+  };
+}
+
+/** 削除ボタン押下 → 確認viewに切り替える */
+function handleA0DeleteRequest() {
+  adminState.a0edit.confirmDelete = true;
+  renderA0ConfirmDelete();
+}
+
+/** サイドバーを削除確認viewに差し替える */
+function renderA0ConfirmDelete() {
+  const contentEl = document.getElementById('admin-cal-sidebar-content');
+  if (!contentEl) return;
+
+  const target = getSidebarDeleteTarget();
+  if (!target) return;
+
+  const { plans, projectId } = adminState.a0edit;
+  const proj      = adminState.a1.boltProjects.find(p => p.id === projectId);
+  const name      = projDisplayName(proj) || '—';
+  const startDate = plans[0]?.deliveryDate || '—';
+  const dayCount  = plans.length;
+
+  const titleText = target.isSeries
+    ? `連続搬入 ${dayCount}日間 を削除`
+    : 'この搬入予定を削除';
+
+  const warnText = target.isSeries
+    ? 'この連続搬入に紐づく号車・品目のデータは搬入予定が削除されても Firestore 上に残りますが、カレンダーから参照できなくなります。'
+    : '号車・品目のデータは搬入予定が削除されても Firestore 上に残りますが、カレンダーから参照できなくなります。';
+
+  contentEl.innerHTML = `
+    <div>
+      <div class="text-sm font-semibold text-red-400 mb-3">${esc(titleText)}</div>
+      <div class="text-xs text-gray-400 space-y-1.5 mb-4">
+        <div>工事: <span class="text-gray-200">${esc(name)}</span></div>
+        <div>搬入開始日: <span class="text-gray-200">${esc(startDate)}</span></div>
+        <div>対象日数: <span class="text-gray-200">${dayCount}日</span></div>
+      </div>
+
+      <div class="bg-red-950/40 border border-red-900/60 rounded p-3 text-xs text-red-300 leading-relaxed mb-4">
+        ⚠️ 削除すると元に戻せません。<br>
+        ${esc(warnText)}
+      </div>
+
+      <div class="flex gap-2">
+        <button id="a0-delete-confirm-btn"
+          class="flex-1 bg-red-700 hover:bg-red-600 text-white py-2 rounded text-sm font-medium">
+          削除する
+        </button>
+        <button id="a0-delete-cancel-btn"
+          class="flex-1 bg-gray-700 hover:bg-gray-600 text-white py-2 rounded text-sm">
+          キャンセル
+        </button>
+      </div>
+    </div>`;
+}
+
+/** 削除確認後の実行処理 */
+async function handleA0DeleteConfirm() {
+  const target = getSidebarDeleteTarget();
+  if (!target) return;
+
+  const confirmBtn = document.getElementById('a0-delete-confirm-btn');
+  if (confirmBtn) { confirmBtn.disabled = true; confirmBtn.textContent = '削除中…'; }
+
+  // 影響月を先に記録（close 後はアクセスできなくなるため）
+  const affectedMonths = new Set();
+  adminState.a0edit.plans.forEach(p => {
+    if (p.deliveryDate) {
+      const [y, mo] = p.deliveryDate.split('-');
+      affectedMonths.add(`${y}-${mo}`);
+    }
+  });
+
+  try {
+    if (target.isSeries) {
+      await deletePlansBySeriesId(target.projectId, target.deliverySeriesId);
+    } else {
+      await deletePlan(target.projectId, target.planId);
+    }
+  } catch (err) {
+    console.error('[A0 delete] failed', err);
+    alert('削除に失敗しました');
+    if (confirmBtn) { confirmBtn.disabled = false; confirmBtn.textContent = '削除する'; }
+    return;
+  }
+
+  for (const key of affectedMonths) delete adminState.plansCache[key];
+  adminState.selectedDate = null;  // 削除後は日付選択をリセット
+  closeA0EditSidebar();
+  await loadAndRenderCalendar();
+
+  // 軽い完了通知（2.5秒で自動消去）
+  updateHeaderInfo('<span class="text-green-400 text-xs font-normal">削除しました</span>');
+  setTimeout(() => updateHeaderInfo(''), 2500);
+}
+
+/**
  * a0edit.plans の rowIndex 行の日付を newDate に設定し、後続行を再計算する
  * rowIndex 行自身の DOM は呼び出し元が担当（ユーザー入力 or 全更新）
  */
@@ -314,9 +429,10 @@ function renderA0EditSidebar() {
   if (!contentEl) return;
 
   const { plans, projectId, dateAssignMode } = adminState.a0edit;
-  const proj = adminState.a1.boltProjects.find(p => p.id === projectId);
-  const name = projDisplayName(proj) || '—';
-  const inp  = 'bg-gray-700 text-gray-100 rounded px-2 py-1 text-xs w-full';
+  const proj   = adminState.a1.boltProjects.find(p => p.id === projectId);
+  const name   = projDisplayName(proj) || '—';
+  const inp    = 'bg-gray-700 text-gray-100 rounded px-2 py-1 text-xs w-full';
+  const target = getSidebarDeleteTarget();
 
   const modeOptions = [
     ['all_days',         '連続（土日含む）'],
@@ -340,11 +456,19 @@ function renderA0EditSidebar() {
     </tr>`).join('');
 
   const seriesLabel = plans.length > 1 ? `${plans.length}日間シリーズ` : '単体';
+  const startDate   = plans[0]?.deliveryDate || '—';
+  // 開発用: シリーズIDを小さく表示（あれば）
+  const seriesId    = plans[0]?.deliverySeriesId || null;
+  const deleteLabel = target?.isSeries ? 'この連続搬入を削除…' : 'この搬入予定を削除…';
 
   contentEl.innerHTML = `
     <div>
       <div class="text-sm font-medium text-gray-200 truncate">${esc(name)}</div>
-      <div class="text-xs text-gray-500 mt-0.5">${seriesLabel}</div>
+      <div class="text-xs text-gray-500 mt-0.5 space-y-0.5">
+        <div>${seriesLabel}</div>
+        <div>搬入開始日: ${esc(startDate)}</div>
+        ${seriesId ? `<div class="truncate text-gray-600">ID: ${esc(seriesId)}</div>` : ''}
+      </div>
     </div>
 
     <div>
@@ -389,6 +513,14 @@ function renderA0EditSidebar() {
       <button id="a0-edit-cancel-btn"
         class="flex-1 bg-gray-700 hover:bg-gray-600 text-white py-2 rounded text-sm">
         キャンセル
+      </button>
+    </div>
+
+    <div class="border-t border-gray-700 pt-3">
+      <button id="a0-delete-btn"
+        class="w-full text-xs text-red-400 hover:text-red-300 hover:bg-red-900/20
+               border border-red-900/50 hover:border-red-700 py-1.5 rounded transition-colors">
+        ${esc(deleteLabel)}
       </button>
     </div>`;
 }
@@ -479,6 +611,20 @@ function bindA0SidebarEvents() {
     }
     if (e.target.id === 'a0-shift-backward-btn') {
       shiftA0SeriesDates(-1);
+      return;
+    }
+    if (e.target.id === 'a0-delete-btn') {
+      handleA0DeleteRequest();
+      return;
+    }
+    if (e.target.id === 'a0-delete-confirm-btn') {
+      await handleA0DeleteConfirm();
+      return;
+    }
+    if (e.target.id === 'a0-delete-cancel-btn') {
+      adminState.a0edit.confirmDelete = false;
+      renderA0EditSidebar();
+      return;
     }
   });
 
