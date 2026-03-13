@@ -12,8 +12,29 @@ export const adminState = {
   selectedDate: null,
 
   // ── カレンダー用データ ────────────────────────────────────
-  projects:   [],   // getDeliveryProjects の結果
+  projects:   [],   // bolt プロジェクト一覧（カレンダー名称表示 + A1 コンボ候補）
   plansCache: {},   // { 'YYYY-MM': plan[] }
+
+  // ── A1 計画登録フォーム内部状態 ───────────────────────────
+  a1: {
+    // A1 コンボボックス候補（bolt アプリ側工事一覧）
+    boltProjects: [],
+
+    // フォーム入力値
+    form: {
+      projectId:        '',
+      newProjectName:   '',
+      startDate:        '',          // カレンダー選択日。A1 では固定表示
+      deliveryDays:     1,
+      dateAssignMode:   'all_days',  // 'all_days' | 'weekday_only' | 'all_days_holiday'
+      drawingAssignMode: 'serial',   // 'serial'（将来拡張予定）
+    },
+
+    // プレビュー行（登録本体）
+    // deliveryDay は固定通し番号、他は編集可
+    previewRows: [],
+    // [{ deliveryDay, deliveryDate, dayLabel, drawingNo }]
+  },
 
   // ── 選択中の計画 ──────────────────────────────────────────
   selectedProjectId: null,
