@@ -197,7 +197,7 @@ function renderDateDetail(dateStr) {
 // dateAssignMode enum:
 //   'all_days'         … 連続（土日含む全日）
 //   'weekday_only'     … 平日のみ（土日スキップ）
-//   'all_days_holiday' … 平日+土日+祝日（将来の祝日スキップ用。現状は all_days と同じ）
+//   'all_days_holiday' … 平日+土日+祝日（将来の祝日対応用。現状は all_days と同じ）
 //
 // drawingAssignMode enum:
 //   'serial' … 連番（1, 2, 3…）。将来拡張予定。
@@ -206,35 +206,36 @@ function renderDateDetail(dateStr) {
 // ── state 更新 ─────────────────────────────────────────────
 
 function updateA1FormField(field, value) {
+  if (!adminState.a1?.form) return;
   adminState.a1.form[field] = value;
 }
 
 function updateA1PreviewCell(rowIndex, field, value) {
-  if (adminState.a1.previewRows[rowIndex]) {
-    adminState.a1.previewRows[rowIndex][field] = value;
-  }
+  if (!adminState.a1?.previewRows?.[rowIndex]) return;
+  adminState.a1.previewRows[rowIndex][field] = value;
 }
 
 // ── 再計算ロジック ─────────────────────────────────────────
 
 /**
  * dateStr の翌日から dateAssignMode に従った次の有効日を返す
+ * T00:00:00 付与でタイムゾーンによるズレを防ぐ
  * @param {string} dateStr 'YYYY-MM-DD'
  * @param {'all_days'|'weekday_only'|'all_days_holiday'} mode
  * @returns {string} 翌有効日 'YYYY-MM-DD'
  */
 function getNextDateByMode(dateStr, mode) {
-  const [y, mo, d] = dateStr.split('-').map(Number);
-  const next = new Date(y, mo - 1, d + 1);
+  const date = new Date(`${dateStr}T00:00:00`);
+  date.setDate(date.getDate() + 1);
 
   if (mode === 'weekday_only') {
-    while (next.getDay() === 0 || next.getDay() === 6) {
-      next.setDate(next.getDate() + 1);
+    while (date.getDay() === 0 || date.getDay() === 6) {
+      date.setDate(date.getDate() + 1);
     }
   }
   // 'all_days_holiday': 将来の祝日スキップをここに追加
 
-  return toDateStr(next);
+  return toDateStr(date);
 }
 
 /**
@@ -244,10 +245,10 @@ function getNextDateByMode(dateStr, mode) {
  */
 function buildA1PreviewRows({ startDate, deliveryDays, dateAssignMode, drawingAssignMode }) {
   const rows = [];
-  const [y, mo, d] = startDate.split('-').map(Number);
-  const firstDay = new Date(y, mo - 1, d);
+  if (!startDate || deliveryDays < 1) return rows;
 
-  // 開始日自体が無効な場合に最初の有効日まで進める
+  // 開始日自体が無効な場合（例: weekday_only で土日）に最初の有効日まで進める
+  const firstDay = new Date(`${startDate}T00:00:00`);
   if (dateAssignMode === 'weekday_only') {
     while (firstDay.getDay() === 0 || firstDay.getDay() === 6) {
       firstDay.setDate(firstDay.getDate() + 1);
@@ -261,7 +262,7 @@ function buildA1PreviewRows({ startDate, deliveryDays, dateAssignMode, drawingAs
     rows.push({
       deliveryDay:  i + 1,
       deliveryDate: curDate,
-      dayLabel:     `搬入${i + 1}日目`,
+      dayLabel:     '',
       drawingNo:    drawingAssignMode === 'serial' ? String(i + 1) : '',
     });
     curDate = getNextDateByMode(curDate, dateAssignMode);
@@ -283,7 +284,7 @@ function regenerateA1PreviewRows() {
 }
 
 /**
- * rowIndex 行の日付を newDate に設定し、後続行のみ dateAssignMode に従って再計算する
+ * rowIndex 行の日付を newDate に設定し、後続行のみ再計算する
  * drawingNo には触れない
  * @param {number} rowIndex - 0ベースのインデックス
  * @param {string} newDate  - 変更後の日付 'YYYY-MM-DD'
@@ -302,14 +303,14 @@ function reflowA1DatesFromRow(rowIndex, newDate) {
 
   // 後続行の日付 input だけ surgical update（focus を失わない）
   for (let i = rowIndex + 1; i < adminState.a1.previewRows.length; i++) {
-    const el = document.querySelector(`#pf-preview tr[data-row-index="${i}"] input[name="deliveryDate"]`);
+    const el = document.querySelector(`.a1-preview-date[data-row-index="${i}"]`);
     if (el) el.value = adminState.a1.previewRows[i].deliveryDate;
   }
 }
 
 /**
  * drawingAssignMode に従い drawingNo を更新する
- * state と DOM の両方を更新する（現在は 'serial' のみ実装）
+ * state と DOM の両方を surgical update する（現在は 'serial' のみ実装）
  */
 function applyDrawingAssignMode() {
   const { drawingAssignMode } = adminState.a1.form;
@@ -317,7 +318,7 @@ function applyDrawingAssignMode() {
 
   adminState.a1.previewRows.forEach((row, i) => {
     row.drawingNo = String(i + 1);
-    const el = document.querySelector(`#pf-preview tr[data-row-index="${i}"] input[name="drawingNo"]`);
+    const el = document.querySelector(`.a1-preview-drawing-no[data-row-index="${i}"]`);
     if (el) el.value = row.drawingNo;
   });
 }
@@ -327,6 +328,7 @@ function applyDrawingAssignMode() {
 function handleA1DeliveryDaysChange(value) {
   updateA1FormField('deliveryDays', Math.max(1, Math.min(30, parseInt(value) || 1)));
   regenerateA1PreviewRows();
+  // プレビューのみ更新（ヘッダ入力のフォーカスを保持する）
   const preview = document.getElementById('pf-preview');
   if (preview) preview.innerHTML = buildPreviewTableHTML();
 }
@@ -339,11 +341,13 @@ function handleA1DateAssignModeChange(value) {
 }
 
 function handleA1DrawingAssignModeChange(value) {
+  // 日付は再計算せず drawingNo だけ更新する（手修正した日付を保持）
   updateA1FormField('drawingAssignMode', value);
   applyDrawingAssignMode();
 }
 
 function handleA1PreviewDateChange(rowIndex, value) {
+  if (!value) return;
   reflowA1DatesFromRow(rowIndex, value);
 }
 
@@ -359,17 +363,17 @@ function handleA1PreviewDrawingNoChange(rowIndex, value) {
 
 /**
  * 工事選択コンボの <option> HTML を返す
- * bolt アプリ側の工事一覧を候補にする
+ * id / projectId 両フィールドに対応（bolt プロジェクトのフィールド差異を吸収）
  */
 function renderBoltProjectOptions() {
   const { boltProjects, form } = adminState.a1;
-  return [
-    '<option value="">— 工事を選択 —</option>',
-    ...boltProjects.map(p =>
-      `<option value="${esc(p.id)}"${p.id === form.projectId ? ' selected' : ''}>${esc(projDisplayName(p) || p.id)}</option>`
-    ),
-    `<option value="__new__"${'__new__' === form.projectId ? ' selected' : ''}>＋ 新規工事を作成…</option>`,
-  ].join('');
+  const selectedId = String(form.projectId ?? '');
+
+  return (boltProjects || []).map(p => {
+    const id   = String(p.id || p.projectId || '');
+    const name = projDisplayName(p) || id;
+    return `<option value="${esc(id)}"${id === selectedId ? ' selected' : ''}>${esc(name)}</option>`;
+  }).join('');
 }
 
 /**
@@ -381,19 +385,23 @@ function renderA1HeaderSection() {
   const radioBase = 'accent-blue-500';
   const isNewProj = form.projectId === '__new__';
 
-  const [, m, d]    = form.startDate.split('-');
-  const startLabel  = `${parseInt(m)}月${parseInt(d)}日`;
+  const [, m, d]   = form.startDate.split('-');
+  const startLabel = `${parseInt(m)}月${parseInt(d)}日`;
 
   const dayModes = [
-    ['all_days',         '連続'],
-    ['weekday_only',     '平日のみ'],
-    ['all_days_holiday', '平日+土日+祝日'],
+    ['all_days',         '通常モード（連続）'],
+    ['weekday_only',     '平日のみモード'],
+    ['all_days_holiday', '平日+土日+祝日モード'],
   ];
 
   return `
     <div>
       <label class="text-xs text-gray-400 block mb-1">工事 <span class="text-red-400">*</span></label>
-      <select id="pf-project" class="${inp}">${renderBoltProjectOptions()}</select>
+      <select id="a1-project-id" class="${inp}">
+        <option value="">— 工事を選択 —</option>
+        ${renderBoltProjectOptions()}
+        <option value="__new__"${'__new__' === form.projectId ? ' selected' : ''}>＋ 新規工事を作成…</option>
+      </select>
     </div>
 
     <div id="pf-new-project-area" class="${isNewProj ? '' : 'hidden'} space-y-2 pl-2 border-l-2 border-blue-700">
@@ -412,7 +420,7 @@ function renderA1HeaderSection() {
     <div class="flex gap-4 items-start">
       <div class="w-24 flex-shrink-0">
         <label class="text-xs text-gray-400 block mb-1">搬入日数 <span class="text-red-400">*</span></label>
-        <input id="pf-delivery-days" type="number" min="1" max="30"
+        <input id="a1-delivery-days" type="number" min="1" max="30"
           value="${form.deliveryDays}" class="${inp}">
       </div>
       <div class="flex-1">
@@ -420,7 +428,7 @@ function renderA1HeaderSection() {
         <div class="flex flex-col gap-1.5 py-1">
           ${dayModes.map(([val, label]) => `
             <label class="flex items-center gap-1.5 text-sm text-gray-300 cursor-pointer">
-              <input type="radio" name="pf-day-mode" value="${val}"
+              <input type="radio" name="a1-date-assign-mode" value="${val}"
                 ${form.dateAssignMode === val ? 'checked' : ''} class="${radioBase}">
               ${label}
             </label>`).join('')}
@@ -430,9 +438,9 @@ function renderA1HeaderSection() {
         <label class="text-xs text-gray-400 block mb-1">計画図番割当</label>
         <div class="flex flex-col gap-1.5 py-1">
           <label class="flex items-center gap-1.5 text-sm text-gray-300 cursor-pointer">
-            <input type="radio" name="pf-drawing-mode" value="serial"
+            <input type="radio" name="a1-drawing-assign-mode" value="serial"
               ${form.drawingAssignMode === 'serial' ? 'checked' : ''} class="${radioBase}">
-            連番
+            連番モード
           </label>
         </div>
       </div>
@@ -440,7 +448,7 @@ function renderA1HeaderSection() {
 }
 
 /**
- * previewRows の <tr> 列 HTML を返す（#pf-preview 内のテーブルに使う）
+ * previewRows の <tr> 列 HTML を返す
  */
 function renderA1PreviewRows() {
   const { previewRows } = adminState.a1;
@@ -448,22 +456,25 @@ function renderA1PreviewRows() {
 
   return previewRows.map(({ deliveryDay, deliveryDate, dayLabel, drawingNo }, i) => `
     <tr data-row-index="${i}" class="border-t border-gray-700">
-      <td class="px-2 py-1.5 text-xs text-gray-400 text-center whitespace-nowrap select-none">${deliveryDay}</td>
-      <td class="px-2 py-1.5">
-        <input type="date" name="deliveryDate" value="${esc(deliveryDate)}" class="${inp}">
+      <td class="px-2 py-1.5 text-xs text-gray-400 text-center whitespace-nowrap select-none">
+        搬入${deliveryDay}日目
       </td>
       <td class="px-2 py-1.5">
-        <input type="text" name="dayLabel" value="${esc(dayLabel)}" class="${inp}" placeholder="日名称">
+        <input type="date" class="a1-preview-date ${inp}"
+          data-row-index="${i}" value="${esc(deliveryDate)}">
       </td>
       <td class="px-2 py-1.5">
-        <input type="text" name="drawingNo" value="${esc(drawingNo)}" class="${inp}" placeholder="1">
+        <input type="text" class="a1-preview-day-label ${inp}"
+          data-row-index="${i}" value="${esc(dayLabel)}" placeholder="例: 前段取り">
+      </td>
+      <td class="px-2 py-1.5">
+        <input type="text" class="a1-preview-drawing-no ${inp}"
+          data-row-index="${i}" value="${esc(drawingNo)}" placeholder="1">
       </td>
     </tr>`).join('');
 }
 
-/**
- * #pf-preview の innerHTML として入れるテーブル HTML を返す（private）
- */
+/** #pf-preview の innerHTML として使うテーブル HTML（private helper）*/
 function buildPreviewTableHTML() {
   const { previewRows } = adminState.a1;
   if (!previewRows.length) return '<p class="text-xs text-gray-500 p-3">（日付なし）</p>';
@@ -471,7 +482,7 @@ function buildPreviewTableHTML() {
     <table class="w-full text-sm">
       <thead>
         <tr class="text-xs text-gray-500">
-          <th class="px-2 py-1 text-center w-10">日目</th>
+          <th class="px-2 py-1 text-center w-24">搬入日目</th>
           <th class="px-2 py-1 text-left">日付</th>
           <th class="px-2 py-1 text-left">日名称</th>
           <th class="px-2 py-1 text-left">計画図番</th>
@@ -507,13 +518,13 @@ function renderPlanForm() {
       ${renderA1HeaderSection()}
       ${renderA1PreviewSection()}
       <div class="flex gap-3 pt-2">
-        <button id="pf-save"
+        <button id="a1-save-btn"
           class="flex-1 bg-blue-700 hover:bg-blue-600 text-white py-2 rounded text-sm font-medium">
           登録
         </button>
-        <button id="pf-cancel"
+        <button id="a1-back-btn" type="button"
           class="flex-1 bg-gray-700 hover:bg-gray-600 text-white py-2 rounded text-sm">
-          キャンセル
+          戻る
         </button>
       </div>
     </div>`;
@@ -526,84 +537,90 @@ function renderPlanForm() {
 // el への委譲で一度だけバインドする（re-render 後も動作する）
 let _planFormEventsBound = false;
 
-function bindPlanFormEvents() {
-  const el = document.getElementById('admin-plan-form-content');
-  if (!el || _planFormEventsBound) return;
-  _planFormEventsBound = true;
-
-  // change: select / radio / date input
+/** ヘッダ部（工事・日数・モード）のイベントを el に委譲してバインドする */
+function bindA1HeaderEvents(el) {
   el.addEventListener('change', e => {
-    if (e.target.matches('input[name="pf-day-mode"]')) {
+    if (e.target.id === 'a1-project-id') {
+      updateA1FormField('projectId', e.target.value);
+      document.getElementById('pf-new-project-area')
+        ?.classList.toggle('hidden', e.target.value !== '__new__');
+      return;
+    }
+    if (e.target.matches('input[name="a1-date-assign-mode"]')) {
       handleA1DateAssignModeChange(e.target.value);
       return;
     }
-    if (e.target.matches('input[name="pf-drawing-mode"]')) {
+    if (e.target.matches('input[name="a1-drawing-assign-mode"]')) {
       handleA1DrawingAssignModeChange(e.target.value);
-      return;
-    }
-    if (e.target.id === 'pf-project') {
-      updateA1FormField('projectId', e.target.value);
-      document.getElementById('pf-new-project-area')
-        .classList.toggle('hidden', e.target.value !== '__new__');
-      return;
-    }
-    if (e.target.matches('#pf-preview input[name="deliveryDate"]')) {
-      const row = e.target.closest('tr[data-row-index]');
-      if (row) handleA1PreviewDateChange(parseInt(row.dataset.rowIndex), e.target.value);
     }
   });
 
-  // input: number / text（即時反映）
   el.addEventListener('input', e => {
-    if (e.target.id === 'pf-delivery-days') {
+    if (e.target.id === 'a1-delivery-days') {
       handleA1DeliveryDaysChange(e.target.value);
       return;
     }
     if (e.target.id === 'pf-new-project-name') {
       updateA1FormField('newProjectName', e.target.value);
-      return;
-    }
-    if (e.target.matches('#pf-preview input[name="dayLabel"]')) {
-      const row = e.target.closest('tr[data-row-index]');
-      if (row) handleA1PreviewDayLabelChange(parseInt(row.dataset.rowIndex), e.target.value);
-      return;
-    }
-    if (e.target.matches('#pf-preview input[name="drawingNo"]')) {
-      const row = e.target.closest('tr[data-row-index]');
-      if (row) handleA1PreviewDrawingNoChange(parseInt(row.dataset.rowIndex), e.target.value);
     }
   });
 
-  // click: ボタン
   el.addEventListener('click', e => {
-    if (e.target.id === 'pf-save')   handlePlanFormSave();
-    if (e.target.id === 'pf-cancel') goToCalendar();
+    if (e.target.id === 'a1-save-btn')  handlePlanFormSave();
+    if (e.target.id === 'a1-back-btn')  goToCalendar();
   });
+}
+
+/** プレビュー行（日付・日名称・計画図番）のイベントを el に委譲してバインドする */
+function bindA1PreviewEvents(el) {
+  el.addEventListener('change', e => {
+    if (e.target.matches('.a1-preview-date')) {
+      const rowIndex = parseInt(e.target.dataset.rowIndex);
+      handleA1PreviewDateChange(rowIndex, e.target.value);
+    }
+  });
+
+  el.addEventListener('input', e => {
+    if (e.target.matches('.a1-preview-day-label')) {
+      handleA1PreviewDayLabelChange(parseInt(e.target.dataset.rowIndex), e.target.value);
+      return;
+    }
+    if (e.target.matches('.a1-preview-drawing-no')) {
+      handleA1PreviewDrawingNoChange(parseInt(e.target.dataset.rowIndex), e.target.value);
+    }
+  });
+}
+
+function bindPlanFormEvents() {
+  const el = document.getElementById('admin-plan-form-content');
+  if (!el || _planFormEventsBound) return;
+  _planFormEventsBound = true;
+  bindA1HeaderEvents(el);
+  bindA1PreviewEvents(el);
 }
 
 // ── 保存 ─────────────────────────────────────────────────
 
 /**
  * previewRow を createPlan に渡す planData に変換する
- * @param {{ deliveryDay, deliveryDate, dayLabel, drawingNo }} row
+ * Firestore 構造は変えない（dayIndex / status: 'active' を維持）
  */
 function previewRowToPlanData(row) {
   return {
     deliveryDate: row.deliveryDate,
-    dayIndex:     row.deliveryDay,
+    dayIndex:     row.deliveryDay,   // Firestore フィールド名は dayIndex
     dayLabel:     row.dayLabel  || null,
     drawingNo:    row.drawingNo || null,
-    status:       'active',
+    status:       'active',          // Firestore の既存値に合わせる
     truckCount:   0,
   };
 }
 
 async function handlePlanFormSave() {
-  // 登録本体は state.a1.previewRows。DOM からは読まない。
   const { form, previewRows } = adminState.a1;
 
   if (!form.projectId) {
-    document.getElementById('pf-project').classList.add('ring-1', 'ring-red-500');
+    document.getElementById('a1-project-id')?.classList.add('ring-1', 'ring-red-500');
     return;
   }
 
@@ -611,7 +628,7 @@ async function handlePlanFormSave() {
 
   if (form.projectId === '__new__') {
     if (!form.newProjectName.trim()) {
-      document.getElementById('pf-new-project-name').classList.add('ring-1', 'ring-red-500');
+      document.getElementById('pf-new-project-name')?.classList.add('ring-1', 'ring-red-500');
       return;
     }
     const created = await createProject({ projectName: form.newProjectName.trim(), isActive: true });
@@ -619,66 +636,83 @@ async function handlePlanFormSave() {
     projectId = created.id;
   }
 
-  if (!previewRows.length) {
+  if (!previewRows?.length) {
     alert('搬入日が1件もありません');
     return;
   }
 
-  const saveBtn = document.getElementById('pf-save');
+  const saveBtn = document.getElementById('a1-save-btn');
   if (saveBtn) { saveBtn.disabled = true; saveBtn.textContent = '登録中…'; }
 
   const affectedMonths = new Set();
 
-  for (const row of previewRows) {
-    if (!row.deliveryDate) continue;
-    await createPlan(projectId, previewRowToPlanData(row));
-    const [y, mo] = row.deliveryDate.split('-');
-    affectedMonths.add(`${y}-${mo}`);
+  try {
+    for (const row of previewRows) {
+      if (!row.deliveryDate) continue;
+      await createPlan(projectId, previewRowToPlanData(row));
+      const [y, mo] = row.deliveryDate.split('-');
+      affectedMonths.add(`${y}-${mo}`);
+    }
+  } catch (err) {
+    console.error('[A1] save failed', err);
+    alert('登録に失敗しました');
+    if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = '登録'; }
+    return;
   }
 
   for (const key of affectedMonths) delete adminState.plansCache[key];
-
   await goToCalendar();
 }
 
 // ── 入口 ─────────────────────────────────────────────────
 
 /**
- * bolt 工事一覧を a1.boltProjects にロードする（未ロードの場合のみ取得）
+ * bolt 工事一覧を a1.boltProjects にロードする
+ * initializeA1State が boltProjects をリセットするため毎回取得する
  */
 async function loadA1BoltProjects() {
-  if (adminState.a1.boltProjects.length > 0) return;
-  adminState.a1.boltProjects = await getBoltProjects();
+  try {
+    const projects = await getBoltProjects();
+    adminState.a1.boltProjects = Array.isArray(projects) ? projects : [];
+  } catch (err) {
+    console.error('[A1] Failed to load bolt projects', err);
+    adminState.a1.boltProjects = [];
+  }
 }
 
 /**
- * A1 表示前に state.a1 を初期化する（showPlanForm から毎回呼ぶ）
+ * A1 表示前に state.a1 を全体リセットする（showPlanForm から毎回呼ぶ）
  * @param {string} startDate 'YYYY-MM-DD'
  */
 function initializeA1State(startDate) {
-  adminState.a1.form = {
-    projectId:         '',
-    newProjectName:    '',
-    startDate,
-    deliveryDays:      1,
-    dateAssignMode:    'all_days',
-    drawingAssignMode: 'serial',
+  adminState.a1 = {
+    boltProjects: [],   // loadA1BoltProjects で上書きされる
+    form: {
+      projectId:         '',
+      newProjectName:    '',
+      startDate,         // カレンダー選択日で固定
+      deliveryDays:      1,
+      dateAssignMode:    'all_days',
+      drawingAssignMode: 'serial',
+    },
+    previewRows: buildA1PreviewRows({
+      startDate,
+      deliveryDays:      1,
+      dateAssignMode:    'all_days',
+      drawingAssignMode: 'serial',
+    }),
   };
-  adminState.a1.previewRows = buildA1PreviewRows({
-    startDate,
-    deliveryDays:      1,
-    dateAssignMode:    'all_days',
-    drawingAssignMode: 'serial',
-  });
 }
 
-function showPlanForm(dateStr) {
+async function showPlanForm(dateStr) {
   if (dateStr) adminState.selectedDate = dateStr;
   const startDate = adminState.selectedDate || toDateStr(new Date());
-  initializeA1State(startDate);
-  showScreen('plan-form');
+
+  initializeA1State(startDate);          // state リセット
+  await loadA1BoltProjects();            // 工事候補ロード
   updateHeaderInfo('<span class="text-gray-400">搬入計画 登録</span>');
-  renderPlanForm();
+  renderPlanForm();                      // 描画
+  showScreen('plan-form');              // 画面切替
 }
 
 // ══════════════════════════════════════════════════════════
@@ -752,7 +786,12 @@ function bindCalendarEvents() {
 // ══════════════════════════════════════════════════════════
 
 export async function initAdminApp() {
-  await loadA1BoltProjects(); // カレンダー名称表示 + A1 コンボ候補
+  // A1 state の初期化（boltProjects は showPlanForm 時にロード）
+  initializeA1State(toDateStr(new Date()));
+
+  // カレンダー名称表示用に bolt 工事一覧を先行ロード
+  await loadA1BoltProjects();
+
   bindCalendarEvents();
   await goToCalendar();
 }
