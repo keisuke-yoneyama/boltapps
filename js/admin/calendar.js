@@ -6,6 +6,7 @@ import {
   getPlansForMonth,
   createPlan,
   createProject,
+  updatePlan,
 } from './db.js';
 import { initGridScreen } from './ui.js';
 
@@ -251,6 +252,258 @@ function renderDateDetail(dateStr) {
 }
 
 // ══════════════════════════════════════════════════════════
+// A0: Calendar — Right Sidebar (Series Edit)
+// ══════════════════════════════════════════════════════════
+
+/** サイドバーを閉じ a0edit state をリセットする */
+function closeA0EditSidebar() {
+  adminState.a0edit = { projectId: null, plans: [], dateAssignMode: 'all_days' };
+  document.getElementById('admin-cal-sidebar')?.classList.add('hidden');
+}
+
+/**
+ * a0edit.plans の rowIndex 行の日付を newDate に設定し、後続行を再計算する
+ * rowIndex 行自身の DOM は呼び出し元が担当（ユーザー入力 or 全更新）
+ */
+function reflowA0DatesFromRow(rowIndex, newDate) {
+  const { plans, dateAssignMode } = adminState.a0edit;
+  plans[rowIndex].deliveryDate = newDate;
+
+  let prev = newDate;
+  for (let i = rowIndex + 1; i < plans.length; i++) {
+    const next = getNextDateByMode(prev, dateAssignMode);
+    plans[i].deliveryDate = next;
+    prev = next;
+  }
+
+  // 後続行の date input だけ surgical update（focus を保持）
+  for (let i = rowIndex + 1; i < plans.length; i++) {
+    const el = document.querySelector(`.a0-edit-date[data-row-index="${i}"]`);
+    if (el) el.value = plans[i].deliveryDate;
+  }
+}
+
+/** シリーズ全体の日付を1スロット前後にずらす */
+function shiftA0SeriesDates(direction) {
+  const { plans, dateAssignMode } = adminState.a0edit;
+  if (!plans.length) return;
+
+  const newFirst = direction > 0
+    ? getNextDateByMode(plans[0].deliveryDate, dateAssignMode)
+    : getPrevDateByMode(plans[0].deliveryDate, dateAssignMode);
+
+  // 全行を state 更新
+  plans[0].deliveryDate = newFirst;
+  let prev = newFirst;
+  for (let i = 1; i < plans.length; i++) {
+    const next = getNextDateByMode(prev, dateAssignMode);
+    plans[i].deliveryDate = next;
+    prev = next;
+  }
+
+  // 全行の DOM を一括更新
+  for (let i = 0; i < plans.length; i++) {
+    const el = document.querySelector(`.a0-edit-date[data-row-index="${i}"]`);
+    if (el) el.value = plans[i].deliveryDate;
+  }
+}
+
+/** サイドバーの innerHTML を現在の a0edit state から再描画する */
+function renderA0EditSidebar() {
+  const contentEl = document.getElementById('admin-cal-sidebar-content');
+  if (!contentEl) return;
+
+  const { plans, projectId, dateAssignMode } = adminState.a0edit;
+  const proj = adminState.a1.boltProjects.find(p => p.id === projectId);
+  const name = projDisplayName(proj) || '—';
+  const inp  = 'bg-gray-700 text-gray-100 rounded px-2 py-1 text-xs w-full';
+
+  const modeOptions = [
+    ['all_days',         '連続（土日含む）'],
+    ['weekday_only',     '平日のみ'],
+    ['all_days_holiday', '平日＋土（日曜除く）'],
+  ];
+
+  const rowsHtml = plans.map((plan, i) => `
+    <tr data-row-index="${i}" class="border-t border-gray-700">
+      <td class="px-2 py-1.5 text-xs text-gray-400 text-center whitespace-nowrap select-none">
+        搬入${plan.dayIndex}日目
+      </td>
+      <td class="px-2 py-1.5">
+        <input type="date" class="a0-edit-date ${inp}"
+          data-row-index="${i}" value="${esc(plan.deliveryDate)}">
+      </td>
+      <td class="px-2 py-1.5">
+        <input type="text" class="a0-edit-drawing-no ${inp}"
+          data-row-index="${i}" value="${esc(plan.drawingNo || '')}" placeholder="1">
+      </td>
+    </tr>`).join('');
+
+  const seriesLabel = plans.length > 1 ? `${plans.length}日間シリーズ` : '単体';
+
+  contentEl.innerHTML = `
+    <div>
+      <div class="text-sm font-medium text-gray-200 truncate">${esc(name)}</div>
+      <div class="text-xs text-gray-500 mt-0.5">${seriesLabel}</div>
+    </div>
+
+    <div>
+      <label class="text-xs text-gray-400 block mb-1">日付割当モード（シフト・再計算に使用）</label>
+      <select id="a0-date-assign-mode"
+        class="w-full bg-gray-700 text-gray-100 rounded px-2 py-1.5 text-sm">
+        ${modeOptions.map(([val, label]) =>
+          `<option value="${val}"${dateAssignMode === val ? ' selected' : ''}>${label}</option>`
+        ).join('')}
+      </select>
+    </div>
+
+    <div class="flex gap-2">
+      <button id="a0-shift-backward-btn"
+        class="flex-1 text-xs bg-gray-700 hover:bg-gray-600 text-gray-200 py-1.5 rounded">
+        ← 1日前へ
+      </button>
+      <button id="a0-shift-forward-btn"
+        class="flex-1 text-xs bg-gray-700 hover:bg-gray-600 text-gray-200 py-1.5 rounded">
+        1日後ろへ →
+      </button>
+    </div>
+
+    <div class="bg-gray-900 border border-gray-700 rounded overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead>
+          <tr class="text-xs text-gray-500">
+            <th class="px-2 py-1 text-center w-20">搬入日目</th>
+            <th class="px-2 py-1 text-left">日付</th>
+            <th class="px-2 py-1 text-left">計画図番</th>
+          </tr>
+        </thead>
+        <tbody>${rowsHtml}</tbody>
+      </table>
+    </div>
+
+    <div class="flex gap-2 pt-1">
+      <button id="a0-edit-save-btn"
+        class="flex-1 bg-blue-700 hover:bg-blue-600 text-white py-2 rounded text-sm font-medium">
+        保存
+      </button>
+      <button id="a0-edit-cancel-btn"
+        class="flex-1 bg-gray-700 hover:bg-gray-600 text-white py-2 rounded text-sm">
+        キャンセル
+      </button>
+    </div>`;
+}
+
+/**
+ * バークリック時にサイドバーを開く
+ * planId が属するシリーズを plansCache から取得して a0edit state に格納する
+ */
+function openA0EditSidebar(planId, projectId) {
+  const { displayMonth, plansCache } = adminState;
+  const year     = displayMonth.getFullYear();
+  const month    = displayMonth.getMonth();
+  const monthKey = `${year}-${String(month + 1).padStart(2, '0')}`;
+  const allPlans = plansCache[monthKey] || [];
+
+  const clicked = allPlans.find(p => p.id === planId);
+  if (!clicked) return;
+
+  let series;
+  if (clicked.deliverySeriesId) {
+    series = allPlans
+      .filter(p => p.deliverySeriesId === clicked.deliverySeriesId && p.projectId === projectId)
+      .sort((a, b) => (a.deliverySeriesIndex || 0) - (b.deliverySeriesIndex || 0));
+  } else {
+    series = [clicked];
+  }
+
+  adminState.a0edit = {
+    projectId,
+    plans:          series.map(p => ({ ...p })),  // shallow copy（元データを直接変更しない）
+    dateAssignMode: series[0]?.dateAssignMode || 'all_days',
+  };
+
+  document.getElementById('admin-cal-sidebar')?.classList.remove('hidden');
+  renderA0EditSidebar();
+}
+
+/** サイドバーの保存処理 — planId を維持したまま updatePlan を順次実行 */
+async function handleA0EditSave() {
+  const { plans, projectId } = adminState.a0edit;
+  const saveBtn = document.getElementById('a0-edit-save-btn');
+  if (saveBtn) { saveBtn.disabled = true; saveBtn.textContent = '保存中…'; }
+
+  const affectedMonths = new Set();
+  try {
+    for (const plan of plans) {
+      await updatePlan(projectId, plan.id, {
+        deliveryDate:         plan.deliveryDate,
+        drawingNo:            plan.drawingNo || null,
+        dayIndex:             plan.dayIndex,
+        deliverySeriesIndex:  plan.deliverySeriesIndex,
+        deliverySeriesLength: plan.deliverySeriesLength,
+      });
+      const [y, mo] = plan.deliveryDate.split('-');
+      affectedMonths.add(`${y}-${mo}`);
+    }
+  } catch (err) {
+    console.error('[A0 edit] save failed', err);
+    alert('保存に失敗しました');
+    if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = '保存'; }
+    return;
+  }
+
+  for (const key of affectedMonths) delete adminState.plansCache[key];
+  const prevSelectedDate = adminState.selectedDate;
+  closeA0EditSidebar();
+  await loadAndRenderCalendar();
+  if (prevSelectedDate) renderDateDetail(prevSelectedDate);
+}
+
+/** サイドバーのイベントを委譲バインド（一度だけ呼ぶ） */
+function bindA0SidebarEvents() {
+  const sidebar = document.getElementById('admin-cal-sidebar');
+  if (!sidebar) return;
+
+  sidebar.addEventListener('click', async e => {
+    if (e.target.id === 'a0-sidebar-close-btn' || e.target.id === 'a0-edit-cancel-btn') {
+      closeA0EditSidebar();
+      return;
+    }
+    if (e.target.id === 'a0-edit-save-btn') {
+      await handleA0EditSave();
+      return;
+    }
+    if (e.target.id === 'a0-shift-forward-btn') {
+      shiftA0SeriesDates(1);
+      return;
+    }
+    if (e.target.id === 'a0-shift-backward-btn') {
+      shiftA0SeriesDates(-1);
+    }
+  });
+
+  sidebar.addEventListener('change', e => {
+    if (e.target.id === 'a0-date-assign-mode') {
+      adminState.a0edit.dateAssignMode = e.target.value;
+      return;
+    }
+    if (e.target.matches('.a0-edit-date')) {
+      const rowIndex = parseInt(e.target.dataset.rowIndex);
+      if (e.target.value) reflowA0DatesFromRow(rowIndex, e.target.value);
+    }
+  });
+
+  sidebar.addEventListener('input', e => {
+    if (e.target.matches('.a0-edit-drawing-no')) {
+      const rowIndex = parseInt(e.target.dataset.rowIndex);
+      if (adminState.a0edit.plans[rowIndex]) {
+        adminState.a0edit.plans[rowIndex].drawingNo = e.target.value;
+      }
+    }
+  });
+}
+
+// ══════════════════════════════════════════════════════════
 // A1: Plan Form — state.a1 ベース
 //
 // dateAssignMode enum:
@@ -295,6 +548,29 @@ function getNextDateByMode(dateStr, mode) {
     // 日曜のみスキップ（土曜は搬入可）
     while (date.getDay() === 0) {
       date.setDate(date.getDate() + 1);
+    }
+  }
+
+  return toDateStr(date);
+}
+
+/**
+ * dateStr の前日から dateAssignMode に従った前の有効日を返す（シフト後退用）
+ * @param {string} dateStr 'YYYY-MM-DD'
+ * @param {'all_days'|'weekday_only'|'all_days_holiday'} mode
+ * @returns {string} 前有効日 'YYYY-MM-DD'
+ */
+function getPrevDateByMode(dateStr, mode) {
+  const date = new Date(`${dateStr}T00:00:00`);
+  date.setDate(date.getDate() - 1);
+
+  if (mode === 'weekday_only') {
+    while (date.getDay() === 0 || date.getDay() === 6) {
+      date.setDate(date.getDate() - 1);
+    }
+  } else if (mode === 'all_days_holiday') {
+    while (date.getDay() === 0) {
+      date.setDate(date.getDate() - 1);
     }
   }
 
@@ -711,6 +987,7 @@ async function handlePlanFormSave() {
         deliverySeriesId:     seriesId,
         deliverySeriesIndex:  idx + 1,
         deliverySeriesLength: seriesLength,
+        dateAssignMode:       form.dateAssignMode,
       });
       const [y, mo] = row.deliveryDate.split('-');
       affectedMonths.add(`${y}-${mo}`);
@@ -825,6 +1102,13 @@ function bindCalendarEvents() {
   });
 
   document.getElementById('admin-cal-grid').addEventListener('click', e => {
+    // バーアイテムのクリック → サイドバー編集を優先
+    const bar = e.target.closest('[data-plan-id]');
+    if (bar) {
+      openA0EditSidebar(bar.dataset.planId, bar.dataset.projectId);
+      return;
+    }
+    // セル背景クリック → 日付選択
     const cell = e.target.closest('[data-cal-date]');
     if (!cell) return;
     adminState.selectedDate = cell.dataset.calDate;
@@ -841,6 +1125,8 @@ function bindCalendarEvents() {
   });
 
   document.getElementById('admin-back-btn').addEventListener('click', goToCalendar);
+
+  bindA0SidebarEvents();
 }
 
 // ══════════════════════════════════════════════════════════

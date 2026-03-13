@@ -51,6 +51,16 @@ export const adminState = {
   // ロード済みデータ
   trucks:     [],   // getTrucksForPlan の結果
   itemsCache: {},   // { [truckId]: item[] }
+
+  // ── A0 カレンダー右サイドバー（シリーズ編集）────────────────
+  a0edit: {
+    projectId:      null,
+    // 編集対象計画（deliverySeriesIndex 順）
+    // [{ id, deliveryDate, dayIndex, drawingNo, deliverySeriesId,
+    //    deliverySeriesIndex, deliverySeriesLength, ... }]
+    plans:          [],
+    dateAssignMode: 'all_days',  // サイドバー内モード選択値
+  },
 };
 
 /**
