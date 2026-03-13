@@ -9,6 +9,9 @@ import {
   addDoc,
   updateDoc,
   deleteDoc,
+  query,
+  where,
+  getDocs,
   serverTimestamp,
 } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js';
 
@@ -83,6 +86,37 @@ export async function createPlan(projectId, planData) {
     updatedAt: serverTimestamp(),
   });
   return { id: ref.id, projectId, ...planData };
+}
+
+/**
+ * 搬入計画フィールドを更新する（号車・品目には触れない）
+ * @param {string} projectId
+ * @param {string} planId
+ * @param {object} data - 更新するフィールド
+ */
+export async function updatePlan(projectId, planId, data) {
+  const ref = doc(plansCol(projectId), planId);
+  await updateDoc(ref, { ...data, updatedAt: serverTimestamp() });
+}
+
+/**
+ * 搬入計画を1件削除する
+ * @param {string} projectId
+ * @param {string} planId
+ */
+export async function deletePlan(projectId, planId) {
+  await deleteDoc(doc(plansCol(projectId), planId));
+}
+
+/**
+ * deliverySeriesId が一致する計画を全件削除する（シリーズ一括削除）
+ * @param {string} projectId
+ * @param {string} seriesId
+ */
+export async function deletePlansBySeriesId(projectId, seriesId) {
+  const q = query(plansCol(projectId), where('deliverySeriesId', '==', seriesId));
+  const snap = await getDocs(q);
+  await Promise.all(snap.docs.map(d => deleteDoc(d.ref)));
 }
 
 const DEV_MODE = false;

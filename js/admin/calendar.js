@@ -30,6 +30,73 @@ function projDisplayName(proj) {
   return proj?.name || proj?.projectName || null;
 }
 
+// ── カレンダー色分け ──────────────────────────────────────
+
+const PROJECT_COLORS = [
+  '#e57373','#f06292','#ba68c8','#9575cd','#7986cb',
+  '#64b5f6','#4dd0e1','#4db6ac','#81c784','#aed581',
+  '#fff176','#ffb74d','#ff8a65','#a1887f','#90a4ae',
+  '#e53935','#8e24aa','#1e88e5','#00acc1','#43a047',
+];
+
+/** projectId から安定した色を返す（同じ ID は常に同じ色） */
+function getProjectColor(projectId) {
+  let hash = 0;
+  for (const ch of String(projectId)) {
+    hash = (hash * 31 + ch.charCodeAt(0)) & 0xffff;
+  }
+  return PROJECT_COLORS[hash % PROJECT_COLORS.length];
+}
+
+/**
+ * プランをバーアイテムに変換して日付別に整理する
+ * @param {object[]} plans - getPlansForMonth の結果
+ * @param {object[]} boltProjects - a1.boltProjects
+ * @returns {{ [dateStr]: {position, color, name, planId, projectId}[] }}
+ */
+function buildBarLayout(plans, boltProjects) {
+  const byDate = {};
+  for (const plan of plans) {
+    if (!plan.deliveryDate) continue;
+    if (!byDate[plan.deliveryDate]) byDate[plan.deliveryDate] = [];
+
+    const proj  = boltProjects.find(p => p.id === plan.projectId);
+    const name  = projDisplayName(proj) || '工事';
+    const color = getProjectColor(plan.projectId || '');
+
+    let position = 'bar-single';
+    if (plan.deliverySeriesId && plan.deliverySeriesLength > 1) {
+      if (plan.deliverySeriesIndex === 1)                              position = 'bar-start';
+      else if (plan.deliverySeriesIndex === plan.deliverySeriesLength) position = 'bar-end';
+      else                                                            position = 'bar-middle';
+    }
+
+    byDate[plan.deliveryDate].push({
+      position, color, name,
+      planId: plan.id, projectId: plan.projectId,
+    });
+  }
+  return byDate;
+}
+
+/** カレンダーセル内のバーアイテム HTML を返す */
+function renderBarItem({ position, color, name, planId, projectId }) {
+  // bar-start / bar-single のみ名称表示・角丸。middle / end は詰めて連続感を出す
+  const showName = position === 'bar-single' || position === 'bar-start';
+  const radiusCls = {
+    'bar-single': 'rounded',
+    'bar-start':  'rounded-l',
+    'bar-middle': 'rounded-none',
+    'bar-end':    'rounded-r',
+  }[position] || 'rounded';
+
+  return `<div class="text-xs leading-tight px-1 py-0.5 mb-px ${radiusCls} truncate cursor-pointer hover:brightness-125"
+     style="background-color:${color};color:#fff;"
+     data-plan-id="${esc(planId)}" data-project-id="${esc(projectId)}">
+    ${showName ? esc(name) : '&nbsp;'}
+  </div>`;
+}
+
 // ══════════════════════════════════════════════════════════
 // Screen management
 // ══════════════════════════════════════════════════════════
@@ -87,13 +154,7 @@ function renderCalendar() {
   const monthLabelEl = document.getElementById('admin-cal-month');
   if (monthLabelEl) monthLabelEl.textContent = `${year}年${month + 1}月`;
 
-  const plansByDate = {};
-  for (const plan of plans) {
-    if (!plan.deliveryDate) continue;
-    if (!plansByDate[plan.deliveryDate]) plansByDate[plan.deliveryDate] = [];
-    const proj = boltProjects.find(p => p.id === plan.projectId);
-    plansByDate[plan.deliveryDate].push(projDisplayName(proj) || '工事');
-  }
+  const barsByDate = buildBarLayout(plans, boltProjects);
 
   const firstDay    = new Date(year, month, 1).getDay();
   const daysInMonth = new Date(year, month + 1, 0).getDate();
@@ -108,8 +169,8 @@ function renderCalendar() {
 
   for (let d = 1; d <= daysInMonth; d++) {
     const dateStr  = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
-    const names    = plansByDate[dateStr] || [];
-    const hasPlans = names.length > 0;
+    const bars     = barsByDate[dateStr] || [];
+    const hasPlans = bars.length > 0;
     const dow      = (firstDay + d - 1) % 7;
     const isToday  = dateStr === todayStr;
     const isSel    = dateStr === selectedDate;
@@ -117,7 +178,7 @@ function renderCalendar() {
     let cellCls = 'min-h-[72px] p-1.5 rounded-lg border cursor-pointer transition-colors ';
     if (isToday)       cellCls += 'border-blue-500 bg-blue-900/25 ';
     else if (isSel)    cellCls += 'border-yellow-400 bg-yellow-900/20 ';
-    else if (hasPlans) cellCls += 'border-orange-700/50 bg-orange-900/10 hover:bg-orange-900/20 ';
+    else if (hasPlans) cellCls += 'border-gray-600 bg-gray-800/80 hover:bg-gray-700/50 ';
     else               cellCls += 'border-gray-700 bg-gray-800 hover:bg-gray-700/50 ';
 
     const numCls = dow === 0 ? 'text-red-400' : dow === 6 ? 'text-blue-400' : 'text-gray-300';
@@ -125,14 +186,12 @@ function renderCalendar() {
       ? `<span class="bg-blue-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs font-bold">${d}</span>`
       : `<span class="text-xs font-semibold ${numCls}">${d}</span>`;
 
-    const projHtml = names.map(name =>
-      `<span class="text-xs leading-tight text-orange-300 truncate block">${esc(name)}</span>`
-    ).join('');
+    const barsHtml = bars.map(bar => renderBarItem(bar)).join('');
 
     html += `
       <div class="${cellCls}" data-cal-date="${dateStr}">
         <div class="flex">${numEl}</div>
-        <div class="mt-0.5 flex flex-col gap-0.5 overflow-hidden">${projHtml}</div>
+        <div class="mt-0.5 overflow-hidden">${barsHtml}</div>
       </div>`;
   }
   html += '</div>';
@@ -232,8 +291,12 @@ function getNextDateByMode(dateStr, mode) {
     while (date.getDay() === 0 || date.getDay() === 6) {
       date.setDate(date.getDate() + 1);
     }
+  } else if (mode === 'all_days_holiday') {
+    // 日曜のみスキップ（土曜は搬入可）
+    while (date.getDay() === 0) {
+      date.setDate(date.getDate() + 1);
+    }
   }
-  // 'all_days_holiday': 将来の祝日スキップをここに追加
 
   return toDateStr(date);
 }
@@ -253,8 +316,12 @@ function buildA1PreviewRows({ startDate, deliveryDays, dateAssignMode, drawingAs
     while (firstDay.getDay() === 0 || firstDay.getDay() === 6) {
       firstDay.setDate(firstDay.getDate() + 1);
     }
+  } else if (dateAssignMode === 'all_days_holiday') {
+    // 日曜のみスキップ
+    while (firstDay.getDay() === 0) {
+      firstDay.setDate(firstDay.getDate() + 1);
+    }
   }
-  // 'all_days_holiday': 将来の祝日スキップをここに追加
 
   let curDate = toDateStr(firstDay);
 
@@ -262,7 +329,6 @@ function buildA1PreviewRows({ startDate, deliveryDays, dateAssignMode, drawingAs
     rows.push({
       deliveryDay:  i + 1,
       deliveryDate: curDate,
-      dayLabel:     '',
       drawingNo:    drawingAssignMode === 'serial' ? String(i + 1) : '',
     });
     curDate = getNextDateByMode(curDate, dateAssignMode);
@@ -349,10 +415,6 @@ function handleA1DrawingAssignModeChange(value) {
 function handleA1PreviewDateChange(rowIndex, value) {
   if (!value) return;
   reflowA1DatesFromRow(rowIndex, value);
-}
-
-function handleA1PreviewDayLabelChange(rowIndex, value) {
-  updateA1PreviewCell(rowIndex, 'dayLabel', value);
 }
 
 function handleA1PreviewDrawingNoChange(rowIndex, value) {
@@ -454,7 +516,7 @@ function renderA1PreviewRows() {
   const { previewRows } = adminState.a1;
   const inp = 'bg-gray-700 text-gray-100 rounded px-2 py-1 text-xs w-full';
 
-  return previewRows.map(({ deliveryDay, deliveryDate, dayLabel, drawingNo }, i) => `
+  return previewRows.map(({ deliveryDay, deliveryDate, drawingNo }, i) => `
     <tr data-row-index="${i}" class="border-t border-gray-700">
       <td class="px-2 py-1.5 text-xs text-gray-400 text-center whitespace-nowrap select-none">
         搬入${deliveryDay}日目
@@ -462,10 +524,6 @@ function renderA1PreviewRows() {
       <td class="px-2 py-1.5">
         <input type="date" class="a1-preview-date ${inp}"
           data-row-index="${i}" value="${esc(deliveryDate)}">
-      </td>
-      <td class="px-2 py-1.5">
-        <input type="text" class="a1-preview-day-label ${inp}"
-          data-row-index="${i}" value="${esc(dayLabel)}" placeholder="例: 前段取り">
       </td>
       <td class="px-2 py-1.5">
         <input type="text" class="a1-preview-drawing-no ${inp}"
@@ -484,7 +542,6 @@ function buildPreviewTableHTML() {
         <tr class="text-xs text-gray-500">
           <th class="px-2 py-1 text-center w-24">搬入日目</th>
           <th class="px-2 py-1 text-left">日付</th>
-          <th class="px-2 py-1 text-left">日名称</th>
           <th class="px-2 py-1 text-left">計画図番</th>
         </tr>
       </thead>
@@ -581,10 +638,6 @@ function bindA1PreviewEvents(el) {
   });
 
   el.addEventListener('input', e => {
-    if (e.target.matches('.a1-preview-day-label')) {
-      handleA1PreviewDayLabelChange(parseInt(e.target.dataset.rowIndex), e.target.value);
-      return;
-    }
     if (e.target.matches('.a1-preview-drawing-no')) {
       handleA1PreviewDrawingNoChange(parseInt(e.target.dataset.rowIndex), e.target.value);
     }
@@ -609,7 +662,6 @@ function previewRowToPlanData(row) {
   return {
     deliveryDate: row.deliveryDate,
     dayIndex:     row.deliveryDay,   // Firestore フィールド名は dayIndex
-    dayLabel:     row.dayLabel  || null,
     drawingNo:    row.drawingNo || null,
     status:       'active',          // Firestore の既存値に合わせる
     truckCount:   0,
@@ -646,10 +698,20 @@ async function handlePlanFormSave() {
 
   const affectedMonths = new Set();
 
+  // シリーズID生成（同一 A1 登録の計画群をグループ化）
+  const seriesId    = `s-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+  const validRows   = previewRows.filter(row => row.deliveryDate);
+  const seriesLength = validRows.length;
+
   try {
-    for (const row of previewRows) {
-      if (!row.deliveryDate) continue;
-      await createPlan(projectId, previewRowToPlanData(row));
+    for (let idx = 0; idx < validRows.length; idx++) {
+      const row = validRows[idx];
+      await createPlan(projectId, {
+        ...previewRowToPlanData(row),
+        deliverySeriesId:     seriesId,
+        deliverySeriesIndex:  idx + 1,
+        deliverySeriesLength: seriesLength,
+      });
       const [y, mo] = row.deliveryDate.split('-');
       affectedMonths.add(`${y}-${mo}`);
     }
