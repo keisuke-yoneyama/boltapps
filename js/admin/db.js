@@ -44,6 +44,9 @@ export {
   getItemsForTruck,
 } from '../modules/delivery-db.js';
 
+// bolt アプリ側の工事一覧（A1 工事セレクトの候補用）
+export { getAllProjects as getBoltProjects } from '../modules/db.js';
+
 function projectsCol() {
   return collection(db, 'projects');
 }

@@ -2,7 +2,7 @@
 
 import { adminState } from './state.js';
 import {
-  getDeliveryProjects,
+  getBoltProjects,
   getPlansForMonth,
   createPlan,
   createProject,
@@ -21,6 +21,11 @@ function esc(s) {
 
 function toDateStr(d) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+// bolt プロジェクトの表示名を取得（name 優先、なければ projectName）
+function projDisplayName(proj) {
+  return proj?.name || proj?.projectName || null;
 }
 
 // ── Screen management ──────────────────────────────────────
@@ -83,7 +88,7 @@ function renderCalendar() {
     if (!plan.deliveryDate) continue;
     if (!plansByDate[plan.deliveryDate]) plansByDate[plan.deliveryDate] = [];
     const proj = projects.find(p => p.id === plan.projectId);
-    plansByDate[plan.deliveryDate].push(proj?.projectName || '工事');
+    plansByDate[plan.deliveryDate].push(projDisplayName(proj) || '工事');
   }
 
   const firstDay    = new Date(year, month, 1).getDay();
@@ -152,6 +157,7 @@ function renderDateDetail(dateStr) {
 
   const planCards = plans.map(plan => {
     const proj = projects.find(p => p.id === plan.projectId);
+    const name = projDisplayName(proj) || '—';
     const meta = [
       plan.drawingNo ? `計画図 ${plan.drawingNo}` : null,
       plan.truckCount ? `${plan.truckCount}台` : null,
@@ -162,7 +168,7 @@ function renderDateDetail(dateStr) {
                   hover:border-gray-500 cursor-pointer transition-colors"
            data-plan-id="${esc(plan.id)}" data-project-id="${esc(plan.projectId)}">
         <div class="flex-1 min-w-0">
-          <div class="font-medium text-sm text-gray-100 truncate">${esc(proj?.projectName || '—')}</div>
+          <div class="font-medium text-sm text-gray-100 truncate">${esc(name)}</div>
           ${meta ? `<div class="text-xs text-gray-400 mt-0.5">${esc(meta)}</div>` : ''}
         </div>
         <span class="text-gray-500">›</span>
@@ -190,10 +196,17 @@ function renderDateDetail(dateStr) {
 // ── Plan Form (A1) ─────────────────────────────────────────
 
 /**
+ * 日付割当モード
+ * 'continuous' : 連続（土日含む全日）
+ * 'weekday'    : 平日のみ（土日スキップ）
+ * 'all'        : 平日+土日+祝日（将来の祝日対応用。現状は 'continuous' と同じ全日連続）
+ */
+
+/**
  * 搬入日リストを生成する
  * @param {string} startDateStr - 'YYYY-MM-DD'
  * @param {number} count
- * @param {'continuous'|'weekday'} mode
+ * @param {'continuous'|'weekday'|'all'} mode
  * @returns {{ dayIndex: number, date: string, dayLabel: string, drawingNo: string }[]}
  */
 function generateDays(startDateStr, count, mode) {
@@ -203,8 +216,11 @@ function generateDays(startDateStr, count, mode) {
   let idx = 1;
 
   while (days.length < count) {
-    const dow = cur.getDay();
-    if (mode !== 'weekday' || (dow !== 0 && dow !== 6)) {
+    const dow  = cur.getDay();
+    const skip = mode === 'weekday' && (dow === 0 || dow === 6);
+    // 'all' は将来の祝日スキップをここに追加予定。現状はスキップなし。
+
+    if (!skip) {
       days.push({
         dayIndex: idx,
         date: toDateStr(cur),
@@ -218,8 +234,47 @@ function generateDays(startDateStr, count, mode) {
   return days;
 }
 
+/**
+ * 指定行以降の日付を、その行の日付を起点に後ろへ再計算する
+ * @param {number} fromDayIndex - 変更した行の dayIndex（この行自体は変えない）
+ * @param {string} baseDateStr  - 変更後の日付 'YYYY-MM-DD'
+ * @param {'continuous'|'weekday'|'all'} mode
+ */
+function recalcFrom(fromDayIndex, baseDateStr, mode) {
+  const rows = [...document.querySelectorAll('#pf-preview tr[data-day-index]')];
+  const afterRows = rows.filter(r => parseInt(r.dataset.dayIndex) > fromDayIndex);
+
+  const [y, mo, d] = baseDateStr.split('-').map(Number);
+  const cur = new Date(y, mo - 1, d);
+  cur.setDate(cur.getDate() + 1); // 次の日から開始
+
+  for (const row of afterRows) {
+    // 平日のみモード: 土日をスキップ
+    if (mode === 'weekday') {
+      while (cur.getDay() === 0 || cur.getDay() === 6) {
+        cur.setDate(cur.getDate() + 1);
+      }
+    }
+    // 'all' は将来の祝日スキップをここに追加予定
+    row.querySelector('input[name="date"]').value = toDateStr(cur);
+    cur.setDate(cur.getDate() + 1);
+  }
+}
+
+/**
+ * 計画図番割当モードをプレビュー行に適用する
+ * @param {'sequential'} drawingMode
+ */
+function applyDrawingNoMode(drawingMode) {
+  if (drawingMode !== 'sequential') return;
+  const rows = document.querySelectorAll('#pf-preview tr[data-day-index]');
+  rows.forEach((row, i) => {
+    row.querySelector('input[name="drawingNo"]').value = String(i + 1);
+  });
+}
+
 function renderPreviewTable(days) {
-  if (!days.length) return '<p class="text-xs text-gray-500">（日付なし）</p>';
+  if (!days.length) return '<p class="text-xs text-gray-500 p-3">（日付なし）</p>';
 
   const inp = 'bg-gray-700 text-gray-100 rounded px-2 py-1 text-xs w-full';
   const rows = days.map(({ dayIndex, date, dayLabel, drawingNo }) => `
@@ -232,7 +287,7 @@ function renderPreviewTable(days) {
         <input type="text" name="dayLabel" value="${esc(dayLabel)}" class="${inp}" placeholder="日名称">
       </td>
       <td class="px-2 py-1.5">
-        <input type="text" name="drawingNo" value="${esc(drawingNo)}" class="${inp}" placeholder="DWG-001">
+        <input type="text" name="drawingNo" value="${esc(drawingNo)}" class="${inp}" placeholder="1">
       </td>
     </tr>
   `).join('');
@@ -259,6 +314,9 @@ function showPlanForm(dateStr) {
   renderPlanForm();
 }
 
+// A1 フォームのイベントは el への委譲で一度だけバインド
+let _planFormEventsBound = false;
+
 function renderPlanForm() {
   const el = document.getElementById('admin-plan-form-content');
   if (!el) return;
@@ -266,8 +324,8 @@ function renderPlanForm() {
   const { projects, selectedDate } = adminState;
 
   const projOptions = [
-    '<option value="">— 既存工事を選択 —</option>',
-    ...projects.map(p => `<option value="${esc(p.id)}">${esc(p.projectName)}</option>`),
+    '<option value="">— 工事を選択 —</option>',
+    ...projects.map(p => `<option value="${esc(p.id)}">${esc(projDisplayName(p) || p.id)}</option>`),
     '<option value="__new__">＋ 新規工事を作成…</option>',
   ].join('');
 
@@ -277,7 +335,11 @@ function renderPlanForm() {
     ? (() => { const [, m, d] = selectedDate.split('-'); return `${parseInt(m)}月${parseInt(d)}日`; })()
     : '未選択';
 
-  const previewDays = selectedDate ? generateDays(selectedDate, 1, 'continuous') : [];
+  // 初期プレビュー（搬入1日目、連番図番）
+  const initialDays = selectedDate ? generateDays(selectedDate, 1, 'continuous') : [];
+  initialDays.forEach((day, i) => { day.drawingNo = String(i + 1); });
+
+  const radioBase = 'accent-blue-500';
 
   el.innerHTML = `
     <h2 class="text-lg font-semibold text-gray-100 mb-6">搬入計画 登録</h2>
@@ -304,21 +366,30 @@ function renderPlanForm() {
         </div>
       </div>
 
-      <div class="flex gap-4 items-end">
-        <div class="flex-1">
+      <div class="flex gap-4 items-start">
+        <div class="w-24 flex-shrink-0">
           <label class="text-xs text-gray-400 block mb-1">搬入日数 <span class="text-red-400">*</span></label>
           <input id="pf-delivery-days" type="number" min="1" max="30" value="1" class="${inp}">
         </div>
         <div class="flex-1">
           <label class="text-xs text-gray-400 block mb-1">日付割当モード</label>
-          <div class="flex gap-4 py-2">
+          <div class="flex flex-col gap-1.5 py-1">
             <label class="flex items-center gap-1.5 text-sm text-gray-300 cursor-pointer">
-              <input type="radio" name="pf-day-mode" value="continuous" checked
-                class="accent-blue-500"> 連続
+              <input type="radio" name="pf-day-mode" value="continuous" checked class="${radioBase}"> 連続
             </label>
             <label class="flex items-center gap-1.5 text-sm text-gray-300 cursor-pointer">
-              <input type="radio" name="pf-day-mode" value="weekday"
-                class="accent-blue-500"> 平日のみ
+              <input type="radio" name="pf-day-mode" value="weekday" class="${radioBase}"> 平日のみ
+            </label>
+            <label class="flex items-center gap-1.5 text-sm text-gray-300 cursor-pointer">
+              <input type="radio" name="pf-day-mode" value="all" class="${radioBase}"> 平日+土日+祝日
+            </label>
+          </div>
+        </div>
+        <div class="flex-1">
+          <label class="text-xs text-gray-400 block mb-1">計画図番割当</label>
+          <div class="flex flex-col gap-1.5 py-1">
+            <label class="flex items-center gap-1.5 text-sm text-gray-300 cursor-pointer">
+              <input type="radio" name="pf-drawing-mode" value="sequential" checked class="${radioBase}"> 連番
             </label>
           </div>
         </div>
@@ -327,7 +398,7 @@ function renderPlanForm() {
       <div>
         <label class="text-xs text-gray-400 block mb-2">搬入日プレビュー</label>
         <div id="pf-preview" class="bg-gray-800 border border-gray-700 rounded overflow-x-auto">
-          ${renderPreviewTable(previewDays)}
+          ${renderPreviewTable(initialDays)}
         </div>
       </div>
 
@@ -345,24 +416,60 @@ function renderPlanForm() {
     </div>
   `;
 
-  // 工事セレクト変更 → 新規入力エリア表示切替
-  document.getElementById('pf-project').addEventListener('change', e => {
-    document.getElementById('pf-new-project-area').classList.toggle('hidden', e.target.value !== '__new__');
-  });
+  // イベントバインドは初回のみ（el への委譲なので rerenderでも動作する）
+  if (_planFormEventsBound) return;
+  _planFormEventsBound = true;
 
-  // 日数・モード変更 → プレビュー再生成
+  function getCurrentDayMode() {
+    return document.querySelector('input[name="pf-day-mode"]:checked')?.value ?? 'continuous';
+  }
+
   function refreshPreview() {
     const count = Math.max(1, Math.min(30, parseInt(document.getElementById('pf-delivery-days').value) || 1));
-    const mode  = document.querySelector('input[name="pf-day-mode"]:checked')?.value ?? 'continuous';
+    const mode  = getCurrentDayMode();
+    const drawingMode = document.querySelector('input[name="pf-drawing-mode"]:checked')?.value ?? 'sequential';
     const days  = adminState.selectedDate ? generateDays(adminState.selectedDate, count, mode) : [];
+
+    // 計画図番割当モードを初期適用
+    if (drawingMode === 'sequential') {
+      days.forEach((day, i) => { day.drawingNo = String(i + 1); });
+    }
+
     document.getElementById('pf-preview').innerHTML = renderPreviewTable(days);
   }
 
-  document.getElementById('pf-delivery-days').addEventListener('input', refreshPreview);
-  el.querySelectorAll('input[name="pf-day-mode"]').forEach(r => r.addEventListener('change', refreshPreview));
+  el.addEventListener('input', e => {
+    if (e.target.id === 'pf-delivery-days') refreshPreview();
+  });
 
-  document.getElementById('pf-save').addEventListener('click', handlePlanFormSave);
-  document.getElementById('pf-cancel').addEventListener('click', goToCalendar);
+  el.addEventListener('change', e => {
+    // 日付割当モード変更 → プレビュー全体を再生成
+    if (e.target.matches('input[name="pf-day-mode"]')) {
+      refreshPreview();
+      return;
+    }
+    // 計画図番割当モード変更 → 既存行の図番だけ書き換え（手修正は保持）
+    if (e.target.matches('input[name="pf-drawing-mode"]')) {
+      applyDrawingNoMode(e.target.value);
+      return;
+    }
+    // 工事セレクト変更 → 新規入力エリア表示切替
+    if (e.target.id === 'pf-project') {
+      document.getElementById('pf-new-project-area').classList.toggle('hidden', e.target.value !== '__new__');
+      return;
+    }
+    // プレビュー行の日付変更 → その行以降を再計算
+    if (e.target.matches('#pf-preview input[name="date"]')) {
+      const row = e.target.closest('tr[data-day-index]');
+      if (!row) return;
+      recalcFrom(parseInt(row.dataset.dayIndex), e.target.value, getCurrentDayMode());
+    }
+  });
+
+  el.addEventListener('click', e => {
+    if (e.target.id === 'pf-save')   handlePlanFormSave();
+    if (e.target.id === 'pf-cancel') goToCalendar();
+  });
 }
 
 async function handlePlanFormSave() {
@@ -401,7 +508,7 @@ async function handlePlanFormSave() {
   const affectedMonths = new Set();
 
   for (const row of rows) {
-    const dayIndex = parseInt(row.dataset.dayIndex);
+    const dayIndex     = parseInt(row.dataset.dayIndex);
     const deliveryDate = row.querySelector('input[name="date"]').value;
     const dayLabel     = row.querySelector('input[name="dayLabel"]').value.trim();
     const drawingNo    = row.querySelector('input[name="drawingNo"]').value.trim();
@@ -426,7 +533,6 @@ async function handlePlanFormSave() {
     delete adminState.plansCache[key];
   }
 
-  adminState.selectedDate = adminState.selectedDate; // keep current date
   await goToCalendar();
 }
 
@@ -434,9 +540,10 @@ async function handlePlanFormSave() {
 
 async function enterGrid(projectId, planId) {
   const proj = adminState.projects.find(p => p.id === projectId);
+  const name = projDisplayName(proj) || projectId;
   showScreen('grid');
   updateHeaderInfo(`
-    <span class="text-gray-300 truncate max-w-[200px]">${esc(proj?.projectName || projectId)}</span>
+    <span class="text-gray-300 truncate max-w-[200px]">${esc(name)}</span>
     <span class="text-gray-600">/</span>
     <span class="text-gray-500 text-xs">${esc(planId)}</span>
   `);
@@ -505,8 +612,8 @@ function bindCalendarEvents() {
 // ── Init ───────────────────────────────────────────────────
 
 export async function initAdminApp() {
-  // プロジェクト一覧を先にロード（計画フォームのセレクトで使用）
-  adminState.projects = await getDeliveryProjects();
+  // bolt アプリ側の工事一覧をロード（A1 コンボボックス候補 + カレンダー名称表示に使用）
+  adminState.projects = await getBoltProjects();
 
   // イベント bind
   bindCalendarEvents();
