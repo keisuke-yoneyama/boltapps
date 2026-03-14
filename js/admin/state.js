@@ -102,3 +102,20 @@ export function removeItemFromState(truckId, itemId) {
   if (!adminState.itemsCache[truckId]) return;
   adminState.itemsCache[truckId] = adminState.itemsCache[truckId].filter(i => i.id !== itemId);
 }
+
+/**
+ * trucks 配列内の号車を更新する（updateTruck 後に呼ぶ）
+ * @param {object} truck - id 付き更新済み号車オブジェクト
+ */
+export function updateTruckInState(truck) {
+  adminState.trucks = adminState.trucks.map(t => t.id === truck.id ? { ...t, ...truck } : t);
+}
+
+/**
+ * trucks 配列から号車を削除する（deleteTruckCascade 後に呼ぶ）
+ * @param {string} truckId
+ */
+export function removeTruckFromState(truckId) {
+  adminState.trucks = adminState.trucks.filter(t => t.id !== truckId);
+  delete adminState.itemsCache[truckId];
+}

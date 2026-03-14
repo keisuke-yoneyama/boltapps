@@ -224,13 +224,21 @@ export async function deleteItem(projectId, planId, truckId, itemId) {
 }
 
 /**
- * 号車情報を保存する（スタブ）
+ * 号車情報を更新する
  * @param {string} projectId
  * @param {string} planId
  * @param {string} truckId
- * @param {object} data
+ * @param {object} data - 更新するフィールド
+ */
+export async function updateTruck(projectId, planId, truckId, data) {
+  const ref = doc(trucksCol(projectId, planId), truckId);
+  await updateDoc(ref, { ...data, updatedAt: serverTimestamp() });
+}
+
+/**
+ * 号車情報を保存する（スタブ・後方互換）
+ * @deprecated updateTruck を使うこと
  */
 export async function saveTruck(projectId, planId, truckId, data) {
-  // TODO: Firestore write
   console.log('[admin-db] saveTruck stub', { projectId, planId, truckId, data });
 }

@@ -1,7 +1,7 @@
 // 管理画面 UI / イベント
 
-import { adminState, addItemToState, updateItemInState, removeItemFromState, addTruckToState } from './state.js';
-import { getTrucksForPlan, getItemsForTruck, createItem, updateItem, deleteItem, createTruck } from './db.js';
+import { adminState, addItemToState, updateItemInState, removeItemFromState, addTruckToState, updateTruckInState, removeTruckFromState } from './state.js';
+import { getTrucksForPlan, getItemsForTruck, createItem, updateItem, deleteItem, createTruck, updateTruck, deleteTruckCascade } from './db.js';
 import { sortItems, buildItemName } from '../../packages/shared-domain/src/index.js';
 import { getSuggestions } from './suggest-data.js';
 
@@ -46,6 +46,11 @@ function getItemDisplayName(item) {
 
 // ── bindEvents ガード（複数回呼び出し防止） ────────────────
 let _eventsBound = false;
+
+// ── Truck Panel mode ────────────────────────────────────────
+// null | 'new' | 'edit' | 'delete-confirm'
+// renderRightPanel() の先頭で確認し、セット時は号車フォームを描画
+let _truckPanelMode = null;
 
 // ── Right Panel: draft state ───────────────────────────────
 
@@ -217,25 +222,27 @@ function renderTruckList() {
 
   elTruckList.innerHTML = trucks.map(t => {
     const isSelected = t.id === selectedTruckId;
+    const btnCls = isSelected
+      ? 'text-blue-200 hover:text-white hover:bg-blue-600'
+      : 'text-gray-500 hover:text-blue-300 hover:bg-gray-600';
+    const visCls = isSelected ? 'opacity-100' : 'opacity-0 group-hover:opacity-100';
 
     return `
       <li class="relative group">
         <button
           data-truck-id="${esc(t.id)}"
-          class="w-full text-left px-3 py-2.5 pr-8 flex flex-col gap-0.5 transition-colors
+          class="w-full text-left px-3 py-2.5 pr-14 flex flex-col gap-0.5 transition-colors
             ${isSelected ? 'bg-blue-700 text-white' : 'hover:bg-gray-700 text-gray-200'}"
         >
           <span class="font-semibold text-sm">${esc(t.truckNo)}号車</span>
           <span class="text-xs ${isSelected ? 'text-blue-200' : 'text-gray-400'} truncate">${esc(t.vehicleType ?? '')}</span>
         </button>
-        <button
-          data-copy-truck="${esc(t.id)}"
-          title="この号車を複製"
-          class="absolute top-1/2 -translate-y-1/2 right-1.5
-            ${isSelected ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'} transition-opacity
-            w-6 h-6 flex items-center justify-center rounded
-            text-xs ${isSelected ? 'text-blue-200 hover:text-white hover:bg-blue-600' : 'text-gray-500 hover:text-blue-300 hover:bg-gray-600'}"
-        >⧉</button>
+        <div class="absolute top-1/2 -translate-y-1/2 right-1 flex gap-0.5 ${visCls} transition-opacity">
+          <button data-edit-truck="${esc(t.id)}" title="編集"
+            class="w-6 h-6 flex items-center justify-center rounded text-xs ${btnCls}">✏</button>
+          <button data-copy-truck="${esc(t.id)}" title="複製"
+            class="w-6 h-6 flex items-center justify-center rounded text-xs ${btnCls}">⧉</button>
+        </div>
       </li>
     `;
   }).join('');
@@ -317,6 +324,16 @@ function renderItemCell(item, isPrimary, isMulti) {
 // ── Render: Right Panel ────────────────────────────────────
 
 function renderRightPanel() {
+  // 号車フォームモードが優先
+  if (_truckPanelMode === 'new' || _truckPanelMode === 'edit') {
+    _renderTruckFormPanel(_truckPanelMode);
+    return;
+  }
+  if (_truckPanelMode === 'delete-confirm') {
+    _renderTruckDeleteConfirm();
+    return;
+  }
+
   const { rightPanelMode, selectedTruckId, selectedItemId, itemsCache } = adminState;
 
   const items = selectedTruckId ? (itemsCache[selectedTruckId] ?? []) : [];
@@ -649,6 +666,160 @@ function _confirmBulkRowEdit(idx) {
   const newName = input.value.trim();
   if (newName) _bulkDraft[idx].name = newName;
   _renderBulkDraftList();
+}
+
+// ── Truck Form Panel ───────────────────────────────────────
+
+function _renderTruckFormPanel(mode) {
+  const { trucks, selectedTruckId } = adminState;
+  const isEdit = mode === 'edit';
+  const truck  = isEdit ? trucks.find(t => t.id === selectedTruckId) : null;
+
+  const maxNo = Math.max(0, ...trucks.map(t => parseInt(t.truckNo) || 0));
+  const defNo  = isEdit ? (truck?.truckNo ?? '') : String(maxNo + 1);
+  const defVeh = truck?.vehicleType        ?? '';
+  const defCau = truck?.cautionNotes       ?? '';
+  const defLoa = truck?.loadingInstruction ?? '';
+
+  const inp = 'w-full bg-gray-700 text-gray-100 rounded px-2 py-1 mt-0.5 text-sm';
+
+  elRightContent.innerHTML = `
+    <div class="px-3 py-2 text-xs font-semibold text-gray-400 tracking-widest
+                border-b border-gray-700 -mx-3 -mt-3 mb-3">
+      ${isEdit ? '号車 編集' : '号車 新規登録'}
+    </div>
+
+    <div class="flex gap-1.5 mb-4">
+      <button data-truck-action="save"
+        class="flex-1 text-xs ${isEdit ? 'bg-green-700 hover:bg-green-600' : 'bg-blue-700 hover:bg-blue-600'} text-white py-1.5 rounded font-medium">
+        ${isEdit ? '更新' : '登録'}
+      </button>
+      <button data-truck-action="cancel"
+        class="flex-1 text-xs bg-gray-700 hover:bg-gray-600 text-white py-1.5 rounded">
+        キャンセル
+      </button>
+      ${isEdit ? `
+        <button data-truck-action="delete-request"
+          class="text-xs bg-red-900 hover:bg-red-800 text-red-200 px-2.5 py-1.5 rounded">
+          削除
+        </button>
+      ` : ''}
+    </div>
+
+    <div class="space-y-2.5 text-sm">
+      <div>
+        <label class="text-xs text-gray-400">号車番号 <span class="text-red-400">*</span></label>
+        <input id="tp-truckNo" type="text" value="${esc(defNo)}"
+          class="${inp}" placeholder="1">
+      </div>
+      <div>
+        <label class="text-xs text-gray-400">車種</label>
+        <input id="tp-vehicleType" type="text" value="${esc(defVeh)}"
+          class="${inp}" placeholder="例: 10t">
+      </div>
+      <div>
+        <label class="text-xs text-gray-400">注意事項</label>
+        <textarea id="tp-cautionNotes" rows="3"
+          class="${inp} resize-none"
+          placeholder="注意事項">${esc(defCau)}</textarea>
+      </div>
+      <div>
+        <label class="text-xs text-gray-400">積込指示</label>
+        <textarea id="tp-loadingInstruction" rows="3"
+          class="${inp} resize-none"
+          placeholder="積込指示">${esc(defLoa)}</textarea>
+      </div>
+    </div>
+  `;
+
+  elRightContent.querySelector('#tp-truckNo')?.focus();
+}
+
+function _renderTruckDeleteConfirm() {
+  const { trucks, selectedTruckId } = adminState;
+  const truck = trucks.find(t => t.id === selectedTruckId);
+  if (!truck) return;
+
+  elRightContent.innerHTML = `
+    <div class="text-sm font-semibold text-red-400 mb-3">${esc(truck.truckNo)}号車を削除</div>
+    <div class="bg-red-950/40 border border-red-900/60 rounded p-3 text-xs text-red-300 leading-relaxed mb-4">
+      ⚠️ 削除すると元に戻せません。<br>
+      この号車に紐づく品目データも一緒に削除されます。
+    </div>
+    <div class="flex gap-2">
+      <button data-truck-action="delete-confirm"
+        class="flex-1 bg-red-700 hover:bg-red-600 text-white py-2 rounded text-sm font-medium">
+        削除する
+      </button>
+      <button data-truck-action="delete-cancel"
+        class="flex-1 bg-gray-700 hover:bg-gray-600 text-white py-2 rounded text-sm">
+        キャンセル
+      </button>
+    </div>
+  `;
+}
+
+async function _handleTruckSave() {
+  const { selectedProjectId, selectedPlanId, selectedTruckId, trucks } = adminState;
+  const isEdit = _truckPanelMode === 'edit';
+
+  const q      = id => elRightContent.querySelector(id);
+  const truckNo = q('#tp-truckNo')?.value.trim();
+  if (!truckNo) { q('#tp-truckNo')?.focus(); return; }
+
+  const cautionNotes       = q('#tp-cautionNotes')?.value.trim()        ?? '';
+  const loadingInstruction = q('#tp-loadingInstruction')?.value.trim()  ?? '';
+  const truckData = {
+    truckNo,
+    vehicleType:           q('#tp-vehicleType')?.value.trim() ?? '',
+    cautionNotes,
+    loadingInstruction,
+    hasCaution:            !!cautionNotes,
+    hasLoadingInstruction: !!loadingInstruction,
+  };
+
+  if (isEdit) {
+    const existing = trucks.find(t => t.id === selectedTruckId);
+    truckData.truckOrder = existing?.truckOrder ?? 0;
+    await updateTruck(selectedProjectId, selectedPlanId, selectedTruckId, truckData);
+    updateTruckInState({ id: selectedTruckId, ...truckData });
+  } else {
+    const maxOrder = Math.max(0, ...trucks.map(t => t.truckOrder ?? 0));
+    truckData.truckOrder = maxOrder + 1;
+    const newTruck = await createTruck(selectedProjectId, selectedPlanId, truckData);
+    addTruckToState(newTruck);
+    adminState.selectedTruckId = newTruck.id;
+    adminState.itemsCache[newTruck.id] = [];
+  }
+
+  _truckPanelMode = null;
+  renderTruckList();
+  renderMainGrid();
+  renderRightPanel();
+}
+
+async function _handleTruckDelete() {
+  const { selectedProjectId, selectedPlanId, selectedTruckId } = adminState;
+
+  // Optimistic: state 先更新 → 即再描画
+  removeTruckFromState(selectedTruckId);
+  adminState.selectedTruckId      = null;
+  adminState.selectedItemId       = null;
+  adminState.multiSelectedItemIds = [];
+  _truckPanelMode = null;
+  _diffDraft      = [];
+  _bulkDraft      = [];
+
+  renderTruckList();
+  renderMainGrid();
+  renderRightPanel();
+
+  // Firestore cascade 削除
+  try {
+    await deleteTruckCascade(selectedProjectId, selectedPlanId, selectedTruckId);
+  } catch (err) {
+    console.error('[A2] 号車削除失敗', { selectedProjectId, selectedPlanId, selectedTruckId }, err);
+  }
 }
 
 function _renderBulkPanel() {
@@ -1007,6 +1178,7 @@ async function _handleCopyTruck(sourceTruckId) {
 }
 
 async function selectTruck(truckId) {
+  _truckPanelMode                 = null;
   adminState.selectedTruckId      = truckId;
   adminState.selectedItemId       = null;
   adminState.multiSelectedItemIds = [];
@@ -1081,8 +1253,24 @@ function bindEvents() {
     const copyBtn = e.target.closest('[data-copy-truck]');
     if (copyBtn) { await _handleCopyTruck(copyBtn.dataset.copyTruck); return; }
 
+    const editBtn = e.target.closest('[data-edit-truck]');
+    if (editBtn) {
+      // 編集対象号車を選択済みにしてからフォームを開く
+      const truckId = editBtn.dataset.editTruck;
+      adminState.selectedTruckId = truckId;
+      _truckPanelMode = 'edit';
+      renderTruckList();
+      renderRightPanel();
+      return;
+    }
+
     const btn = e.target.closest('[data-truck-id]');
     if (btn) selectTruck(btn.dataset.truckId);
+  });
+
+  document.getElementById('admin-truck-add-btn')?.addEventListener('click', () => {
+    _truckPanelMode = 'new';
+    renderRightPanel();
   });
 
   elMainGrid.addEventListener('click', e => {
@@ -1132,6 +1320,17 @@ function bindEvents() {
       const mode    = adminState.rightPanelMode === 'bulk' ? 'bulk' : 'single';
       const listEl  = elRightContent.querySelector('#rp-history-list');
       if (listEl) listEl.innerHTML = _historyListHtml(mode);
+      return;
+    }
+
+    // 号車フォームアクション
+    const truckAction = e.target.closest('[data-truck-action]')?.dataset.truckAction;
+    if (truckAction) {
+      if (truckAction === 'save')           { await _handleTruckSave(); return; }
+      if (truckAction === 'cancel')         { _truckPanelMode = null; renderRightPanel(); return; }
+      if (truckAction === 'delete-request') { _truckPanelMode = 'delete-confirm'; renderRightPanel(); return; }
+      if (truckAction === 'delete-confirm') { await _handleTruckDelete(); return; }
+      if (truckAction === 'delete-cancel')  { _truckPanelMode = 'edit'; renderRightPanel(); return; }
       return;
     }
 
