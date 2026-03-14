@@ -58,7 +58,35 @@
 ### admin
 - 搬入リスト入力・編集・公開に特化
 - 現場アプリへ渡す元データを作る
-- 画面Aが中核画面
+- 画面 A0（カレンダー）・A1（計画登録フォーム）・A2（グリッド編集）が中核
+
+---
+
+## admin 画面構成
+
+### A0: カレンダー画面
+- 月間カレンダーで搬入計画を一覧する
+- 右サイドバー: シリーズ編集（`a0edit` 状態で管理）
+- 計画削除は必ずカスケード削除（trucks / items も削除）
+
+### A1: 計画登録フォーム
+- 工事選択 → 日付・納入日数・日程モード入力 → プレビュー → 登録
+- 登録するとシリーズ（`deliverySeriesId` 共通の複数 plan）が作られる
+- `deliverySeriesIndex` で順序管理、`deliverySeriesLength` でシリーズ長管理
+
+### A2: グリッド編集画面
+- 搬入計画1件の号車・品目を編集する中核画面
+- 上部ヘッダ: 工事名 / 搬入○日目 / 計画図番○
+- 上部タブ: 同一シリーズの日切替（`_onSwitchA2Plan` コールバック経由）
+- 左ペイン: 号車一覧（＋ボタンで追加）
+- 中央: 種別別4列グリッド
+- 右サイドバー: `idle / view / edit / new / bulk` モード
+
+#### A2 右サイドバーモード
+- `rightPanelMode`: `'idle' | 'view' | 'edit' | 'new' | 'bulk'`
+- `_truckPanelMode`: モジュール変数 `null | 'new' | 'edit' | 'delete-confirm'`
+  - renderRightPanel() では `_truckPanelMode` を先にチェックし、非 null なら号車フォームを表示
+  - 号車フォーム表示中は `rightPanelMode` を見ない
 
 ---
 
@@ -70,9 +98,10 @@
 - 同日でも工事が違えば別でよい
 
 ### 建方○日目
-- 計画図番とは別データ
-- deliveryPlan 単位で保持してよい
+- 計画図番とは別データ（`dayIndex` フィールド）
+- deliveryPlan 単位で保持
 - field の画面3 / 4 に表示する
+- A2 ヘッダにも表示する
 
 ### 進捗判定
 field 側の進捗は手入力ではなく、item.checked から自動判定する。
@@ -115,7 +144,13 @@ admin 側では進捗表示は不要。
 - 2B100-1 は 3B100-1 より先
 - 補足（例: ×4）はソート比較から除外
 
-### 種別
+### 種別（カテゴリ）
+実務に合わせた固定リストを使う。順序は以下の通り。
+
+```
+柱 / 間柱 / 大梁 / 小梁 / ブレス / ボルト / 仮ボルト / デッキ / コン止め / その他
+```
+
 - ボルトアプリ由来データは種別を自動取得
 - 手入力時は種別をユーザー選択
 - ピン取りは考慮せず、実務分類に丸める
@@ -124,11 +159,8 @@ admin 側では進捗表示は不要。
 
 ## admin 画面Aの設計思想
 
-### 画面Aの役割
-搬入リスト作成・編集の主作業画面。
-
 ### レイアウト
-- 上部: 搬入計画ヘッダ
+- 上部: 搬入計画ヘッダ（工事名 / 搬入○日目 / 計画図番○）
 - 左: 号車一覧
 - 中央: 種別別4列グリッド
 - 右: 入力補助 / 詳細編集サイドバー
@@ -139,6 +171,7 @@ admin 側では進捗表示は不要。
 - データがない種別は表示しない
 - 品目セルは簡潔表示
 - 詳細編集は右サイドバーで行う
+- グリッド最上部にシリーズ日切替タブを表示（同一シリーズ計画が2件以上の場合のみ）
 
 ### 右サイドバー
 - idle / view / edit / new を持つ
@@ -177,9 +210,67 @@ admin 側では進捗表示は不要。
 - deliveryPlans は project 配下
 - 月間取得は collectionGroup 前提になる可能性がある
 
+### カスケード削除
+**Firestore はドキュメント削除時にサブコレクションを自動削除しない。**
+deliveryPlan を削除する際は必ず以下の順でカスケード削除すること。
+
+1. `deletePlanCascade(projectId, planId)`: plan配下のすべてのtrucksを取得 → 各truckを `deleteTruckCascade` で削除 → plan本体を削除
+2. `deleteTruckCascade(projectId, planId, truckId)`: truck配下のすべてのitemsを取得 → 各itemを削除 → truck本体を削除
+3. `deletePlansBySeriesId(projectId, seriesId)`: シリーズIDで一致するplansをFirestoreから取得 → 各planを `deletePlanCascade` で削除
+
+単体の `deletePlan` / `deleteTruck` / `deleteItem` は意図的な部分削除のみに使う。
+
 ### MVP方針
 - checks サブコレクションは必須ではない
 - まずは item.checked を優先する
+
+---
+
+## adminState の重要フィールド
+
+```js
+adminState.a2 = {
+  currentPlan: null,   // 現在A2で表示中のplan（ヘッダ・タブ表示に使う）
+  seriesPlans: [],     // 同一deliverySeriesIdのplan群（deliverySeriesIndex昇順）
+};
+
+adminState._onSwitchA2Plan = null;
+// calendar.js がセットするコールバック。
+// ui.js から日切替タブクリック時に呼び出す。
+// ui.js → calendar.js の直接 import は循環依存になるため、このコールバックで解決する。
+
+adminState.a0edit = {
+  projectId: null,
+  plans: [],           // 編集対象計画（deliverySeriesIndex順）
+  dateAssignMode: 'all_days',
+};
+```
+
+---
+
+## 実装上の注意点（過去バグからの教訓）
+
+### SCREEN_DISPLAY の calendar は 'flex' にすること
+```js
+const SCREEN_DISPLAY = {
+  calendar: 'flex',   // ← 'block' にすると右サイドバーが下に落ちるバグが出る
+  'plan-form': 'block',
+  grid: 'flex',
+};
+```
+
+### 一括プレビューのフォーカスバグ対策
+`elRightContent` の `input` イベントリスナーで `_updateBulkPreview()` を呼ぶ際、
+`#rp-bulk-preview` 内のインライン編集 input からイベントが bubble してくると
+再レンダリングで DOM が破壊されフォーカスが失われる。
+
+```js
+elRightContent.addEventListener('input', e => {
+  if (adminState.rightPanelMode !== 'bulk') return;
+  if (e.target.closest('#rp-bulk-preview')) return; // ← この行が必須
+  _updateBulkPreview();
+});
+```
 
 ---
 
@@ -241,13 +332,15 @@ Claude は実装前に、必ず以下を出すこと。
 最低限確認できること:
 - 複数工事
 - 計画図番あり / なし
-- 建方○日目あり
+- 建方○日目あり（`dayIndex` フィールド）
 - 差分あり
 - 注意あり
 - 積込指示あり
-- 種別が複数ある
+- 種別が複数ある（柱・大梁・小梁・ボルト など）
 - 進捗判定確認用に checked 状態が混在
 - admin の中央グリッドで種別別セクションが確認できる
+- シリーズ計画（`deliverySeriesId` 共通の複数 plan）が確認できる
+- A2 の日切替タブが表示される状態が確認できる
 
 ---
 
