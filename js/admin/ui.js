@@ -806,6 +806,7 @@ async function _handleTruckSave() {
   const origSaveBtnText = saveBtn?.textContent;
   if (saveBtn) { saveBtn.disabled = true; saveBtn.textContent = '保存中…'; }
 
+  try {
   const { selectedProjectId, selectedPlanId, selectedTruckId, trucks } = adminState;
   const isEdit = _truckPanelMode === 'edit';
 
