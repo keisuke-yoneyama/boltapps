@@ -100,7 +100,8 @@ export async function updatePlan(projectId, planId, data) {
 }
 
 /**
- * 搬入計画を1件削除する
+ * 搬入計画を1件削除する（配下データは削除しない）
+ * ※ 通常は deletePlanCascade を使うこと
  * @param {string} projectId
  * @param {string} planId
  */
@@ -109,14 +110,57 @@ export async function deletePlan(projectId, planId) {
 }
 
 /**
- * deliverySeriesId が一致する計画を全件削除する（シリーズ一括削除）
+ * 号車1件を配下の品目ごと削除する
+ * @param {string} projectId
+ * @param {string} planId
+ * @param {string} truckId
+ */
+export async function deleteTruckCascade(projectId, planId, truckId) {
+  const iCol = collection(db, `projects/${projectId}/deliveryPlans/${planId}/trucks/${truckId}/items`);
+  const itemSnap = await getDocs(iCol);
+  for (const itemDoc of itemSnap.docs) {
+    try {
+      await deleteDoc(itemDoc.ref);
+    } catch (err) {
+      console.error('[db] deleteTruckCascade: item削除失敗', { projectId, planId, truckId, itemId: itemDoc.id }, err);
+    }
+  }
+  try {
+    await deleteDoc(doc(trucksCol(projectId, planId), truckId));
+  } catch (err) {
+    console.error('[db] deleteTruckCascade: truck削除失敗', { projectId, planId, truckId }, err);
+  }
+}
+
+/**
+ * 搬入計画を配下の号車・品目ごと完全削除する
+ * @param {string} projectId
+ * @param {string} planId
+ */
+export async function deletePlanCascade(projectId, planId) {
+  const truckSnap = await getDocs(trucksCol(projectId, planId));
+  for (const truckDoc of truckSnap.docs) {
+    await deleteTruckCascade(projectId, planId, truckDoc.id);
+  }
+  try {
+    await deleteDoc(doc(plansCol(projectId), planId));
+  } catch (err) {
+    console.error('[db] deletePlanCascade: plan削除失敗', { projectId, planId }, err);
+    throw err;
+  }
+}
+
+/**
+ * deliverySeriesId が一致する計画を配下データごと全件削除する（シリーズ一括削除）
  * @param {string} projectId
  * @param {string} seriesId
  */
 export async function deletePlansBySeriesId(projectId, seriesId) {
   const q = query(plansCol(projectId), where('deliverySeriesId', '==', seriesId));
   const snap = await getDocs(q);
-  await Promise.all(snap.docs.map(d => deleteDoc(d.ref)));
+  for (const planDoc of snap.docs) {
+    await deletePlanCascade(projectId, planDoc.id);
+  }
 }
 
 const DEV_MODE = false;

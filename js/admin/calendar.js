@@ -7,7 +7,7 @@ import {
   createPlan,
   createProject,
   updatePlan,
-  deletePlan,
+  deletePlanCascade,
   deletePlansBySeriesId,
 } from './db.js';
 import { initGridScreen } from './ui.js';
@@ -306,8 +306,8 @@ function renderA0ConfirmDelete() {
     : 'この搬入予定を削除';
 
   const warnText = target.isSeries
-    ? 'この連続搬入に紐づく号車・品目のデータは搬入予定が削除されても Firestore 上に残りますが、カレンダーから参照できなくなります。'
-    : '号車・品目のデータは搬入予定が削除されても Firestore 上に残りますが、カレンダーから参照できなくなります。';
+    ? 'この連続搬入に紐づく号車・品目データも一緒に削除されます。'
+    : 'この搬入予定に紐づく号車・品目データも一緒に削除されます。';
 
   contentEl.innerHTML = `
     <div>
@@ -357,7 +357,7 @@ async function handleA0DeleteConfirm() {
     if (target.isSeries) {
       await deletePlansBySeriesId(target.projectId, target.deliverySeriesId);
     } else {
-      await deletePlan(target.projectId, target.planId);
+      await deletePlanCascade(target.projectId, target.planId);
     }
   } catch (err) {
     console.error('[A0 delete] failed', err);
