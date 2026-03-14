@@ -38,12 +38,19 @@ function esc(s) {
 }
 
 function getItemDisplayName(item) {
+  // item.name を優先（一括登録の手動編集名を尊重）
+  // nameParts よりも name が確定している場合はそちらを返す
+  if (item.name) return item.name;
   if (item.nameParts) return buildItemName(item.nameParts);
-  return item.name || item.itemName || item.itemCode || '品目名不明';
+  return item.itemName || item.itemCode || '品目名不明';
 }
 
 // ── bindEvents ガード（複数回呼び出し防止） ────────────────
 let _eventsBound = false;
+
+// ── 保存中フラグ（二重実行防止） ──────────────────────────
+// _handleSave / _handleBulkSave / _handleTruckSave / _handleCopyTruck で共用
+let _saving = false;
 
 // ── Truck Panel mode ────────────────────────────────────────
 // null | 'new' | 'edit' | 'delete-confirm'
@@ -793,6 +800,12 @@ function _renderTruckDeleteConfirm() {
 }
 
 async function _handleTruckSave() {
+  if (_saving) return;
+  _saving = true;
+  const saveBtn = elRightContent.querySelector('[data-truck-action="save"]');
+  const origSaveBtnText = saveBtn?.textContent;
+  if (saveBtn) { saveBtn.disabled = true; saveBtn.textContent = '保存中…'; }
+
   const { selectedProjectId, selectedPlanId, selectedTruckId, trucks } = adminState;
   const isEdit = _truckPanelMode === 'edit';
 
@@ -829,6 +842,12 @@ async function _handleTruckSave() {
   renderTruckList();
   renderMainGrid();
   renderRightPanel();
+  } catch (err) {
+    console.error('[A2] 号車保存失敗', err);
+    if (saveBtn?.isConnected) { saveBtn.disabled = false; saveBtn.textContent = origSaveBtnText; }
+  } finally {
+    _saving = false;
+  }
 }
 
 async function _handleTruckDelete() {
@@ -987,6 +1006,13 @@ function _renderBulkPanel() {
 }
 
 async function _handleSave() {
+  if (_saving) return;
+  _saving = true;
+  const saveBtn = elRightContent.querySelector('[data-rp-action="save"]');
+  const origSaveBtnText = saveBtn?.textContent;
+  if (saveBtn) { saveBtn.disabled = true; saveBtn.textContent = '保存中…'; }
+  try {
+
   const {
     rightPanelMode, selectedProjectId, selectedPlanId,
     selectedTruckId, selectedItemId, itemsCache,
@@ -1059,6 +1085,12 @@ async function _handleSave() {
   _diffDraft = [];
   renderMainGrid();
   renderRightPanel();
+  } catch (err) {
+    console.error('[A2] 品目保存失敗', err);
+    if (saveBtn?.isConnected) { saveBtn.disabled = false; saveBtn.textContent = origSaveBtnText; }
+  } finally {
+    _saving = false;
+  }
 }
 
 async function _handleDelete() {
@@ -1089,6 +1121,20 @@ async function _handleDelete() {
 }
 
 async function _handleBulkSave() {
+  if (_saving) return;
+  _saving = true;
+  const saveBtn = elRightContent.querySelector('[data-rp-action="bulk-save"]');
+  const origSaveBtnText = saveBtn?.textContent;
+  if (saveBtn) { saveBtn.disabled = true; saveBtn.textContent = '登録中…'; }
+  try {
+
+  // 未確定のインライン編集を自動コミット（確定ボタンを押さずに登録した場合対応）
+  elRightContent.querySelectorAll('[data-bulk-input]').forEach(input => {
+    const idx = parseInt(input.dataset.bulkInput, 10);
+    const newName = input.value.trim();
+    if (newName && _bulkDraft[idx]) _bulkDraft[idx].name = newName;
+  });
+
   if (!_bulkDraft.length) {
     elRightContent.querySelector('#rp-bulk-baseName')?.focus();
     return;
@@ -1140,6 +1186,12 @@ async function _handleBulkSave() {
   adminState.rightPanelMode = lastCreatedId ? 'view' : 'idle';
   renderMainGrid();
   renderRightPanel();
+  } catch (err) {
+    console.error('[A2] 一括登録失敗', err);
+    if (saveBtn?.isConnected) { saveBtn.disabled = false; saveBtn.textContent = origSaveBtnText; }
+  } finally {
+    _saving = false;
+  }
 }
 
 // ── Actions: Truck / Item ───────────────────────────────────
@@ -1152,6 +1204,12 @@ async function _handleBulkSave() {
  * - 新しい truckNo = 既存最大 + 1
  */
 async function _handleCopyTruck(sourceTruckId) {
+  if (_saving) return;
+  _saving = true;
+  const copyBtn = elTruckList.querySelector(`[data-copy-truck="${sourceTruckId}"]`);
+  if (copyBtn) { copyBtn.disabled = true; }
+  try {
+
   const { selectedProjectId, selectedPlanId, trucks, itemsCache } = adminState;
   const sourceTruck = trucks.find(t => t.id === sourceTruckId);
   if (!sourceTruck) return;
@@ -1208,6 +1266,12 @@ async function _handleCopyTruck(sourceTruckId) {
 
   // 複製した号車を選択（itemsCache 設定済みなので再フェッチなし）
   await selectTruck(newTruck.id);
+  } catch (err) {
+    console.error('[A2] 号車複製失敗', err);
+    if (copyBtn?.isConnected) { copyBtn.disabled = false; }
+  } finally {
+    _saving = false;
+  }
 }
 
 async function selectTruck(truckId) {

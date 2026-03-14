@@ -151,6 +151,18 @@ export async function deletePlanCascade(projectId, planId) {
 }
 
 /**
+ * deliverySeriesId が一致する計画を取得する（月跨ぎシリーズの補完に使用）
+ * @param {string} projectId
+ * @param {string} seriesId
+ * @returns {Promise<object[]>} 同シリーズの plan 一覧
+ */
+export async function getPlansBySeriesId(projectId, seriesId) {
+  const q = query(plansCol(projectId), where('deliverySeriesId', '==', seriesId));
+  const snap = await getDocs(q);
+  return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+}
+
+/**
  * deliverySeriesId が一致する計画を配下データごと全件削除する（シリーズ一括削除）
  * @param {string} projectId
  * @param {string} seriesId

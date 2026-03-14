@@ -9,6 +9,7 @@ import {
   updatePlan,
   deletePlanCascade,
   deletePlansBySeriesId,
+  getPlansBySeriesId,
 } from './db.js';
 import { initGridScreen } from './ui.js';
 
@@ -1226,6 +1227,21 @@ async function enterGrid(projectId, planId) {
     const seen = new Set();
     seriesPlans = seriesPlans.filter(p => seen.has(p.id) ? false : (seen.add(p.id), true));
     seriesPlans.sort((a, b) => (a.deliverySeriesIndex ?? 0) - (b.deliverySeriesIndex ?? 0));
+
+    // キャッシュ不足時は Firestore から補完（月跨ぎシリーズ対応）
+    const expectedLen = currentPlan.deliverySeriesLength ?? 2;
+    if (seriesPlans.length < expectedLen) {
+      try {
+        const fetched = await getPlansBySeriesId(projectId, sid);
+        const seenIds = new Set(seriesPlans.map(p => p.id));
+        for (const p of fetched) {
+          if (!seenIds.has(p.id)) seriesPlans.push(p);
+        }
+        seriesPlans.sort((a, b) => (a.deliverySeriesIndex ?? 0) - (b.deliverySeriesIndex ?? 0));
+      } catch (e) {
+        console.warn('[enterGrid] シリーズ計画補完取得失敗', e);
+      }
+    }
   }
 
   adminState.a2 = { currentPlan, seriesPlans };

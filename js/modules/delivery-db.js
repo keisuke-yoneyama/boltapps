@@ -18,14 +18,19 @@ import {
 
 const DEV_MODE = true;
 
-// プロジェクト1: 計画図番あり
-const _M_PROJ_ID  = 'dev-project-1';
-const _M_PLAN_ID  = 'dev-plan-1';
-const _M_T1 = 'dev-truck-1';
-const _M_T2 = 'dev-truck-2';
-const _M_T3 = 'dev-truck-3';
+// プロジェクト1: 計画図番あり・3日シリーズ（日切替UIテスト用）
+const _M_PROJ_ID   = 'dev-project-1';
+const _M_SERIES_ID = 'dev-series-1';
+const _M_PLAN_ID   = 'dev-plan-1';   // シリーズ 1日目
+const _M_PLAN_S2   = 'dev-plan-s2';  // シリーズ 2日目
+const _M_PLAN_S3   = 'dev-plan-s3';  // シリーズ 3日目
+const _M_T1  = 'dev-truck-1';
+const _M_T2  = 'dev-truck-2';
+const _M_T3  = 'dev-truck-3';
+const _M_TS2 = 'dev-truck-s2';       // plan-s2 用
+const _M_TS3 = 'dev-truck-s3';       // plan-s3 用
 
-// プロジェクト2: 計画図番なし
+// プロジェクト2: 計画図番なし・単体計画
 const _M_PROJ2_ID = 'dev-project-2';
 const _M_PLAN2_ID = 'dev-plan-2';
 const _M_T4 = 'dev-truck-4';
@@ -35,19 +40,45 @@ const _todayStr = (() => {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 })();
 
+const _day2Str = (() => {
+  const d = new Date(); d.setDate(d.getDate() + 1);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+})();
+
+const _day3Str = (() => {
+  const d = new Date(); d.setDate(d.getDate() + 2);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+})();
+
 const MOCK_PROJECTS = [
   { id: _M_PROJ_ID,  projectName: '【DEV】テスト工事 A', projectCode: 'DEV-001', isActive: true },
   { id: _M_PROJ2_ID, projectName: '【DEV】テスト工事 B', projectCode: 'DEV-002', isActive: true },
 ];
 
 const MOCK_PLANS = [
-  // Plan1: 計画図番あり・差分あり
+  // ── 工事A: 3日間シリーズ（日切替UIテスト用） ──────────────
+  // Plan1: シリーズ1日目（計画図番あり・差分あり）
   {
     id: _M_PLAN_ID, projectId: _M_PROJ_ID,
     deliveryDate: _todayStr, status: 'active', version: 1,
     drawingNo: 'DWG-2026-001', truckCount: 3,
+    deliverySeriesId: _M_SERIES_ID, deliverySeriesIndex: 1, deliverySeriesLength: 3, dayIndex: 1,
   },
-  // Plan2: 計画図番なし（別工事・同日）
+  // Plan-S2: シリーズ2日目
+  {
+    id: _M_PLAN_S2, projectId: _M_PROJ_ID,
+    deliveryDate: _day2Str, status: 'active', version: 1,
+    drawingNo: 'DWG-2026-002', truckCount: 1,
+    deliverySeriesId: _M_SERIES_ID, deliverySeriesIndex: 2, deliverySeriesLength: 3, dayIndex: 2,
+  },
+  // Plan-S3: シリーズ3日目
+  {
+    id: _M_PLAN_S3, projectId: _M_PROJ_ID,
+    deliveryDate: _day3Str, status: 'active', version: 1,
+    drawingNo: 'DWG-2026-003', truckCount: 1,
+    deliverySeriesId: _M_SERIES_ID, deliverySeriesIndex: 3, deliverySeriesLength: 3, dayIndex: 3,
+  },
+  // ── 工事B: 単体計画（計画図番なし・別工事・同日） ─────────
   {
     id: _M_PLAN2_ID, projectId: _M_PROJ2_ID,
     deliveryDate: _todayStr, status: 'active', version: 1,
@@ -87,6 +118,26 @@ const MOCK_TRUCKS = [
     loadSummary: '大梁 / 小梁 / スタッド / デッキ',
     hasCaution: false, hasLoadingInstruction: false, diffs: [],
     itemCount: 5, checkedCount: 5,
+  },
+  // ── Plan-S2: 工事A シリーズ2日目 ─────────────────────
+  {
+    id: _M_TS2, projectId: _M_PROJ_ID, planId: _M_PLAN_S2,
+    truckNo: '1', truckOrder: 1, vehicleType: '10t平ボディ',
+    progressStatus: 'pending', constructionDay: 2,
+    loadSummary: '小梁 / ブレス / デッキ',
+    cautionNotes: '', hasCaution: false,
+    loadingInstruction: '', hasLoadingInstruction: false, diffs: [],
+    itemCount: 3, checkedCount: 0,
+  },
+  // ── Plan-S3: 工事A シリーズ3日目 ─────────────────────
+  {
+    id: _M_TS3, projectId: _M_PROJ_ID, planId: _M_PLAN_S3,
+    truckNo: '1', truckOrder: 1, vehicleType: '4t平ボディ',
+    progressStatus: 'pending', constructionDay: 3,
+    loadSummary: 'ボルト / 仮ボルト / その他',
+    cautionNotes: '', hasCaution: false,
+    loadingInstruction: '', hasLoadingInstruction: false, diffs: [],
+    itemCount: 2, checkedCount: 0,
   },
   // ── Plan2: 工事B（計画図番なし）──────────────────────
   {
@@ -154,6 +205,17 @@ const MOCK_ITEMS = {
     { id: 'mi-3-3', name: 'スタッドボルト', category: 'スタッド',   quantity: 200, unit: '本', sortOrder: 3, checked: true, diffs: [] },
     { id: 'mi-3-4', name: 'デッキプレート', category: 'デッキプレート', quantity: 10, unit: '枚', sortOrder: 4, checked: true, diffs: [] },
     { id: 'mi-3-5', name: '溶接棒',       category: 'その他',       quantity: 5,   unit: 'kg', sortOrder: 5, checked: true, diffs: [] },
+  ],
+  // ── Truck-S2: 工事A シリーズ2日目 ───────────────────────────────────────
+  [_M_TS2]: [
+    { id: 'mi-s2-1', name: '2SB198-5',    category: '小梁', quantity: 2, unit: '本', sortOrder: 1, checked: false, diffs: [] },
+    { id: 'mi-s2-2', name: 'BR3',          category: 'ブレス', quantity: 1, unit: '本', sortOrder: 2, checked: false, diffs: [] },
+    { id: 'mi-s2-3', name: 'デッキプレート', category: 'デッキ', quantity: 5, unit: '枚', sortOrder: 3, checked: false, diffs: [] },
+  ],
+  // ── Truck-S3: 工事A シリーズ3日目 ───────────────────────────────────────
+  [_M_TS3]: [
+    { id: 'mi-s3-1', name: 'M20×200 セット', category: 'ボルト',   quantity: 48, unit: '本', sortOrder: 1, checked: false, diffs: [] },
+    { id: 'mi-s3-2', name: '仮ボルト M20',   category: '仮ボルト', quantity: 24, unit: '本', sortOrder: 2, checked: false, diffs: [] },
   ],
   // ── Truck4: 工事B・計画図番なし確認用 ────────────────────────────────────
   [_M_T4]: [
