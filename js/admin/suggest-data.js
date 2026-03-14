@@ -25,6 +25,32 @@ export const MEMBER_CATALOG = [
 ];
 
 /**
+ * 自然ソート比較関数
+ * 数値部分を数値として比較するため 2SB198-2 < 2SB198-10 になる
+ * @param {string} a
+ * @param {string} b
+ * @returns {number}
+ */
+export function naturalCompare(a, b) {
+  const split = s => s.match(/(\d+|\D+)/g) ?? [];
+  const pa = split(a);
+  const pb = split(b);
+  for (let i = 0; i < Math.max(pa.length, pb.length); i++) {
+    if (i >= pa.length) return -1;
+    if (i >= pb.length) return 1;
+    const na = parseInt(pa[i], 10);
+    const nb = parseInt(pb[i], 10);
+    if (!isNaN(na) && !isNaN(nb)) {
+      if (na !== nb) return na - nb;
+    } else {
+      const cmp = pa[i].localeCompare(pb[i], 'ja');
+      if (cmp !== 0) return cmp;
+    }
+  }
+  return 0;
+}
+
+/**
  * itemsCache の全号車から baseName を動的に抽出する（主力候補源）
  * @param {object} itemsCache - adminState.itemsCache
  * @returns {{ baseName: string, category: string }[]}
@@ -46,10 +72,40 @@ export function getDynamicCandidates(itemsCache) {
   return result;
 }
 
-const MAX_SUGGESTIONS = 10;
+/**
+ * 全候補を返す（フォーカス時のブラウズモード用）
+ * 現在カテゴリーを先頭に出し、残りは自然ソート
+ * @param {string} currentCategory
+ * @param {object} itemsCache
+ * @returns {{ baseName: string, category: string }[]}
+ */
+export function getAllCandidates(currentCategory, itemsCache) {
+  const dynamic   = getDynamicCandidates(itemsCache);
+  const dynKeys   = new Set(dynamic.map(c => `${c.baseName}\x00${c.category}`));
+  const staticFill = MEMBER_CATALOG.filter(c => !dynKeys.has(`${c.baseName}\x00${c.category}`));
+  const all = [...dynamic, ...staticFill];
+
+  // カテゴリー優先 → 自然ソート
+  all.sort((a, b) => {
+    const catA = a.category === currentCategory ? 0 : 1;
+    const catB = b.category === currentCategory ? 0 : 1;
+    if (catA !== catB) return catA - catB;
+    return naturalCompare(a.baseName, b.baseName);
+  });
+
+  // baseName 重複排除（最初に出たものを残す）
+  const seen = new Set();
+  return all.filter(c => {
+    if (seen.has(c.baseName)) return false;
+    seen.add(c.baseName);
+    return true;
+  });
+}
+
+const MAX_SUGGESTIONS = 200;
 
 /**
- * サジェスト候補を返す
+ * サジェスト候補を返す（入力文字列でフィルタ）
  *
  * 優先度スコア:
  *   種別一致  +20
@@ -86,7 +142,7 @@ export function getSuggestions(inputVal, currentCategory, itemsCache) {
   }
 
   scored.sort((a, b) =>
-    b.score - a.score || a.baseName.localeCompare(b.baseName, 'ja')
+    b.score - a.score || naturalCompare(a.baseName, b.baseName)
   );
 
   // baseName 重複は最高スコアのものだけ残す

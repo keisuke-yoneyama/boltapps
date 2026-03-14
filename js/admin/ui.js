@@ -3,7 +3,7 @@
 import { adminState, addItemToState, updateItemInState, removeItemFromState, addTruckToState, updateTruckInState, removeTruckFromState } from './state.js';
 import { getTrucksForPlan, getItemsForTruck, createItem, updateItem, deleteItem, createTruck, updateTruck, deleteTruckCascade } from './db.js';
 import { sortItems, buildItemName } from '../../packages/shared-domain/src/index.js';
-import { getSuggestions } from './suggest-data.js';
+import { getSuggestions, getAllCandidates } from './suggest-data.js';
 
 // ── 種別順（ボルトアプリ準拠） ─────────────────────────────
 const CATEGORY_ORDER = [
@@ -63,6 +63,12 @@ let _diffDraft = [];
 let _bulkDraft = []; // { name: string, nameParts: object }[]
 let _inputHistoryTab  = 'input'; // 'input' | 'history'
 let _pendingRestoreEntry = null;
+
+// ── Right Panel: フォーム入力保持 draft ────────────────────
+// 同一 A2 / 同一搬入日の操作中に保持し、initGridScreen でリセット
+// 号車切替では保持し続ける（同日内の連続作業を想定）
+let _singleFormDraft = null; // null | { prefix, baseName, separator, suffix, note, category, cautionNote, loadingInstruction }
+let _bulkFormDraft   = null; // null | { category, prefix, baseName, separator, suffixStart, note, count, autoIncrement }
 
 function _diffDraftListHtml() {
   if (!_diffDraft.length) return '<span class="text-xs text-gray-500">差分なし</span>';
@@ -131,6 +137,17 @@ function _historyListHtml(mode) {
  * @param {HTMLInputElement}  inputEl  baseName input
  * @param {HTMLSelectElement} catEl    category select（category 自動反映 + 種別優先に使用）
  */
+/**
+ * baseName 入力欄にサジェストを attach する
+ * - フォーカス時に全候補を表示（空でも開く）
+ * - input イベントで候補を絞り込み
+ * - ↑↓キーでハイライト移動、Enter で確定
+ * - mousedown で blur を抑止してクリック選択
+ * - blur / Escape でリストを閉じる
+ *
+ * @param {HTMLInputElement}  inputEl  baseName input
+ * @param {HTMLSelectElement} catEl    category select（category 自動反映 + 種別優先に使用）
+ */
 function _attachSuggest(inputEl, catEl) {
   if (!inputEl) return;
 
@@ -142,30 +159,46 @@ function _attachSuggest(inputEl, catEl) {
   suggEl.className = [
     'absolute z-50 left-0 right-0 top-full mt-px',
     'bg-gray-800 border border-gray-600 rounded shadow-lg',
-    'max-h-48 overflow-y-auto hidden',
+    'max-h-56 overflow-y-auto hidden',
   ].join(' ');
   container.appendChild(suggEl);
 
-  let _results = [];
+  let _results  = [];
+  let _activeIdx = -1;
 
-  function show() {
-    const val = inputEl.value;
-    const cat = catEl?.value ?? '';
-    _results = getSuggestions(val, cat, adminState.itemsCache);
-    if (!_results.length || !val) { hide(); return; }
-
+  function renderList() {
+    if (!_results.length) { hide(); return; }
     suggEl.innerHTML = _results.map((r, i) => `
       <div data-si="${i}"
-        class="px-2 py-1.5 text-xs cursor-pointer hover:bg-gray-700 flex items-center justify-between gap-2">
-        <span class="text-gray-100 font-medium">${esc(r.baseName)}</span>
-        <span class="text-gray-500 shrink-0">${esc(r.category)}</span>
+        class="px-2 py-1.5 text-xs cursor-pointer flex items-center justify-between gap-2
+               ${i === _activeIdx ? 'bg-gray-600 text-white' : 'hover:bg-gray-700 text-gray-100'}">
+        <span class="font-medium">${esc(r.baseName)}</span>
+        <span class="text-gray-500 shrink-0 text-[10px]">${esc(r.category)}</span>
       </div>
     `).join('');
     suggEl.classList.remove('hidden');
   }
 
+  function show() {
+    const val = inputEl.value;
+    const cat = catEl?.value ?? '';
+    // 入力なし → 全候補を自然ソートで表示、入力あり → 絞り込み
+    _results   = val ? getSuggestions(val, cat, adminState.itemsCache)
+                     : getAllCandidates(cat, adminState.itemsCache);
+    _activeIdx = -1;
+    renderList();
+  }
+
   function hide() {
     suggEl.classList.add('hidden');
+    _activeIdx = -1;
+  }
+
+  function setActive(idx) {
+    _activeIdx = Math.max(0, Math.min(idx, _results.length - 1));
+    renderList();
+    // アクティブ行をスクロールして見えるようにする
+    suggEl.querySelector(`[data-si="${_activeIdx}"]`)?.scrollIntoView({ block: 'nearest' });
   }
 
   function apply(idx) {
@@ -178,10 +211,13 @@ function _attachSuggest(inputEl, catEl) {
     if (adminState.rightPanelMode === 'bulk') _updateBulkPreview();
   }
 
+  // フォーカス時に全候補を表示
+  inputEl.addEventListener('focus', show);
+  // 入力時に絞り込み
   inputEl.addEventListener('input', show);
 
   // カテゴリー変更時も候補の並び順を更新
-  catEl?.addEventListener('change', () => { if (inputEl.value) show(); });
+  catEl?.addEventListener('change', () => show());
 
   // mousedown で e.preventDefault() → blur を抑止してから apply
   suggEl.addEventListener('mousedown', e => {
@@ -193,7 +229,20 @@ function _attachSuggest(inputEl, catEl) {
   inputEl.addEventListener('blur', hide);
 
   inputEl.addEventListener('keydown', e => {
-    if (e.key === 'Escape') hide();
+    const isOpen = !suggEl.classList.contains('hidden');
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      if (!isOpen) { show(); return; }
+      setActive(_activeIdx < 0 ? 0 : _activeIdx + 1);
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      if (isOpen) setActive(_activeIdx <= 0 ? 0 : _activeIdx - 1);
+    } else if (e.key === 'Enter' && isOpen && _activeIdx >= 0) {
+      e.preventDefault();
+      apply(_activeIdx);
+    } else if (e.key === 'Escape') {
+      hide();
+    }
   });
 }
 
@@ -463,14 +512,17 @@ function _renderFormPanel(mode, item) {
   const inp = (extra = '') =>
     `w-full bg-gray-700 text-gray-100 rounded px-2 py-1 mt-0.5 text-sm ${extra}`;
 
-  const defPrefix    = restore?.prefix             ?? np.prefix?.value    ?? '';
-  const defBaseName  = restore?.baseName           ?? np.baseName?.value  ?? item?.name ?? '';
-  const defSeparator = restore?.separator          ?? np.separator?.value ?? '-';
-  const defSuffix    = restore?.suffix             ?? np.suffix?.value    ?? '';
-  const defNote      = restore?.note               ?? np.note?.value      ?? '';
-  const defCategory  = restore?.category           ?? item?.category      ?? '';
-  const defCaution   = restore?.cautionNote        ?? item?.cautionNote   ?? '';
-  const defLoading   = restore?.loadingInstruction ?? item?.loadingInstruction ?? '';
+  // new モードかつ restore なしのとき _singleFormDraft を fallback に使う
+  const draft = (!isEdit && !restore) ? _singleFormDraft : null;
+
+  const defPrefix    = restore?.prefix             ?? np.prefix?.value    ?? draft?.prefix    ?? '';
+  const defBaseName  = restore?.baseName           ?? np.baseName?.value  ?? item?.name ?? draft?.baseName  ?? '';
+  const defSeparator = restore?.separator          ?? np.separator?.value ?? draft?.separator ?? '-';
+  const defSuffix    = restore?.suffix             ?? np.suffix?.value    ?? draft?.suffix    ?? '';
+  const defNote      = restore?.note               ?? np.note?.value      ?? draft?.note      ?? '';
+  const defCategory  = restore?.category           ?? item?.category      ?? draft?.category  ?? '';
+  const defCaution   = restore?.cautionNote        ?? item?.cautionNote   ?? draft?.cautionNote        ?? '';
+  const defLoading   = restore?.loadingInstruction ?? item?.loadingInstruction ?? draft?.loadingInstruction ?? '';
 
   const showTabs  = !isEdit;
   const isHistTab = showTabs && _inputHistoryTab === 'history';
@@ -881,18 +933,22 @@ function _renderBulkPanel() {
 
   const inp = (extra = '') =>
     `w-full bg-gray-700 text-gray-100 rounded px-2 py-1 mt-0.5 text-sm ${extra}`;
-  const catOptions = CATEGORY_ORDER.map(c =>
-    `<option value="${esc(c)}">${esc(c)}</option>`
-  ).join('');
 
   const isHistTab      = _inputHistoryTab === 'history';
-  const defPrefix      = restore?.prefix       ?? '';
-  const defBaseName    = restore?.baseName      ?? '';
-  const defSeparator   = restore?.separator     ?? '-';
-  const defSuffixStart = restore?.suffixStart   ?? '1';
-  const defNote        = restore?.note          ?? '';
-  const defCount       = restore?.count         ?? '3';
-  const defAutoInc     = restore?.autoIncrement ?? true;
+  // restore なしのとき _bulkFormDraft を fallback に使う
+  const bdraft = restore ? null : _bulkFormDraft;
+  const defCategory    = restore?.category     ?? bdraft?.category     ?? '';
+
+  const catOptions = CATEGORY_ORDER.map(c =>
+    `<option value="${esc(c)}" ${defCategory === c ? 'selected' : ''}>${esc(c)}</option>`
+  ).join('');
+  const defPrefix      = restore?.prefix       ?? bdraft?.prefix       ?? '';
+  const defBaseName    = restore?.baseName      ?? bdraft?.baseName     ?? '';
+  const defSeparator   = restore?.separator     ?? bdraft?.separator    ?? '-';
+  const defSuffixStart = restore?.suffixStart   ?? bdraft?.suffixStart  ?? '1';
+  const defNote        = restore?.note          ?? bdraft?.note         ?? '';
+  const defCount       = restore?.count         ?? bdraft?.count        ?? '3';
+  const defAutoInc     = restore?.autoIncrement ?? bdraft?.autoIncrement ?? true;
 
   elRightContent.innerHTML = `
     <div class="flex gap-0.5 mb-2 bg-gray-900 rounded-md p-0.5">
@@ -1083,6 +1139,9 @@ async function _handleSave() {
     adminState.rightPanelMode = 'view';
   }
 
+  // new モード完了後も入力内容を保持（次回新規登録で復元される）
+  if (rightPanelMode === 'new') _singleFormDraft = f;
+
   _diffDraft = [];
   renderMainGrid();
   renderRightPanel();
@@ -1182,6 +1241,8 @@ async function _handleBulkSave() {
     });
   }
 
+  // 一括登録完了後もフォーム入力内容を保持（次回一括パネルで復元される）
+  _bulkFormDraft = f;
   _bulkDraft = [];
   adminState.selectedItemId = lastCreatedId;
   adminState.rightPanelMode = lastCreatedId ? 'view' : 'idle';
@@ -1384,6 +1445,22 @@ function bindEvents() {
     if (cell) selectItem(cell.dataset.itemId, e);
   });
 
+  // ダブルクリックで品目を即編集（単クリック選択と競合しない）
+  elMainGrid.addEventListener('dblclick', e => {
+    const cell = e.target.closest('[data-item-id]');
+    if (!cell) return;
+    const itemId = cell.dataset.itemId;
+    const items  = adminState.itemsCache[adminState.selectedTruckId] ?? [];
+    const item   = items.find(i => i.id === itemId);
+    if (!item) return;
+    adminState.selectedItemId       = itemId;
+    adminState.multiSelectedItemIds = [];
+    _diffDraft = [...(item.diffs ?? [])];
+    adminState.rightPanelMode = 'edit';
+    renderMainGrid();
+    renderRightPanel();
+  });
+
   // 右パネル: イベント委譲
   elRightContent.addEventListener('click', async e => {
     // diff-remove は data-rp-action を持たないため先に処理
@@ -1488,6 +1565,8 @@ function bindEvents() {
     }
 
     if (action === 'mode-single') {
+      // 一括フォームの入力を保存してから切替
+      _bulkFormDraft   = _readBulkFormData();
       _bulkDraft       = [];
       _inputHistoryTab = 'input';
       adminState.rightPanelMode = 'new';
@@ -1496,6 +1575,8 @@ function bindEvents() {
     }
 
     if (action === 'mode-bulk') {
+      // 単品フォームの入力を保存してから切替
+      _singleFormDraft = _readFormData();
       _inputHistoryTab = 'input';
       adminState.rightPanelMode = 'bulk';
       renderRightPanel();
@@ -1561,6 +1642,9 @@ export async function initGridScreen(projectId, planId) {
   adminState.rightPanelMode       = 'idle';
   adminState.trucks               = [];
   adminState.itemsCache           = {};
+  // 搬入日切替または A2 離脱時はフォーム draft をリセット
+  _singleFormDraft = null;
+  _bulkFormDraft   = null;
 
   bindEvents(); // 2回目以降は no-op
 
