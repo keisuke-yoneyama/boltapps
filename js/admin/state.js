@@ -52,6 +52,17 @@ export const adminState = {
   trucks:     [],   // getTrucksForPlan の結果
   itemsCache: {},   // { [truckId]: item[] }
 
+  // ── A2 グリッド画面メタ情報 ───────────────────────────────────
+  a2: {
+    // 現在表示中の plan（header・switcher に使用）
+    currentPlan: null,
+    // 同一 deliverySeriesId の plan 群（deliverySeriesIndex 昇順）
+    seriesPlans: [],
+  },
+
+  // A2 日切替コールバック（calendar.js がセット、ui.js から呼ぶ）
+  _onSwitchA2Plan: null,
+
   // ── A0 カレンダー右サイドバー（シリーズ編集）────────────────
   a0edit: {
     projectId:      null,

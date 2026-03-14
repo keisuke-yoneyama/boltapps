@@ -7,9 +7,7 @@ import { getSuggestions } from './suggest-data.js';
 
 // ── 種別順（ボルトアプリ準拠） ─────────────────────────────
 const CATEGORY_ORDER = [
-  '大梁', '小梁', 'ブレース', '柱', '根巻き柱脚', 'ランナー', 'スタッド',
-  'スプライスプレート', 'ガセット', 'エンドプレート',
-  '高力ボルト', 'アンカーボルト', 'デッキプレート', 'その他',
+  '柱', '間柱', '大梁', '小梁', 'ブレス', 'ボルト', '仮ボルト', 'デッキ', 'コン止め', 'その他',
 ];
 
 function sortedGroups(groups) {
@@ -202,12 +200,18 @@ function _applyHistoryEntry(entry) {
 // ── Render: Header ─────────────────────────────────────────
 
 function renderHeader() {
-  const { selectedProjectId, selectedPlanId } = adminState;
-  elHeaderInfo.innerHTML = `
-    <span class="text-gray-400">${esc(selectedProjectId)}</span>
-    <span class="text-gray-600">/</span>
-    <span class="text-gray-300">${esc(selectedPlanId)}</span>
-  `;
+  // 通常は calendar.js の enterGrid が updateHeaderInfo を呼ぶ
+  // initAdmin（フォールバック）経由の場合のみここが使われる
+  const { selectedProjectId } = adminState;
+  const { currentPlan } = adminState.a2 ?? {};
+  const parts = [`<span class="text-gray-400">${esc(selectedProjectId)}</span>`];
+  if (currentPlan?.dayIndex != null) {
+    parts.push(`<span class="text-gray-400 text-xs">搬入${esc(String(currentPlan.dayIndex))}日目</span>`);
+  }
+  if (currentPlan?.drawingNo) {
+    parts.push(`<span class="text-gray-500 text-xs">計画図番 ${esc(currentPlan.drawingNo)}</span>`);
+  }
+  elHeaderInfo.innerHTML = parts.join('<span class="text-gray-600 mx-1">/</span>');
 }
 
 // ── Render: Truck List ─────────────────────────────────────
@@ -248,20 +252,49 @@ function renderTruckList() {
   }).join('');
 }
 
+// ── Render: Series Switcher ────────────────────────────────
+
+function _renderSeriesSwitcherHtml() {
+  const { seriesPlans = [], currentPlan } = adminState.a2 ?? {};
+  if (seriesPlans.length <= 1) return '';
+
+  const tabs = seriesPlans.map(p => {
+    const isActive = p.id === currentPlan?.id;
+    const label    = `${p.dayIndex ?? p.deliverySeriesIndex ?? '?'}日目`;
+    return `<button
+      data-switch-plan-id="${esc(p.id)}"
+      data-switch-project-id="${esc(p.projectId)}"
+      class="shrink-0 px-2.5 py-1 text-xs rounded transition-colors whitespace-nowrap
+        ${isActive
+          ? 'bg-blue-700 text-white font-medium'
+          : 'bg-gray-700 hover:bg-gray-600 text-gray-300'}">
+      ${esc(label)}
+    </button>`;
+  }).join('');
+
+  return `
+    <div class="sticky top-0 z-10 bg-gray-900 border-b border-gray-700
+                flex items-center gap-1.5 overflow-x-auto py-2 mb-2">
+      <span class="text-xs text-gray-500 shrink-0">日切替:</span>
+      ${tabs}
+    </div>`;
+}
+
 // ── Render: Main Grid ──────────────────────────────────────
 
 function renderMainGrid() {
+  const switcherHtml = _renderSeriesSwitcherHtml();
   const { selectedTruckId, itemsCache, selectedItemId, multiSelectedItemIds } = adminState;
 
   if (!selectedTruckId) {
-    elMainGrid.innerHTML = '<p class="text-gray-500 text-sm">号車を選択してください</p>';
+    elMainGrid.innerHTML = switcherHtml + '<p class="text-gray-500 text-sm">号車を選択してください</p>';
     return;
   }
 
   const items = itemsCache[selectedTruckId] ?? [];
 
   if (!items.length) {
-    elMainGrid.innerHTML = '<p class="text-gray-500 text-sm">品目がありません</p>';
+    elMainGrid.innerHTML = switcherHtml + '<p class="text-gray-500 text-sm">品目がありません</p>';
     return;
   }
 
@@ -275,7 +308,7 @@ function renderMainGrid() {
 
   const multiSet = new Set(multiSelectedItemIds);
 
-  elMainGrid.innerHTML = sortedGroups(groups).map(([cat, catItems]) => `
+  elMainGrid.innerHTML = switcherHtml + sortedGroups(groups).map(([cat, catItems]) => `
     <section class="pb-2">
       <h2 class="sticky top-0 z-10 bg-gray-900 text-sm font-semibold text-gray-200 px-1 py-2 mb-3 border-b border-gray-700 flex items-center gap-1">
         ${esc(cat)}<span class="text-xs text-gray-500 font-normal">（${catItems.length}）</span>
@@ -1273,7 +1306,15 @@ function bindEvents() {
     renderRightPanel();
   });
 
-  elMainGrid.addEventListener('click', e => {
+  elMainGrid.addEventListener('click', async e => {
+    const switchBtn = e.target.closest('[data-switch-plan-id]');
+    if (switchBtn && adminState._onSwitchA2Plan) {
+      await adminState._onSwitchA2Plan(
+        switchBtn.dataset.switchProjectId,
+        switchBtn.dataset.switchPlanId,
+      );
+      return;
+    }
     const cell = e.target.closest('[data-item-id]');
     if (cell) selectItem(cell.dataset.itemId, e);
   });
@@ -1415,8 +1456,17 @@ function bindEvents() {
   });
 
   // 右パネル: 一括モードのリアルタイムプレビュー
-  elRightContent.addEventListener('input',  () => { if (adminState.rightPanelMode === 'bulk') _updateBulkPreview(); });
-  elRightContent.addEventListener('change', () => { if (adminState.rightPanelMode === 'bulk') _updateBulkPreview(); });
+  // プレビュー内のインライン編集 input は除外（フォーカスが飛ぶのを防ぐ）
+  elRightContent.addEventListener('input', e => {
+    if (adminState.rightPanelMode !== 'bulk') return;
+    if (e.target.closest('#rp-bulk-preview')) return;
+    _updateBulkPreview();
+  });
+  elRightContent.addEventListener('change', e => {
+    if (adminState.rightPanelMode !== 'bulk') return;
+    if (e.target.closest('#rp-bulk-preview')) return;
+    _updateBulkPreview();
+  });
 
   // Delete キー: フォーム編集中は無効化、それ以外は品目削除
   document.addEventListener('keydown', async e => {
@@ -1437,6 +1487,7 @@ function bindEvents() {
  * @param {string} planId
  */
 export async function initGridScreen(projectId, planId) {
+  _truckPanelMode                 = null;
   adminState.selectedProjectId    = projectId;
   adminState.selectedPlanId       = planId;
   adminState.selectedTruckId      = null;

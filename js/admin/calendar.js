@@ -1206,12 +1206,44 @@ async function showPlanForm(dateStr) {
 
 async function enterGrid(projectId, planId) {
   const proj = adminState.a1.boltProjects.find(p => p.id === projectId);
-  const name = projDisplayName(proj) || projectId;
+  const projName = projDisplayName(proj) || '—';
+
+  // plansCache から currentPlan を検索
+  let currentPlan = null;
+  for (const plans of Object.values(adminState.plansCache)) {
+    currentPlan = plans.find(p => p.id === planId);
+    if (currentPlan) break;
+  }
+
+  // 同一 deliverySeriesId の計画を全 cache から収集（deliverySeriesIndex 昇順）
+  let seriesPlans = [];
+  if (currentPlan?.deliverySeriesId) {
+    const sid = currentPlan.deliverySeriesId;
+    for (const plans of Object.values(adminState.plansCache)) {
+      seriesPlans.push(...plans.filter(p => p.deliverySeriesId === sid));
+    }
+    // 重複除去（同月で複数ページになっても安全）
+    const seen = new Set();
+    seriesPlans = seriesPlans.filter(p => seen.has(p.id) ? false : (seen.add(p.id), true));
+    seriesPlans.sort((a, b) => (a.deliverySeriesIndex ?? 0) - (b.deliverySeriesIndex ?? 0));
+  }
+
+  adminState.a2 = { currentPlan, seriesPlans };
+
+  // ヘッダー: 工事名 / 搬入〇日目 / 計画図番〇
+  const headerParts = [
+    `<span class="text-gray-300 truncate max-w-[160px]">${esc(projName)}</span>`,
+  ];
+  if (currentPlan?.dayIndex != null) {
+    headerParts.push(`<span class="text-gray-400 text-xs shrink-0">搬入${esc(String(currentPlan.dayIndex))}日目</span>`);
+  }
+  if (currentPlan?.drawingNo) {
+    headerParts.push(`<span class="text-gray-500 text-xs shrink-0">計画図番 ${esc(currentPlan.drawingNo)}</span>`);
+  }
+  const sep = '<span class="text-gray-600 mx-1 shrink-0">/</span>';
+
   showScreen('grid');
-  updateHeaderInfo(`
-    <span class="text-gray-300 truncate max-w-[200px]">${esc(name)}</span>
-    <span class="text-gray-600">/</span>
-    <span class="text-gray-500 text-xs">${esc(planId)}</span>`);
+  updateHeaderInfo(headerParts.join(sep));
   await initGridScreen(projectId, planId);
 }
 
@@ -1271,6 +1303,11 @@ function bindCalendarEvents() {
   });
 
   document.getElementById('admin-back-btn').addEventListener('click', goToCalendar);
+
+  // A2 日切替コールバック（ui.js の日切替ボタンから呼ばれる）
+  adminState._onSwitchA2Plan = async (projId, pId) => {
+    await enterGrid(projId, pId);
+  };
 
   bindA0SidebarEvents();
 }
