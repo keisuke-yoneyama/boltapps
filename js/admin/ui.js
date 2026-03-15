@@ -74,12 +74,18 @@ let _bulkFormDraft   = null; // null | { category, prefix, baseName, separator, 
 
 // ── サジェスト専用サイドバー state ──────────────────────────
 // bolt 連携工事のとき baseName フォーカス中のみ表示する
-const NO_SUGGEST_CATS = new Set(['ボルト', '仮ボルト', 'コン止め']);
+const NO_SUGGEST_CATS = new Set(['ボルト', '仮ボルト', 'コン止め', 'デッキ', 'ブレス']);
 let _suggestLevel       = 'all'; // アクティブ階層タブ ID
 let _suggestSearch      = '';    // 絞り込み検索文字列
 let _activeSuggestInput = null;  // 現在フォーカス中の baseName input 要素
 let _activeSuggestCatEl = null;  // 現在フォーカス中の category select 要素
 let _sidebarBlurTimer   = null;  // blur 時の遅延非表示タイマー
+
+// ── dblclick: mousedown 時点でアイテムIDを保存 ──────────────
+// click ハンドラが renderMainGrid() で DOM を再構築するため、
+// dblclick 発火時には元の要素が detach 済みの可能性がある。
+// mousedown は DOM 再構築前に呼ばれるため確実に取得できる。
+let _pendingDblclickItemId = null;
 
 function _diffDraftListHtml() {
   if (!_diffDraft.length) return '<span class="text-xs text-gray-500">差分なし</span>';
@@ -788,7 +794,8 @@ function _renderFormPanel(mode, item) {
         <div>
           <label class="text-xs text-gray-400">品名 <span class="text-red-400">*</span></label>
           <input id="rp-baseName" type="text" value="${esc(defBaseName)}"
-            class="${inp()}" placeholder="例: G500">
+            class="${inp()}" placeholder="例: G500"
+            autocomplete="off" spellcheck="false">
         </div>
         <div class="flex gap-1.5">
           <div class="w-20 shrink-0">
@@ -1199,7 +1206,8 @@ function _renderBulkPanel() {
         <div>
           <label class="text-xs text-gray-400">品名 <span class="text-red-400">*</span></label>
           <input id="rp-bulk-baseName" type="text" value="${esc(defBaseName)}"
-            class="${inp()}" placeholder="例: B198">
+            class="${inp()}" placeholder="例: B198"
+            autocomplete="off" spellcheck="false">
         </div>
         <div class="flex gap-1.5">
           <div class="w-20 shrink-0">
@@ -1635,6 +1643,12 @@ function bindEvents() {
     renderRightPanel();
   });
 
+  // mousedown: dblclick 用にアイテムIDを事前保存（click によるDOM再構築前に確定）
+  elMainGrid.addEventListener('mousedown', e => {
+    const cell = e.target.closest('[data-item-id]');
+    _pendingDblclickItemId = cell?.dataset.itemId ?? null;
+  });
+
   elMainGrid.addEventListener('click', async e => {
     const switchBtn = e.target.closest('[data-switch-plan-id]');
     if (switchBtn && adminState._onSwitchA2Plan) {
@@ -1648,19 +1662,20 @@ function bindEvents() {
     if (cell) selectItem(cell.dataset.itemId, e);
   });
 
-  // ダブルクリックで品目を即編集（単クリック選択と競合しない）
-  // click が先行して renderMainGrid() を呼ぶため e.target は detach 済みの可能性がある。
-  // 代わりに click 時に確定済みの adminState.selectedItemId を使う。
+  // ダブルクリックで品目を即編集
+  // mousedown 時点のアイテムIDを使う（click によるDOM再構築後でも確実に参照できる）
   elMainGrid.addEventListener('dblclick', () => {
-    const itemId = adminState.selectedItemId;
+    const itemId = _pendingDblclickItemId ?? adminState.selectedItemId;
     if (!itemId || !adminState.selectedTruckId) return;
     const items = adminState.itemsCache[adminState.selectedTruckId] ?? [];
     const item  = items.find(i => i.id === itemId);
     if (!item) return;
+    adminState.selectedItemId       = itemId;
+    adminState.multiSelectedItemIds = [];
     _diffDraft = [...(item.diffs ?? [])];
     adminState.rightPanelMode = 'edit';
-    // グリッドは click 時に描画済みのため再描画不要
-    renderRightPanel();
+    renderMainGrid();   // 選択ハイライト確定
+    renderRightPanel(); // 編集フォームを開く
   });
 
   // 右パネル: イベント委譲
