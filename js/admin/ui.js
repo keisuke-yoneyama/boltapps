@@ -208,11 +208,15 @@ function _renderSuggestSidebar() {
   // joint.type でカテゴリを正確に判定するため継手マップを作る
   const jointsMap = new Map((proj.joints ?? []).map(j => [j.id, j]));
 
-  // ── 階層タブ ──
+  // 「全て」タブ廃止: 初期値が 'all' のまま残っていたら最初の階層へ自動移行
+  if (_suggestLevel === 'all' && levels.length > 0) {
+    _suggestLevel = levels[0].id;
+  }
+
+  // ── 階層タブ（「全て」タブなし） ──
   const tabsEl = elSuggestSidebar.querySelector('#admin-suggest-tabs');
   if (tabsEl) {
-    const allTabs = [{ id: 'all', label: '全て' }, ...levels];
-    tabsEl.innerHTML = allTabs.map(l => `
+    tabsEl.innerHTML = levels.map(l => `
       <button data-suggest-level="${esc(l.id)}"
         class="px-2.5 py-1 text-xs shrink-0 border-r border-gray-700 whitespace-nowrap
                ${l.id === _suggestLevel
@@ -228,12 +232,15 @@ function _renderSuggestSidebar() {
   const getMemberCat = m => JOINT_TYPE_TO_ADMIN_CAT[jointsMap.get(m.jointId)?.type ?? ''] ?? null;
   const currentCat   = _activeSuggestCatEl?.value ?? '';
 
-  // まず階層で絞る
-  let filtered = _suggestLevel === 'all'
-    ? [...members]
-    : members.filter(m => (m.targetLevels ?? []).includes(_suggestLevel));
+  // 階層で絞る:
+  // targetLevels = [] (全階層対象) の部材はどの階層タブでも表示する
+  // bolt の isAllChecked = (targetLevels.length === 0) と同義
+  let filtered = members.filter(m => {
+    const tl = m.targetLevels ?? [];
+    return tl.length === 0 || tl.includes(_suggestLevel);
+  });
 
-  // 次にカテゴリーで絞る
+  // カテゴリーで絞る
   if (currentCat && SUGGEST_FILTERABLE_CATS.has(currentCat)) {
     filtered = filtered.filter(m => getMemberCat(m) === currentCat);
   }
