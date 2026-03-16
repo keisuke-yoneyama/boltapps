@@ -148,40 +148,22 @@ function _historyListHtml(mode) {
 // ── Suggest: bolt サジェストサイドバー ─────────────────────
 
 /**
- * bolt 部材名からカテゴリーを推定する
- * 鉄骨業界の命名慣習（G=大梁, B=小梁, C=柱, M=間柱, BR=ブレス）に基づく
- * 接頭辞（2S, 3S 等）は除いて判定
- * @param {string} name
- * @returns {string|null}
+ * bolt の joint.type → admin カテゴリーの対応表
+ * 部材は必ず継手（joint）に紐づいており、joint.type が実際の種別を保持する。
+ * 名前推定より正確なため、こちらを優先して使う。
  */
-function _inferMemberCategory(name) {
-  const n = (name ?? '').toUpperCase();
-  if (/BR/.test(n))  return 'ブレス';  // BR より先に判定（B に引っかかるため）
-  if (/G\d/.test(n)) return '大梁';
-  if (/B\d/.test(n)) return '小梁';
-  if (/C\d/.test(n)) return '柱';
-  if (/M\d/.test(n)) return '間柱';
-  return null;
-}
+const JOINT_TYPE_TO_ADMIN_CAT = {
+  girder:      '大梁',
+  beam:        '小梁',
+  column:      '柱',
+  stud:        '間柱',
+  wall_girt:   'その他',
+  roof_purlin: 'その他',
+  other:       'その他',
+};
 
 // カテゴリーフィルタが有効な種別（ボルト系は bolt 部材に存在しない）
-const SUGGEST_FILTERABLE_CATS = new Set(['大梁', '小梁', '柱', '間柱', 'ブレス']);
-
-/**
- * カテゴリフィルタ補助: 推定失敗時に「明らかに別カテゴリの部材」を除外する。
- * 柱・間柱は命名が多様で推定できないケースが多いが、
- * 大梁G系・小梁B系が混入しないようにする。
- * @param {object[]} list - フィルタ対象の部材リスト
- * @param {string} currentCat - 現在選択中のカテゴリー
- * @returns {object[]} 除外後リスト（全除外になる場合は list をそのまま返す）
- */
-function _excludeOtherCats(list, currentCat) {
-  const result = list.filter(m => {
-    const inferred = _inferMemberCategory(m.name);
-    return inferred === null || inferred === currentCat;
-  });
-  return result.length ? result : list;
-}
+const SUGGEST_FILTERABLE_CATS = new Set(['大梁', '小梁', '柱', '間柱']);
 
 /** 現在工事に紐づく bolt プロジェクトを返す（なければ null） */
 function _getBoltProject() {
@@ -221,8 +203,10 @@ function _renderSuggestSidebar() {
   const proj = _getBoltProject();
   if (!proj) return;
 
-  const levels  = getProjectLevels(proj); // [{ id, label }]
-  const members = proj.members ?? [];
+  const levels    = getProjectLevels(proj); // [{ id, label }]
+  const members   = proj.members ?? [];
+  // joint.type でカテゴリを正確に判定するため継手マップを作る
+  const jointsMap = new Map((proj.joints ?? []).map(j => [j.id, j]));
 
   // ── 階層タブ ──
   const tabsEl = elSuggestSidebar.querySelector('#admin-suggest-tabs');
@@ -240,29 +224,18 @@ function _renderSuggestSidebar() {
   }
 
   // ── 候補フィルタ ──
-  const currentCat = _activeSuggestCatEl?.value ?? '';
-  let filtered;
-  if (_suggestLevel === 'all') {
-    // 「すべて」タブでも選択中カテゴリーで絞り込む
-    if (currentCat && SUGGEST_FILTERABLE_CATS.has(currentCat)) {
-      const exact = members.filter(m => _inferMemberCategory(m.name) === currentCat);
-      // 推定一致あり → exact を使用
-      // 推定一致なし → 明らかに別カテゴリの部材だけ除外（柱・間柱の多様な命名に対応）
-      filtered = exact.length ? exact : _excludeOtherCats(members, currentCat);
-    } else {
-      filtered = [...members];
-    }
-  } else {
-    // 個別階層: まず階層で絞り、さらにカテゴリでも絞る
-    const byLevel = members.filter(m => (m.targetLevels ?? []).includes(_suggestLevel));
-    if (currentCat && SUGGEST_FILTERABLE_CATS.has(currentCat)) {
-      const exact = byLevel.filter(m => _inferMemberCategory(m.name) === currentCat);
-      // 推定一致あり → exact を使用
-      // 推定一致なし → 明らかに別カテゴリを除外（大梁G系・小梁B系が混入しないようにする）
-      filtered = exact.length ? exact : _excludeOtherCats(byLevel, currentCat);
-    } else {
-      filtered = byLevel;
-    }
+  // joint.type を使ってカテゴリーを正確に判定する（名前推定より確実）
+  const getMemberCat = m => JOINT_TYPE_TO_ADMIN_CAT[jointsMap.get(m.jointId)?.type ?? ''] ?? null;
+  const currentCat   = _activeSuggestCatEl?.value ?? '';
+
+  // まず階層で絞る
+  let filtered = _suggestLevel === 'all'
+    ? [...members]
+    : members.filter(m => (m.targetLevels ?? []).includes(_suggestLevel));
+
+  // 次にカテゴリーで絞る
+  if (currentCat && SUGGEST_FILTERABLE_CATS.has(currentCat)) {
+    filtered = filtered.filter(m => getMemberCat(m) === currentCat);
   }
 
   const search = _suggestSearch.toLowerCase();
