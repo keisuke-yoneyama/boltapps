@@ -167,6 +167,22 @@ function _inferMemberCategory(name) {
 // カテゴリーフィルタが有効な種別（ボルト系は bolt 部材に存在しない）
 const SUGGEST_FILTERABLE_CATS = new Set(['大梁', '小梁', '柱', '間柱', 'ブレス']);
 
+/**
+ * カテゴリフィルタ補助: 推定失敗時に「明らかに別カテゴリの部材」を除外する。
+ * 柱・間柱は命名が多様で推定できないケースが多いが、
+ * 大梁G系・小梁B系が混入しないようにする。
+ * @param {object[]} list - フィルタ対象の部材リスト
+ * @param {string} currentCat - 現在選択中のカテゴリー
+ * @returns {object[]} 除外後リスト（全除外になる場合は list をそのまま返す）
+ */
+function _excludeOtherCats(list, currentCat) {
+  const result = list.filter(m => {
+    const inferred = _inferMemberCategory(m.name);
+    return inferred === null || inferred === currentCat;
+  });
+  return result.length ? result : list;
+}
+
 /** 現在工事に紐づく bolt プロジェクトを返す（なければ null） */
 function _getBoltProject() {
   const { selectedProjectId, a1 } = adminState;
@@ -229,18 +245,23 @@ function _renderSuggestSidebar() {
   if (_suggestLevel === 'all') {
     // 「すべて」タブでも選択中カテゴリーで絞り込む
     if (currentCat && SUGGEST_FILTERABLE_CATS.has(currentCat)) {
-      filtered = members.filter(m => _inferMemberCategory(m.name) === currentCat);
-      // 推定がマッチしない場合は全件フォールバック
-      if (!filtered.length) filtered = [...members];
+      const exact = members.filter(m => _inferMemberCategory(m.name) === currentCat);
+      // 推定一致あり → exact を使用
+      // 推定一致なし → 明らかに別カテゴリの部材だけ除外（柱・間柱の多様な命名に対応）
+      filtered = exact.length ? exact : _excludeOtherCats(members, currentCat);
     } else {
       filtered = [...members];
     }
   } else {
     // 個別階層: まず階層で絞り、さらにカテゴリでも絞る
-    filtered = members.filter(m => (m.targetLevels ?? []).includes(_suggestLevel));
+    const byLevel = members.filter(m => (m.targetLevels ?? []).includes(_suggestLevel));
     if (currentCat && SUGGEST_FILTERABLE_CATS.has(currentCat)) {
-      const catFiltered = filtered.filter(m => _inferMemberCategory(m.name) === currentCat);
-      if (catFiltered.length) filtered = catFiltered; // マッチゼロなら階層フィルタ結果を維持
+      const exact = byLevel.filter(m => _inferMemberCategory(m.name) === currentCat);
+      // 推定一致あり → exact を使用
+      // 推定一致なし → 明らかに別カテゴリを除外（大梁G系・小梁B系が混入しないようにする）
+      filtered = exact.length ? exact : _excludeOtherCats(byLevel, currentCat);
+    } else {
+      filtered = byLevel;
     }
   }
 
