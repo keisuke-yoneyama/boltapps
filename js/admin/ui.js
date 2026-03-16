@@ -236,7 +236,12 @@ function _renderSuggestSidebar() {
       filtered = [...members];
     }
   } else {
+    // 個別階層: まず階層で絞り、さらにカテゴリでも絞る
     filtered = members.filter(m => (m.targetLevels ?? []).includes(_suggestLevel));
+    if (currentCat && SUGGEST_FILTERABLE_CATS.has(currentCat)) {
+      const catFiltered = filtered.filter(m => _inferMemberCategory(m.name) === currentCat);
+      if (catFiltered.length) filtered = catFiltered; // マッチゼロなら階層フィルタ結果を維持
+    }
   }
 
   const search = _suggestSearch.toLowerCase();
