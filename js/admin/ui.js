@@ -74,7 +74,7 @@ let _bulkFormDraft   = null; // null | { category, prefix, baseName, separator, 
 
 // ── サジェスト専用サイドバー state ──────────────────────────
 // bolt 連携工事のとき baseName フォーカス中のみ表示する
-const NO_SUGGEST_CATS = new Set(['ボルト', '仮ボルト', 'コン止め', 'デッキ', 'ブレス']);
+const NO_SUGGEST_CATS = new Set(['ボルト', '仮ボルト', 'コン止め', 'デッキ', 'ブレス', 'その他']);
 let _suggestLevel       = 'all'; // アクティブ階層タブ ID
 let _suggestSearch      = '';    // 絞り込み検索文字列
 let _activeSuggestInput = null;  // 現在フォーカス中の baseName input 要素
@@ -216,15 +216,47 @@ function _renderSuggestSidebar() {
 
   const members = [...(proj.members ?? []), ...countAsMemberItems];
 
-  // 「全て」タブ廃止: 初期値が 'all' のまま残っていたら最初の階層へ自動移行
-  if (_suggestLevel === 'all' && levels.length > 0) {
-    _suggestLevel = levels[0].id;
+  // ── カテゴリ・候補の事前計算 ──
+  const getMemberCat = m => JOINT_TYPE_TO_ADMIN_CAT[jointsMap.get(m.jointId)?.type ?? ''] ?? null;
+  const currentCat   = _activeSuggestCatEl?.value ?? '';
+
+  // まずカテゴリで絞った全候補（階層問わず）を計算する
+  const catFilteredAll = (currentCat && SUGGEST_FILTERABLE_CATS.has(currentCat))
+    ? members.filter(m => getMemberCat(m) === currentCat)
+    : members;
+
+  // 該当カテゴリの部材が一切ない → サイドバーを閉じて終了
+  if (currentCat && SUGGEST_FILTERABLE_CATS.has(currentCat) && catFilteredAll.length === 0) {
+    _hideBoltSuggest();
+    return;
   }
 
-  // ── 階層タブ（「全て」タブなし） ──
+  // 各階層の候補数を計算（候補0件タブは非表示にするため）
+  const levelCounts = new Map(levels.map(l => [l.id, 0]));
+  catFilteredAll.forEach(m => {
+    const tl = m.targetLevels ?? [];
+    if (tl.length === 0) {
+      // 全階層対象: 全レベルにカウント
+      levels.forEach(l => levelCounts.set(l.id, levelCounts.get(l.id) + 1));
+    } else {
+      tl.forEach(lId => {
+        if (levelCounts.has(lId)) levelCounts.set(lId, levelCounts.get(lId) + 1);
+      });
+    }
+  });
+
+  // 候補がある階層だけ表示する
+  const visibleLevels = levels.filter(l => (levelCounts.get(l.id) ?? 0) > 0);
+
+  // _suggestLevel が 'all' または非表示タブなら最初の有効タブへ移行
+  if (visibleLevels.length > 0 && !visibleLevels.some(l => l.id === _suggestLevel)) {
+    _suggestLevel = visibleLevels[0].id;
+  }
+
+  // ── 階層タブ（候補あり階層のみ） ──
   const tabsEl = elSuggestSidebar.querySelector('#admin-suggest-tabs');
   if (tabsEl) {
-    tabsEl.innerHTML = levels.map(l => `
+    tabsEl.innerHTML = visibleLevels.map(l => `
       <button data-suggest-level="${esc(l.id)}"
         class="px-2.5 py-1 text-xs shrink-0 border-r border-gray-700 whitespace-nowrap
                ${l.id === _suggestLevel
@@ -235,23 +267,11 @@ function _renderSuggestSidebar() {
     `).join('');
   }
 
-  // ── 候補フィルタ ──
-  // joint.type を使ってカテゴリーを正確に判定する（名前推定より確実）
-  const getMemberCat = m => JOINT_TYPE_TO_ADMIN_CAT[jointsMap.get(m.jointId)?.type ?? ''] ?? null;
-  const currentCat   = _activeSuggestCatEl?.value ?? '';
-
-  // 階層で絞る:
-  // targetLevels = [] (全階層対象) の部材はどの階層タブでも表示する
-  // bolt の isAllChecked = (targetLevels.length === 0) と同義
-  let filtered = members.filter(m => {
+  // ── 現在選択中の階層で絞る ──
+  let filtered = catFilteredAll.filter(m => {
     const tl = m.targetLevels ?? [];
     return tl.length === 0 || tl.includes(_suggestLevel);
   });
-
-  // カテゴリーで絞る
-  if (currentCat && SUGGEST_FILTERABLE_CATS.has(currentCat)) {
-    filtered = filtered.filter(m => getMemberCat(m) === currentCat);
-  }
 
   const search = _suggestSearch.toLowerCase();
   if (search) filtered = filtered.filter(m => (m.name ?? '').toLowerCase().includes(search));
