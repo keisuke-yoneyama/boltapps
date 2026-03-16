@@ -204,9 +204,17 @@ function _renderSuggestSidebar() {
   if (!proj) return;
 
   const levels    = getProjectLevels(proj); // [{ id, label }]
-  const members   = proj.members ?? [];
   // joint.type でカテゴリを正確に判定するため継手マップを作る
   const jointsMap = new Map((proj.joints ?? []).map(j => [j.id, j]));
+
+  // countAsMember=true の継手を部材候補に追加する（bolt の ui-members.js と同じルール）
+  // jointId = j.id（自己参照）なので getMemberCat で joint.type が取れる
+  // targetLevels = []（全階層対象）として扱う
+  const countAsMemberItems = (proj.joints ?? [])
+    .filter(j => j.countAsMember)
+    .map(j => ({ id: j.id, name: j.name, jointId: j.id, targetLevels: [] }));
+
+  const members = [...(proj.members ?? []), ...countAsMemberItems];
 
   // 「全て」タブ廃止: 初期値が 'all' のまま残っていたら最初の階層へ自動移行
   if (_suggestLevel === 'all' && levels.length > 0) {
