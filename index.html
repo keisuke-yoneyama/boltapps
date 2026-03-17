@@ -114,17 +114,19 @@
 
       body {
         font-family: "Noto Sans JP", "Inter", sans-serif;
-        background: linear-gradient(
-          to bottom right,
-          #e0f2fe,
-          #fef9c3
-        ) !important;
+        /* 昼間モード: 管理アプリと共通の方眼背景（40px / 薄青） */
+        background-color: #ecf1f8;
+        background-image:
+          linear-gradient(rgba(70, 120, 190, 0.05) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(70, 120, 190, 0.05) 1px, transparent 1px);
+        background-size: 40px 40px;
         background-attachment: fixed;
         padding-top: 80px;
       }
       .dark body {
         /* admin ダークモードと色調統一（濃い青灰） */
         background: #111c2e !important;
+        background-image: none !important;
       }
 
       .custom-scrollbar::-webkit-scrollbar {
