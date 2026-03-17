@@ -526,6 +526,157 @@ function _applyHistoryEntry(entry) {
   renderRightPanel();
 }
 
+// ── 複数選択 / クリップボード ────────────────────────────────
+
+/** 現在選択中の item ID 配列を返す（multiSelected 優先、なければ selectedItemId 単体） */
+function _getSelectedIds() {
+  const { selectedItemId, multiSelectedItemIds } = adminState;
+  if (multiSelectedItemIds.length > 0) return [...multiSelectedItemIds];
+  if (selectedItemId) return [selectedItemId];
+  return [];
+}
+
+/** クリップボードをクリアする */
+function _clearClipboard() {
+  adminState.clipboard = { items: [], mode: null, sourcePlanId: null, sourceTruckId: null, seriesId: null };
+}
+
+/** グリッド上部アクションバーの HTML を返す（選択中/クリップボード状態による） */
+function _gridActionBarHtml() {
+  const { clipboard, selectedTruckId } = adminState;
+  const selIds  = _getSelectedIds();
+  const hasSel  = selIds.length > 0 && !!selectedTruckId;
+  const hasCb   = !!clipboard.mode && clipboard.items.length > 0;
+  if (!hasSel && !hasCb) return '';
+
+  const selPart = hasSel ? `
+    <span class="text-gray-400 shrink-0">${selIds.length}件選択</span>
+    <button data-grid-action="copy" title="Ctrl+C"
+      class="px-2 py-0.5 bg-gray-700 hover:bg-gray-600 rounded text-gray-200">コピー</button>
+    <button data-grid-action="cut"  title="Ctrl+X"
+      class="px-2 py-0.5 bg-gray-700 hover:bg-gray-600 rounded text-gray-200">切り取り</button>
+    <button data-grid-action="del"  title="Delete"
+      class="px-2 py-0.5 bg-red-900/70 hover:bg-red-800/70 rounded text-red-300">削除</button>
+  ` : '';
+
+  const cbPart = hasCb ? (() => {
+    const label = clipboard.mode === 'copy' ? 'コピー' : '切り取り';
+    const cls   = clipboard.mode === 'copy' ? 'text-blue-300' : 'text-amber-300';
+    return `
+      <span class="${cls} shrink-0 ${hasSel ? 'ml-auto' : ''}">${clipboard.items.length}件${label}中</span>
+      <button data-grid-action="paste" title="Ctrl+V"
+        class="px-2 py-0.5 bg-blue-800 hover:bg-blue-700 rounded text-blue-200">貼り付け</button>
+      <button data-grid-action="clear-cb" title="クリア"
+        class="text-gray-600 hover:text-gray-400 px-1">✕</button>
+    `;
+  })() : '';
+
+  return `
+    <div class="flex items-center gap-1.5 bg-gray-900 border-b border-gray-700
+                py-1 px-2 mb-2 text-xs text-gray-200 flex-wrap">
+      ${selPart}${cbPart}
+    </div>`;
+}
+
+/** 選択品目をクリップボードにコピー（mode='copy'） */
+function _handleCopy() {
+  const ids = _getSelectedIds();
+  if (!ids.length || !adminState.selectedTruckId) return;
+  const src = (adminState.itemsCache[adminState.selectedTruckId] ?? []).filter(i => ids.includes(i.id));
+  if (!src.length) return;
+  adminState.clipboard = {
+    items:        src.map(i => ({ ...i })),
+    mode:         'copy',
+    sourcePlanId:  adminState.selectedPlanId,
+    sourceTruckId: adminState.selectedTruckId,
+    seriesId:      adminState.a2.currentPlan?.deliverySeriesId ?? null,
+  };
+  renderMainGrid();
+}
+
+/** 選択品目をクリップボードに切り取り（mode='cut'）。Firestore 操作は paste 時 */
+function _handleCut() {
+  const ids = _getSelectedIds();
+  if (!ids.length || !adminState.selectedTruckId) return;
+  const src = (adminState.itemsCache[adminState.selectedTruckId] ?? []).filter(i => ids.includes(i.id));
+  if (!src.length) return;
+  adminState.clipboard = {
+    items:        src.map(i => ({ ...i })),
+    mode:         'cut',
+    sourcePlanId:  adminState.selectedPlanId,
+    sourceTruckId: adminState.selectedTruckId,
+    seriesId:      adminState.a2.currentPlan?.deliverySeriesId ?? null,
+  };
+  renderMainGrid();
+}
+
+/** クリップボードの品目を現在の号車に貼り付ける */
+async function _handlePaste() {
+  const { clipboard, selectedProjectId, selectedPlanId, selectedTruckId, a2 } = adminState;
+  if (!clipboard.mode || !clipboard.items.length) return;
+  if (!selectedTruckId) return;
+  if (_saving) return;
+
+  // シリーズ内チェック
+  const srcSeriesId = clipboard.seriesId;
+  const tgtSeriesId = a2.currentPlan?.deliverySeriesId ?? null;
+  const inSameSeries = srcSeriesId !== null
+    ? srcSeriesId === tgtSeriesId
+    : clipboard.sourcePlanId === selectedPlanId; // シリーズなし: 同一 plan 内のみ
+  if (!inSameSeries) {
+    alert('同じ搬入計画シリーズ内にのみ貼り付けできます。');
+    return;
+  }
+
+  _saving = true;
+  try {
+    const newItems = [];
+    for (const src of clipboard.items) {
+      const itemData = {
+        nameParts:          src.nameParts          ?? {},
+        name:               src.name               ?? '',
+        category:           src.category           ?? '',
+        quantity:           src.quantity           ?? null,
+        unit:               src.unit               ?? '',
+        cautionNote:        src.cautionNote        ?? '',
+        loadingInstruction: src.loadingInstruction ?? '',
+        diffs:              src.diffs              ?? [],
+        sortOrder:          src.sortOrder          ?? 0,
+        checked:            false,
+      };
+      const created = await createItem(selectedProjectId, selectedPlanId, selectedTruckId, itemData);
+      addItemToState(selectedTruckId, created);
+      newItems.push(created);
+    }
+
+    // cut: source を削除
+    if (clipboard.mode === 'cut') {
+      const { sourcePlanId, sourceTruckId, items: srcItems } = clipboard;
+      for (const src of srcItems) {
+        try {
+          await deleteItem(selectedProjectId, sourcePlanId, sourceTruckId, src.id);
+          removeItemFromState(sourceTruckId, src.id);
+        } catch (err) {
+          console.warn('[A2] paste-cut 削除失敗', src.id, err);
+        }
+      }
+    }
+
+    _clearClipboard();
+    // 貼り付けた items を選択状態にする
+    adminState.selectedItemId       = newItems.at(-1)?.id ?? null;
+    adminState.multiSelectedItemIds = newItems.map(i => i.id);
+    adminState.rightPanelMode       = 'idle';
+
+    renderMainGrid();
+    renderRightPanel();
+  } catch (err) {
+    console.error('[A2] 貼り付け失敗', err);
+  } finally {
+    _saving = false;
+  }
+}
+
 // ── Render: Header ─────────────────────────────────────────
 
 function renderHeader() {
@@ -637,7 +788,7 @@ function renderMainGrid() {
 
   const multiSet = new Set(multiSelectedItemIds);
 
-  elMainGrid.innerHTML = switcherHtml + sortedGroups(groups).map(([cat, catItems]) => `
+  elMainGrid.innerHTML = switcherHtml + _gridActionBarHtml() + sortedGroups(groups).map(([cat, catItems]) => `
     <section class="pb-2">
       <h2 class="sticky top-0 z-10 bg-gray-900 text-sm font-semibold text-gray-200 px-1 py-2 mb-3 border-b border-gray-700 flex items-center gap-1">
         ${esc(cat)}<span class="text-xs text-gray-500 font-normal">（${catItems.length}）</span>
@@ -1713,6 +1864,17 @@ function bindEvents() {
   });
 
   elMainGrid.addEventListener('click', async e => {
+    // アクションバーボタン
+    const gridAction = e.target.closest('[data-grid-action]')?.dataset.gridAction;
+    if (gridAction) {
+      if (gridAction === 'copy')     { _handleCopy(); return; }
+      if (gridAction === 'cut')      { _handleCut();  return; }
+      if (gridAction === 'paste')    { await _handlePaste(); return; }
+      if (gridAction === 'del')      { await _handleDelete(); return; }
+      if (gridAction === 'clear-cb') { _clearClipboard(); renderMainGrid(); return; }
+      return;
+    }
+
     const switchBtn = e.target.closest('[data-switch-plan-id]');
     if (switchBtn && adminState._onSwitchA2Plan) {
       await adminState._onSwitchA2Plan(
@@ -1910,13 +2072,33 @@ function bindEvents() {
     _updateBulkPreview();
   });
 
-  // Delete キー: フォーム編集中は無効化、それ以外は品目削除
+  // グリッド画面キーボードショートカット（Delete / Ctrl+C / Ctrl+X / Ctrl+V）
   document.addEventListener('keydown', async e => {
-    if (e.key !== 'Delete') return;
-    const mode = adminState.rightPanelMode;
-    if (mode === 'edit' || mode === 'new' || mode === 'bulk') return; // フォーム入力中は誤削除防止
-    if (!adminState.selectedTruckId || !adminState.selectedItemId) return;
-    await _handleDelete();
+    // A2 グリッド画面以外では無効
+    if (adminState.adminScreen !== 'grid') return;
+
+    // input / textarea / select 編集中は通常操作を優先
+    const ae = document.activeElement;
+    const isEditing = ae && (
+      ae.tagName === 'INPUT' || ae.tagName === 'TEXTAREA' ||
+      ae.tagName === 'SELECT' || ae.isContentEditable
+    );
+
+    if (e.key === 'Delete') {
+      if (isEditing) return;
+      const mode = adminState.rightPanelMode;
+      if (mode === 'edit' || mode === 'new' || mode === 'bulk') return;
+      if (!adminState.selectedTruckId || !_getSelectedIds().length) return;
+      await _handleDelete();
+      return;
+    }
+
+    const isCtrl = e.ctrlKey || e.metaKey;
+    if (!isCtrl || isEditing) return;
+
+    if (e.key === 'c' || e.key === 'C') { e.preventDefault(); _handleCopy(); return; }
+    if (e.key === 'x' || e.key === 'X') { e.preventDefault(); _handleCut();  return; }
+    if (e.key === 'v' || e.key === 'V') { e.preventDefault(); await _handlePaste(); return; }
   });
 
   _initSuggestSidebar();
@@ -1943,6 +2125,17 @@ export async function initGridScreen(projectId, planId) {
   // 搬入日切替または A2 離脱時はフォーム draft をリセット
   _singleFormDraft = null;
   _bulkFormDraft   = null;
+
+  // clipboard は同一 deliverySeriesId 内の日切替なら維持する
+  // 別シリーズまたはシリーズなし計画への移動ならクリア
+  {
+    const cb = adminState.clipboard;
+    if (cb.mode) {
+      const tgtSeriesId = adminState.a2.seriesPlans.find(p => p.id === planId)?.deliverySeriesId ?? null;
+      const keepCb = cb.seriesId !== null && cb.seriesId === tgtSeriesId;
+      if (!keepCb) _clearClipboard();
+    }
+  }
 
   bindEvents(); // 2回目以降は no-op
 

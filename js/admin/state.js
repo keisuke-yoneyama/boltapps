@@ -45,6 +45,15 @@ export const adminState = {
   selectedItemId:       null,   // 主選択（単一）
   multiSelectedItemIds: [],     // Ctrl/Shift 複数選択中の品目ID配列
 
+  // クリップボード（複写・切り取り）
+  clipboard: {
+    items:        [],    // コピー/切り取り元の item データ配列
+    mode:         null,  // 'copy' | 'cut' | null
+    sourcePlanId:  null,
+    sourceTruckId: null,
+    seriesId:      null, // 同一シリーズ内チェック用 deliverySeriesId
+  },
+
   // 右サイドバーモード: 'idle' | 'view' | 'edit' | 'new'
   rightPanelMode: 'idle',
 
