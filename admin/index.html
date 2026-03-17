@@ -1,7 +1,14 @@
 <!doctype html>
-<html lang="ja" class="dark">
+<html lang="ja">
   <head>
     <meta charset="UTF-8" />
+    <!-- テーマ初期化: FOUC 防止のため最初に実行 -->
+    <script>
+      (function () {
+        var t = localStorage.getItem('admin-theme') || 'dark';
+        document.documentElement.className = t === 'light' ? 'theme-light' : 'dark';
+      })();
+    </script>
     <base href="/" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>玄武 管理</title>
@@ -20,6 +27,95 @@
     />
     <style>
       body { font-family: 'Noto Sans JP', 'Inter', sans-serif; }
+
+      /* ─── テーマ: ダークモード（デフォルト）───────────────────── */
+      html.dark body {
+        background: #111c2e;
+        background-attachment: fixed;
+      }
+
+      /* ─── テーマ: ライトモード ─────────────────────────────────── */
+      /* 案A採用: 薄青ベース + 40px 方眼グリッド（設計図風） */
+      html.theme-light body {
+        background-color: #ecf1f8;
+        background-image:
+          linear-gradient(rgba(70, 120, 190, 0.07) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(70, 120, 190, 0.07) 1px, transparent 1px);
+        background-size: 40px 40px;
+        background-attachment: fixed;
+        color: #1e293b;
+      }
+
+      /* パネル背景 */
+      html.theme-light .bg-gray-900  { background-color: #eef3f9 !important; }
+      html.theme-light .bg-gray-800  { background-color: #ffffff !important; }
+      html.theme-light .bg-gray-700  { background-color: #dde8f2 !important; }
+      html.theme-light .bg-gray-600  { background-color: #c8d8e8 !important; }
+
+      /* サジェストサイドバー（非標準 bg-gray-850 クラスを使用） */
+      html.theme-light #admin-suggest-sidebar { background-color: #f3f7fb !important; }
+
+      /* テキスト */
+      html.theme-light .text-white    { color: #1e293b !important; }
+      html.theme-light .text-gray-100 { color: #0f172a !important; }
+      html.theme-light .text-gray-200 { color: #1e293b !important; }
+      html.theme-light .text-gray-300 { color: #334155 !important; }
+      html.theme-light .text-gray-400 { color: #4a6480 !important; }
+      html.theme-light .text-gray-500 { color: #6b829e !important; }
+      html.theme-light .text-gray-600 { color: #94a3b8 !important; }
+
+      /* ボーダー */
+      html.theme-light .border-gray-700 { border-color: #bad0e3 !important; }
+      html.theme-light .border-gray-600 { border-color: #c8d8e8 !important; }
+      html.theme-light .border-gray-800 { border-color: #9ab0c8 !important; }
+
+      /* ホバー */
+      html.theme-light .hover\:bg-gray-700:hover   { background-color: #dde8f2 !important; }
+      html.theme-light .hover\:bg-gray-600:hover   { background-color: #c8d8e8 !important; }
+      html.theme-light .hover\:text-white:hover    { color: #0f172a !important; }
+      html.theme-light .hover\:text-gray-100:hover { color: #0f172a !important; }
+      html.theme-light .hover\:text-gray-200:hover { color: #1e293b !important; }
+      html.theme-light .hover\:text-gray-300:hover { color: #334155 !important; }
+      html.theme-light .hover\:border-gray-400:hover { border-color: #7090b0 !important; }
+
+      /* 入力欄 */
+      html.theme-light input:not([type=checkbox]):not([type=radio]),
+      html.theme-light select,
+      html.theme-light textarea {
+        background-color: #ffffff !important;
+        color: #1e293b !important;
+        border-color: #bad0e3 !important;
+      }
+      html.theme-light input::placeholder,
+      html.theme-light textarea::placeholder { color: #94a3b8 !important; }
+
+      /* 品目カード: 主選択（blue-900/60） */
+      html.theme-light .bg-blue-900\/60 {
+        background-color: rgba(219, 234, 254, 0.9) !important;
+        color: #1e3a8a !important;
+      }
+      /* 品目カード: 複数選択（blue-900/20） */
+      html.theme-light .bg-blue-900\/20 {
+        background-color: rgba(219, 234, 254, 0.4) !important;
+        color: #1e3a8a !important;
+      }
+      /* カレンダー: 選択日（blue-900/25） */
+      html.theme-light .bg-blue-900\/25 {
+        background-color: rgba(219, 234, 254, 0.5) !important;
+      }
+
+      /* sticky バー / オーバーレイ */
+      html.theme-light .bg-gray-900\/90 { background-color: rgba(236, 241, 248, 0.95) !important; }
+      html.theme-light .bg-gray-900\/60 { background-color: rgba(236, 241, 248, 0.8)  !important; }
+
+      /* テーマトグルボタン: ライトモード時に見えるよう色反転 */
+      html.theme-light #admin-theme-toggle {
+        color: #4a6480 !important;
+      }
+      html.theme-light #admin-theme-toggle:hover {
+        background-color: #dde8f2 !important;
+        color: #1e293b !important;
+      }
     </style>
   </head>
   <body class="dark bg-gray-900 text-gray-100 h-screen flex flex-col overflow-hidden">
@@ -33,6 +129,12 @@
       <span class="font-bold text-base tracking-wide shrink-0">玄武 管理</span>
       <span id="admin-header-sep" class="hidden text-gray-600 shrink-0">|</span>
       <div id="admin-header-info" class="flex items-center gap-2 text-sm text-gray-300 min-w-0 overflow-hidden"></div>
+      <button id="admin-theme-toggle"
+        onclick="toggleAdminTheme()"
+        title="昼間 / ナイトモード切替"
+        class="ml-auto shrink-0 text-gray-400 hover:text-gray-100 text-base
+               px-2 py-1 rounded hover:bg-gray-700 transition-colors leading-none">
+      </button>
     </header>
 
     <!-- ── A0: カレンダー画面 ───────────────────────────────── -->
@@ -132,5 +234,27 @@
     </div>
 
     <script type="module" src="admin/app.js"></script>
+
+    <!-- テーマ切替 -->
+    <script>
+      function _updateThemeToggleBtn() {
+        var btn = document.getElementById('admin-theme-toggle');
+        if (!btn) return;
+        var isLight = document.documentElement.classList.contains('theme-light');
+        btn.textContent = isLight ? '🌙' : '☀️';
+        btn.title = isLight ? 'ナイトモードへ切替' : '昼間モードへ切替';
+      }
+
+      function toggleAdminTheme() {
+        var isLight = document.documentElement.classList.contains('theme-light');
+        var next = isLight ? 'dark' : 'light';
+        document.documentElement.className = next === 'light' ? 'theme-light' : 'dark';
+        localStorage.setItem('admin-theme', next);
+        _updateThemeToggleBtn();
+      }
+
+      // ページ読み込み時にボタンアイコンを初期化
+      document.addEventListener('DOMContentLoaded', _updateThemeToggleBtn);
+    </script>
   </body>
 </html>
