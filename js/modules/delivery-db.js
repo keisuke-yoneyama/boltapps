@@ -1,6 +1,6 @@
 // 搬入リスト固有の Firestore アクセス
 
-import { db } from './firebase.js';
+import { db, appId } from './firebase.js';
 import {
   collection,
   collectionGroup,
@@ -230,8 +230,9 @@ const MOCK_ITEMS = {
 // ── Projects ──────────────────────────────────────────────
 
 export async function getDeliveryProjects() {
+  // boltプロジェクトと同じパスを参照（artifacts/${appId}/public/data/projects）
   try {
-    const snap = await getDocs(collection(db, 'projects'));
+    const snap = await getDocs(collection(db, `artifacts/${appId}/public/data/projects`));
     const result = snap.docs.map(d => ({ id: d.id, ...d.data() }));
     if (!result.length && DEV_MODE) return MOCK_PROJECTS;
     return result;
