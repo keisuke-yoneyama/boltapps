@@ -1300,6 +1300,13 @@ function bindCalendarEvents() {
     const bar = e.target.closest('[data-plan-id]');
     if (bar) {
       openA0EditSidebar(bar.dataset.planId, bar.dataset.projectId);
+      // 工事バーの搬入日に下部パネルを切り替える
+      const firstDate = adminState.a0edit.plans[0]?.deliveryDate;
+      if (firstDate && firstDate !== adminState.selectedDate) {
+        adminState.selectedDate = firstDate;
+        renderCalendar();
+        renderDateDetail(firstDate);
+      }
       return;
     }
     // セル背景クリック → 日付選択
