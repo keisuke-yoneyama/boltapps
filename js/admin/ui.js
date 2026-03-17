@@ -89,6 +89,11 @@ let _lastClickedItemId     = null;
 let _lastClickTime         = 0;
 const DBLCLICK_MS          = 350;
 
+/** ローディングスピナー HTML */
+function _spinHtml() {
+  return '<span class="admin-spinner"></span>';
+}
+
 function _diffDraftListHtml() {
   if (!_diffDraft.length) return '<span class="text-xs text-gray-500">差分なし</span>';
   return _diffDraft.map((d, i) => `
@@ -1286,7 +1291,7 @@ async function _handleTruckSave() {
   _saving = true;
   const saveBtn = elRightContent.querySelector('[data-truck-action="save"]');
   const origSaveBtnText = saveBtn?.textContent;
-  if (saveBtn) { saveBtn.disabled = true; saveBtn.textContent = '保存中…'; }
+  if (saveBtn) { saveBtn.disabled = true; saveBtn.innerHTML = `${_spinHtml()} 保存中`; }
 
   try {
   const { selectedProjectId, selectedPlanId, selectedTruckId, trucks } = adminState;
@@ -1308,10 +1313,28 @@ async function _handleTruckSave() {
   };
 
   if (isEdit) {
-    const existing = trucks.find(t => t.id === selectedTruckId);
+    // 楽観的UI: state 先更新 → 即描画 → Firestore バックグラウンド
+    const existing     = trucks.find(t => t.id === selectedTruckId);
+    const prevSnapshot = existing ? { ...existing } : null;
     truckData.truckOrder = existing?.truckOrder ?? 0;
-    await updateTruck(selectedProjectId, selectedPlanId, selectedTruckId, truckData);
+
     updateTruckInState({ id: selectedTruckId, ...truckData });
+    _truckPanelMode = null;
+    _saving         = false;
+    renderTruckList();
+    renderMainGrid();
+    renderRightPanel();
+
+    try {
+      await updateTruck(selectedProjectId, selectedPlanId, selectedTruckId, truckData);
+    } catch (firestoreErr) {
+      console.error('[A2] 号車更新失敗（ロールバック）', firestoreErr);
+      if (prevSnapshot) updateTruckInState(prevSnapshot);
+      _truckPanelMode = 'edit';
+      renderTruckList();
+      renderRightPanel();
+    }
+    return; // finally は _saving=false のみ（既に解放済み）
   } else {
     const maxOrder = Math.max(0, ...trucks.map(t => t.truckOrder ?? 0));
     truckData.truckOrder = maxOrder + 1;
@@ -1498,7 +1521,7 @@ async function _handleSave() {
   _saving = true;
   const saveBtn = elRightContent.querySelector('[data-rp-action="save"]');
   const origSaveBtnText = saveBtn?.textContent;
-  if (saveBtn) { saveBtn.disabled = true; saveBtn.textContent = '保存中…'; }
+  if (saveBtn) { saveBtn.disabled = true; saveBtn.innerHTML = `${_spinHtml()} 保存中`; }
   try {
 
   const {
@@ -1560,14 +1583,32 @@ async function _handleSave() {
     });
 
   } else {
-    // edit
+    // edit: 楽観的UI（state 先更新 → 即描画 → Firestore → 失敗時ロールバック）
     const existing     = items.find(i => i.id === selectedItemId);
+    const prevSnapshot = existing ? { ...existing } : null;
     itemData.sortOrder = existing?.sortOrder ?? 0;
     itemData.checked   = existing?.checked   ?? false;
 
-    await updateItem(selectedProjectId, selectedPlanId, selectedTruckId, selectedItemId, itemData);
+    // 1. state 先更新 → 即描画（保存ロック解放）
     updateItemInState(selectedTruckId, { id: selectedItemId, ...itemData });
     adminState.rightPanelMode = 'view';
+    _diffDraft = [];
+    _saving    = false;
+    renderMainGrid();
+    renderRightPanel();
+
+    // 2. Firestore（バックグラウンド）
+    try {
+      await updateItem(selectedProjectId, selectedPlanId, selectedTruckId, selectedItemId, itemData);
+    } catch (firestoreErr) {
+      console.error('[A2] 品目更新失敗（ロールバック）', firestoreErr);
+      if (prevSnapshot) updateItemInState(selectedTruckId, prevSnapshot);
+      adminState.rightPanelMode = 'edit';
+      _diffDraft = [...(prevSnapshot?.diffs ?? [])];
+      renderMainGrid();
+      renderRightPanel();
+    }
+    return; // finally は _saving=false のみ（既に解放済み）
   }
 
   // new モード完了後も入力内容を保持（次回新規登録で復元される）
@@ -1616,7 +1657,7 @@ async function _handleBulkSave() {
   _saving = true;
   const saveBtn = elRightContent.querySelector('[data-rp-action="bulk-save"]');
   const origSaveBtnText = saveBtn?.textContent;
-  if (saveBtn) { saveBtn.disabled = true; saveBtn.textContent = '登録中…'; }
+  if (saveBtn) { saveBtn.disabled = true; saveBtn.innerHTML = `${_spinHtml()} 登録中`; }
   try {
 
   // 未確定のインライン編集を自動コミット（確定ボタンを押さずに登録した場合対応）
@@ -1700,7 +1741,7 @@ async function _handleCopyTruck(sourceTruckId) {
   if (_saving) return;
   _saving = true;
   const copyBtn = elTruckList.querySelector(`[data-copy-truck="${sourceTruckId}"]`);
-  if (copyBtn) { copyBtn.disabled = true; }
+  if (copyBtn) { copyBtn.disabled = true; copyBtn.innerHTML = _spinHtml(); }
   try {
 
   const { selectedProjectId, selectedPlanId, trucks, itemsCache } = adminState;
@@ -1778,6 +1819,12 @@ async function selectTruck(truckId) {
   _inputHistoryTab = 'input';
 
   if (!adminState.itemsCache[truckId]) {
+    // キャッシュなし: 号車一覧のハイライトを即更新し、中央にスピナーを表示
+    renderTruckList();
+    elMainGrid.innerHTML = `
+      <div class="flex items-center justify-center py-16 gap-2 text-gray-500">
+        ${_spinHtml()} <span class="text-sm">読み込み中…</span>
+      </div>`;
     const items = await getItemsForTruck(
       adminState.selectedProjectId,
       adminState.selectedPlanId,
@@ -2138,6 +2185,14 @@ export async function initGridScreen(projectId, planId) {
   }
 
   bindEvents(); // 2回目以降は no-op
+
+  // 号車読み込み中のスピナー表示
+  elTruckList.innerHTML = '';
+  elMainGrid.innerHTML = `
+    <div class="flex items-center justify-center py-16 gap-2 text-gray-500">
+      ${_spinHtml()} <span class="text-sm">読み込み中…</span>
+    </div>`;
+  elRightContent.innerHTML = '<p class="text-sm text-gray-500">読み込み中…</p>';
 
   const trucks = await getTrucksForPlan(projectId, planId);
   adminState.trucks = trucks;

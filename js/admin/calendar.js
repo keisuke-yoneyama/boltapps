@@ -137,7 +137,7 @@ async function loadAndRenderCalendar() {
 
   const gridEl = document.getElementById('admin-cal-grid');
   if (gridEl && !adminState.plansCache[monthKey]) {
-    gridEl.innerHTML = '<p class="text-center text-gray-500 py-6 col-span-7">読み込み中…</p>';
+    gridEl.innerHTML = '<div class="col-span-7 flex items-center justify-center gap-2 py-8 text-gray-500"><span class="admin-spinner"></span><span class="text-sm">読み込み中…</span></div>';
   }
 
   if (!adminState.plansCache[monthKey]) {
@@ -343,7 +343,7 @@ async function handleA0DeleteConfirm() {
   if (!target) return;
 
   const confirmBtn = document.getElementById('a0-delete-confirm-btn');
-  if (confirmBtn) { confirmBtn.disabled = true; confirmBtn.textContent = '削除中…'; }
+  if (confirmBtn) { confirmBtn.disabled = true; confirmBtn.innerHTML = '<span class="admin-spinner"></span> 削除中'; }
 
   // 影響月を先に記録（close 後はアクセスできなくなるため）
   const affectedMonths = new Set();
@@ -563,7 +563,7 @@ function openA0EditSidebar(planId, projectId) {
 async function handleA0EditSave() {
   const { plans, projectId } = adminState.a0edit;
   const saveBtn = document.getElementById('a0-edit-save-btn');
-  if (saveBtn) { saveBtn.disabled = true; saveBtn.textContent = '保存中…'; }
+  if (saveBtn) { saveBtn.disabled = true; saveBtn.innerHTML = '<span class="admin-spinner"></span> 保存中'; }
 
   const affectedMonths = new Set();
   try {
@@ -1117,7 +1117,7 @@ async function handlePlanFormSave() {
   }
 
   const saveBtn = document.getElementById('a1-save-btn');
-  if (saveBtn) { saveBtn.disabled = true; saveBtn.textContent = '登録中…'; }
+  if (saveBtn) { saveBtn.disabled = true; saveBtn.innerHTML = '<span class="admin-spinner"></span> 登録中'; }
 
   const affectedMonths = new Set();
 

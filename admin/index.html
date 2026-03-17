@@ -124,6 +124,22 @@
         background-color: #dde8f2 !important;
         color: #1e293b !important;
       }
+
+      /* ── ローディングスピナー ──────────────────────────────── */
+      @keyframes admin-spin {
+        to { transform: rotate(360deg); }
+      }
+      .admin-spinner {
+        display: inline-block;
+        width: 0.9em;
+        height: 0.9em;
+        border: 2px solid currentColor;
+        border-top-color: transparent;
+        border-radius: 50%;
+        animation: admin-spin 0.55s linear infinite;
+        vertical-align: -0.15em;
+        flex-shrink: 0;
+      }
     </style>
   </head>
   <body class="dark bg-gray-900 text-gray-100 h-screen flex flex-col overflow-hidden">
