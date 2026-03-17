@@ -183,8 +183,8 @@ function _showBoltSuggest() {
   if (!elSuggestSidebar) return;
   const searchEl = elSuggestSidebar.querySelector('#admin-suggest-search');
   if (searchEl && searchEl.value !== _suggestSearch) searchEl.value = _suggestSearch;
+  elSuggestSidebar.style.display = 'flex'; // 先に表示、候補ゼロなら renderSidebar 内で hide される
   _renderSuggestSidebar();
-  elSuggestSidebar.style.display = 'flex';
 }
 
 /** サジェストサイドバーを非表示にする */
