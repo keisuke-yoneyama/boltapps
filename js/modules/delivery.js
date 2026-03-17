@@ -784,6 +784,20 @@ function on(id, event, handler) {
   if (el) el.addEventListener(event, handler);
 }
 
+// 前日 / 翌日へ移動（delta = -1 or +1）
+function navigateDate(delta) {
+  const cur = deliveryState.selectedDate;
+  if (!cur) return;
+  const [y, m, d] = cur.split('-').map(Number);
+  const next = new Date(y, m - 1, d + delta);
+  const nextStr = toDateStr(next);
+  deliveryState.selectedDate = nextStr;
+  // 月をまたいだ場合は displayMonth を更新
+  const newMonthStart = new Date(next.getFullYear(), next.getMonth(), 1);
+  deliveryState.displayMonth = newMonthStart;
+  loadAndRenderDateDetail(nextStr);
+}
+
 function setupDeliveryEvents() {
   // Nav
   on('nav-to-bolt-btn',     'click', () => switchAppMode('bolt'));
@@ -827,6 +841,8 @@ function setupDeliveryEvents() {
 
   // 搬入日詳細一覧画面 (3)
   on('dl-detail-back-btn', 'click', () => switchAppMode('delivery'));
+  on('dl-detail-prev-btn', 'click', () => navigateDate(-1));
+  on('dl-detail-next-btn', 'click', () => navigateDate(+1));
   on('dl-detail-project-filter', 'input', e => {
     deliveryState.dateDetailProjectFilter = e.target.value;
     renderDateDetail(deliveryState.selectedDate,
