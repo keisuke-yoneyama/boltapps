@@ -151,7 +151,7 @@ function renderCalendar() {
     if (!d) return;
     if (!plansByDate[d]) plansByDate[d] = [];
     const proj = deliveryState.deliveryProjects.find(p => p.id === plan.projectId);
-    plansByDate[d].push(proj?.projectName || '工事');
+    plansByDate[d].push(proj?.name || proj?.projectName || '工事');
   });
 
   const now = new Date();
@@ -253,7 +253,7 @@ async function loadAndRenderDateDetail(date) {
     plansWithTrucks.push({
       plan,
       trucks: deliveryState.trucksCache[plan.id] || [],
-      projectName: proj?.projectName || '工事名不明',
+      projectName: proj?.name || proj?.projectName || '工事名不明',
     });
   }
 
@@ -759,7 +759,7 @@ function buildPlansWithTrucksFromCache(date) {
     return {
       plan,
       trucks: deliveryState.trucksCache[plan.id] || [],
-      projectName: proj?.projectName || '工事名不明',
+      projectName: proj?.name || proj?.projectName || '工事名不明',
     };
   });
 }

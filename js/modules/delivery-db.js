@@ -16,7 +16,9 @@ import {
 // ── 開発用モック ───────────────────────────────────────────
 // Firestoreが空のときだけ使用。本番時は false に切り替える。
 
-const DEV_MODE = true;
+// true: Firestoreが空またはエラーの時にモックデータで補完（開発専用）
+// false: 本番モード。Firestore実データのみ使用
+const DEV_MODE = false;
 
 // プロジェクト1: 計画図番あり・3日シリーズ（日切替UIテスト用）
 const _M_PROJ_ID   = 'dev-project-1';
