@@ -61,6 +61,49 @@ const DIFF_COLORS = [
 // item.checked 集計から進捗を算出（shared-domain へ委譲）
 const _computeProgress = resolveTruckProgress;
 
+// ── カレンダーバー表示（管理アプリと共通の色テーブル）──────
+
+const _CAL_COLORS = [
+  '#e57373','#f06292','#ba68c8','#9575cd','#7986cb',
+  '#64b5f6','#4dd0e1','#4db6ac','#81c784','#aed581',
+  '#fff176','#ffb74d','#ff8a65','#a1887f','#90a4ae',
+  '#e53935','#8e24aa','#1e88e5','#00acc1','#43a047',
+];
+
+function _calColor(projectId) {
+  let h = 0;
+  for (const ch of String(projectId)) h = (h * 31 + ch.charCodeAt(0)) & 0xffff;
+  return _CAL_COLORS[h % _CAL_COLORS.length];
+}
+
+/** plans → { dateStr: [{position, color, name}] } */
+function _buildCalBars(plans) {
+  const byDate = {};
+  for (const plan of plans) {
+    if (!plan.deliveryDate) continue;
+    if (!byDate[plan.deliveryDate]) byDate[plan.deliveryDate] = [];
+    const proj  = deliveryState.deliveryProjects.find(p => p.id === plan.projectId);
+    const name  = proj?.name || proj?.projectName || '工事';
+    const color = _calColor(plan.projectId || '');
+    let pos = 'bar-single';
+    if (plan.deliverySeriesId && plan.deliverySeriesLength > 1) {
+      if      (plan.deliverySeriesIndex === 1)                               pos = 'bar-start';
+      else if (plan.deliverySeriesIndex === plan.deliverySeriesLength)        pos = 'bar-end';
+      else                                                                    pos = 'bar-middle';
+    }
+    byDate[plan.deliveryDate].push({ pos, color, name });
+  }
+  return byDate;
+}
+
+function _renderCalBar({ pos, color, name }) {
+  const showName = pos === 'bar-single' || pos === 'bar-start';
+  const radius   = { 'bar-single': 'rounded', 'bar-start': 'rounded-l',
+                     'bar-middle': 'rounded-none', 'bar-end': 'rounded-r' }[pos] || 'rounded';
+  return `<div class="text-[10px] leading-tight px-1 py-0.5 mb-px ${radius} truncate"
+    style="background-color:${color};color:#fff;">${showName ? esc(name) : '&nbsp;'}</div>`;
+}
+
 // HTML組み立ては delivery.js が担当、ラベル/色インデックス生成は shared-domain に委譲
 function _diffBadges(diffs) {
   if (!diffs?.length) return '';
@@ -144,18 +187,8 @@ function renderCalendar() {
   const label = document.getElementById('dl-month-label');
   if (label) label.textContent = `${year}年${month + 1}月`;
 
-  // 日付ごとに工事名を集計
-  const plansByDate = {};
-  plans.forEach(plan => {
-    const d = plan.deliveryDate;
-    if (!d) return;
-    if (!plansByDate[d]) plansByDate[d] = [];
-    const proj = deliveryState.deliveryProjects.find(p => p.id === plan.projectId);
-    plansByDate[d].push(proj?.name || proj?.projectName || '工事');
-  });
-
-  const now = new Date();
-  const todayStr = toDateStr(now);
+  const barsByDate = _buildCalBars(plans);
+  const todayStr   = toDateStr(new Date());
 
   const firstDay    = new Date(year, month, 1).getDay();
   const daysInMonth = new Date(year, month + 1, 0).getDate();
@@ -165,50 +198,41 @@ function renderCalendar() {
 
   // 曜日ヘッダー
   DAY_LABELS.forEach((d, i) => {
-    const c = i === 0 ? 'text-red-500' : i === 6 ? 'text-blue-500' : 'text-slate-600 dark:text-slate-400';
+    const c = i === 0 ? 'text-red-500' : i === 6 ? 'text-blue-500' : 'text-slate-500 dark:text-slate-400';
     html += `<div class="text-center text-xs font-bold py-1 ${c}">${d}</div>`;
   });
 
   // 月初め前の空セル
   for (let i = 0; i < firstDay; i++) {
-    html += '<div class="min-h-[64px]"></div>';
+    html += '<div class="min-h-[72px]"></div>';
   }
 
   // 日付セル
   for (let d = 1; d <= daysInMonth; d++) {
     const dateStr  = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
-    const projects  = plansByDate[dateStr] || [];
-    const hasPlans  = projects.length > 0;
-    const dow       = (firstDay + d - 1) % 7;
-    const isToday   = dateStr === todayStr;
-    const isSel     = dateStr === selectedDate;
+    const bars     = barsByDate[dateStr] || [];
+    const hasPlans = bars.length > 0;
+    const dow      = (firstDay + d - 1) % 7;
+    const isToday  = dateStr === todayStr;
+    const isSel    = dateStr === selectedDate;
 
-    // セルスタイル優先順位: 今日 > 選択中 > 差分あり > 搬入あり > 通常
-    let cellCls = 'min-h-[64px] p-1 rounded-lg border cursor-pointer transition-colors ';
-    if (isToday) {
-      cellCls += 'border-blue-400 bg-blue-50 dark:bg-blue-900/30 ';
-    } else if (isSel) {
-      cellCls += 'border-yellow-400 bg-yellow-50 dark:bg-yellow-900/30 ';
-    } else if (hasPlans) {
-      cellCls += 'border-orange-200 bg-orange-50/40 dark:bg-orange-900/10 dark:border-orange-800/40 ';
-    } else {
-      cellCls += 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700/50 ';
-    }
+    let cellCls = 'min-h-[72px] p-1 rounded-lg border cursor-pointer transition-colors ';
+    if      (isToday)    cellCls += 'border-blue-400 bg-blue-50 dark:bg-blue-900/25 ';
+    else if (isSel)      cellCls += 'border-yellow-400 bg-yellow-50 dark:bg-yellow-900/20 ';
+    else if (hasPlans)   cellCls += 'border-slate-300 dark:border-slate-600 bg-slate-100 dark:bg-slate-800/80 hover:bg-slate-200/60 dark:hover:bg-slate-700/50 ';
+    else                 cellCls += 'border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700/50 ';
 
-    // 日付番号
     const numCls = dow === 0 ? 'text-red-500' : dow === 6 ? 'text-blue-500' : 'text-slate-700 dark:text-slate-200';
     const numEl  = isToday
       ? `<span class="bg-blue-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs font-bold">${d}</span>`
       : `<span class="text-xs font-semibold ${numCls}">${d}</span>`;
 
-    const projHtml = projects.map(name =>
-      `<span class="text-xs leading-tight text-orange-700 dark:text-orange-300 truncate block">${esc(name)}</span>`
-    ).join('');
+    const barsHtml = bars.map(b => _renderCalBar(b)).join('');
 
     html += `
       <div class="${cellCls}" data-date="${dateStr}">
         <div class="flex">${numEl}</div>
-        <div class="mt-0.5 flex flex-col gap-0.5 overflow-hidden">${projHtml}</div>
+        <div class="mt-0.5 overflow-hidden">${barsHtml}</div>
       </div>`;
   }
 
