@@ -108,6 +108,14 @@
       html.theme-light .bg-gray-900\/90 { background-color: rgba(236, 241, 248, 0.95) !important; }
       html.theme-light .bg-gray-900\/60 { background-color: rgba(236, 241, 248, 0.8)  !important; }
 
+      /* opacity-variant 背景（上書きなしだとライトモードでも暗いまま → 暗背景×暗文字になる）
+         特に A0 カレンダーの「計画あり」セル（bg-gray-800/80）で発生 */
+      html.theme-light .bg-gray-800\/80  { background-color: rgba(255, 255, 255, 0.96) !important; }
+      html.theme-light .bg-gray-800\/60  { background-color: rgba(255, 255, 255, 0.85) !important; }
+      html.theme-light .bg-gray-700\/50  { background-color: rgba(221, 232, 242, 0.75) !important; }
+      html.theme-light .bg-gray-900\/20  { background-color: rgba(238, 243, 249, 0.6)  !important; }
+      html.theme-light .hover\:bg-gray-700\/50:hover { background-color: rgba(221, 232, 242, 0.85) !important; }
+
       /* テーマトグルボタン: ライトモード時に見えるよう色反転 */
       html.theme-light #admin-theme-toggle {
         color: #4a6480 !important;
