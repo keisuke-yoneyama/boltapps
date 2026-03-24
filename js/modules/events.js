@@ -1661,6 +1661,59 @@ function setupProjectActionEvents() {
         updatedProjectData.customLevels = newLevels;
         updatedProjectData.customAreas = newAreas;
 
+        // --- 階層名変更の検出（インデックスベース、tallyと同方式）---
+        const levelRenameMap = new Map(); // 旧名 → 新名
+        const minLevelLen = Math.min(oldLevels.length, newLevels.length);
+        for (let i = 0; i < minLevelLen; i++) {
+          if (oldLevels[i] !== newLevels[i]) {
+            levelRenameMap.set(oldLevels[i], newLevels[i]);
+          }
+        }
+        // 削除された階層（旧側にあって新側のインデックスが存在しないもの）
+        const deletedLevels = oldLevels.slice(newLevels.length);
+
+        // 削除階層を使用している部材の確認（使用中のみ警告）
+        const projectMembers = project.members || [];
+        const membersUsingDeletedLevels =
+          deletedLevels.length > 0
+            ? projectMembers.filter(
+                (m) =>
+                  m.targetLevels &&
+                  m.targetLevels.length > 0 &&
+                  m.targetLevels.some((l) => deletedLevels.includes(l)),
+              )
+            : [];
+
+        if (membersUsingDeletedLevels.length > 0) {
+          const ok = confirm(
+            `削除される階層（${deletedLevels.map(esc).join("、")}）を使用している部材が ${membersUsingDeletedLevels.length} 件あります。\n削除すると、それらの部材の階層バッジが消えます。\nよろしいですか？`,
+          );
+          if (!ok) return;
+        }
+
+        // 既存部材の targetLevels を更新（完全一致で名前変更 / 削除を反映）
+        if (levelRenameMap.size > 0 || deletedLevels.length > 0) {
+          let updatedMemberCount = 0;
+          const updatedMembers = projectMembers.map((member) => {
+            if (!member.targetLevels || member.targetLevels.length === 0) {
+              return member; // 全階層対象のメンバーは変更不要
+            }
+            const newTargetLevels = member.targetLevels
+              .map((l) => (levelRenameMap.has(l) ? levelRenameMap.get(l) : l))
+              .filter((l) => !deletedLevels.includes(l));
+            const changed =
+              newTargetLevels.length !== member.targetLevels.length ||
+              newTargetLevels.some((l, i) => l !== member.targetLevels[i]);
+            if (!changed) return member;
+            updatedMemberCount++;
+            return { ...member, targetLevels: newTargetLevels };
+          });
+          updatedProjectData.members = updatedMembers;
+          console.log(
+            `[階層名更新] リネーム: ${levelRenameMap.size}件, 削除: ${deletedLevels.length}件, 部材更新: ${updatedMemberCount}件`,
+          );
+        }
+
         // 箇所数データ(tally)のキー変換ロジック
         const newTally = {};
         const oldTally = project.tally || {};
