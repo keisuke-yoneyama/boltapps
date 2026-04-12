@@ -939,5 +939,12 @@ export async function initDelivery() {
   }
 
   setupDeliveryEvents();
-  switchAppMode('bolt');
+
+  // URL ハッシュ #delivery があれば搬入カレンダーを初期表示
+  if (location.hash === '#delivery') {
+    history.replaceState(null, '', location.pathname);
+    switchAppMode('delivery');
+  } else {
+    switchAppMode('bolt');
+  }
 }

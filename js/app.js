@@ -30,6 +30,8 @@ let unsubscribeProjects;
 /**
  * アプリケーションの初期化（エントリーポイント）
  */
+const BOLT_PROJECTS_CACHE_KEY = 'boltProjectsCache';
+
 const initApp = async () => {
   console.log("🚀 App initializing...");
   const loader = document.getElementById("loader");
@@ -45,9 +47,18 @@ const initApp = async () => {
     // 3. イベントリスナー登録
     setupEventListeners();
 
-    // 4. グローバル設定の読み込み (Boltサイズなど)
-    // await loadGlobalSettings();
-    // populateGlobalBoltSelectorModal();
+    // 4. キャッシュから即座に表示（2回目以降の高速起動）
+    try {
+      const cached = sessionStorage.getItem(BOLT_PROJECTS_CACHE_KEY);
+      if (cached) {
+        state.projects = JSON.parse(cached);
+        updateProjectListUI();
+        if (loader) {
+          loader.classList.add("opacity-0");
+          setTimeout(() => (loader.style.display = "none"), 0);
+        }
+      }
+    } catch (_) {}
 
     // 5. 認証とデータ同期の開始 (ここがエンジンの始動)
     startAuthAndDataSync(loader);
@@ -143,6 +154,9 @@ const loadProjects = (loader) => {
       }
 
       state.projects = newProjectsData;
+
+      // キャッシュ更新（次回起動の高速化）
+      try { sessionStorage.setItem(BOLT_PROJECTS_CACHE_KEY, JSON.stringify(state.projects)); } catch (_) {}
 
       // 削除されたプロジェクトを表示中だった場合の処理
       if (

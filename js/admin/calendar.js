@@ -1339,13 +1339,50 @@ function bindCalendarEvents() {
 // Init
 // ══════════════════════════════════════════════════════════
 
+// ── sessionStorage キャッシュ helpers ──────────────────────
+const CACHE_KEY_PROJECTS = 'adminBoltProjectsCache';
+const CACHE_KEY_PLANS    = 'adminPlansCacheData';
+
+function saveAdminCache() {
+  try {
+    sessionStorage.setItem(CACHE_KEY_PROJECTS, JSON.stringify(adminState.a1.boltProjects));
+    sessionStorage.setItem(CACHE_KEY_PLANS,    JSON.stringify(adminState.plansCache));
+  } catch (_) {}
+}
+
+function restoreAdminCache() {
+  try {
+    const cp = sessionStorage.getItem(CACHE_KEY_PROJECTS);
+    const cc = sessionStorage.getItem(CACHE_KEY_PLANS);
+    if (cp) adminState.a1.boltProjects = JSON.parse(cp);
+    if (cc) adminState.plansCache       = JSON.parse(cc);
+    return !!(cp && cc);
+  } catch (_) { return false; }
+}
+
 export async function initAdminApp() {
   // A1 state の初期化（boltProjects は showPlanForm 時にロード）
   initializeA1State(toDateStr(new Date()));
 
-  // カレンダー名称表示用に bolt 工事一覧を先行ロード
-  await loadA1BoltProjects();
+  const hasCachedData = restoreAdminCache();
 
   bindCalendarEvents();
-  await goToCalendar();
+  await goToCalendar(); // キャッシュがあれば Firestore 不要で即座に描画
+
+  if (hasCachedData) {
+    // バックグラウンドで最新データを取得してキャッシュを更新
+    (async () => {
+      await loadA1BoltProjects();
+      const d = adminState.displayMonth;
+      const monthKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+      delete adminState.plansCache[monthKey]; // 今月は必ず再取得
+      await loadAndRenderCalendar();
+      saveAdminCache();
+    })();
+  } else {
+    // 初回: 待機してからキャッシュ保存
+    await loadA1BoltProjects();
+    renderCalendar(); // 工事名を反映して再描画
+    saveAdminCache();
+  }
 }
