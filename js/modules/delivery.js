@@ -827,8 +827,12 @@ function setupDeliveryEvents() {
   on('nav-to-bolt-btn',     'click', () => switchAppMode('bolt'));
   on('nav-to-delivery-btn', 'click', () => switchAppMode('delivery'));
 
-  // 管理画面ボタン: パスワードモーダルを開く
+  // 管理画面ボタン: 管理モード中は直接遷移、それ以外はパスワードモーダルを開く
   on('nav-to-admin-btn', 'click', () => {
+    if (sessionStorage.getItem('adminAuth') === 'granted') {
+      window.location.href = '/admin/';
+      return;
+    }
     const modal = document.getElementById('admin-password-modal');
     const input = document.getElementById('admin-password-input');
     const error = document.getElementById('admin-password-error');
@@ -925,10 +929,13 @@ function setupDeliveryEvents() {
 // ── 初期化（エントリーポイント） ──────────────────────────
 
 export async function initDelivery() {
-  try {
-    deliveryState.deliveryProjects = await getDeliveryProjects();
-  } catch (e) {
-    console.error('[delivery] initDelivery: failed to load delivery projects', e);
+  // 管理モードからの遷移時は搬入プロジェクトのDB取得を省略
+  if (sessionStorage.getItem('adminAuth') !== 'granted') {
+    try {
+      deliveryState.deliveryProjects = await getDeliveryProjects();
+    } catch (e) {
+      console.error('[delivery] initDelivery: failed to load delivery projects', e);
+    }
   }
 
   setupDeliveryEvents();

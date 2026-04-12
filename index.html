@@ -325,10 +325,12 @@
           >
             業務支援システム壱號
           </h1>
+          <span class="admin-mode-indicator hidden text-xs px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-500 border border-amber-500/40 font-medium">管理モード</span>
           <button
             id="nav-to-delivery-btn"
             class="text-xs px-2 py-1 rounded-md bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-600 transition-colors"
           >搬入</button>
+          <a class="admin-mode-indicator hidden text-xs px-2 py-1 rounded-md bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-600 transition-colors" href="/admin/">管理画面</a>
         </div>
 
         <div id="nav-delivery-context" class="hidden flex items-center gap-3">
@@ -339,6 +341,7 @@
           <h1
             class="text-lg font-syuku font-bold text-slate-900 dark:text-slate-100"
           >搬入管理</h1>
+          <span class="admin-mode-indicator hidden text-xs px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-500 border border-amber-500/40 font-medium">管理モード</span>
           <button
             id="nav-to-admin-btn"
             class="text-xs px-2 py-1 rounded-md bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-600 transition-colors ml-auto"
@@ -3705,6 +3708,15 @@
       if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
           navigator.serviceWorker.register('/sw.js');
+        });
+      }
+    </script>
+
+    <!-- 管理モード表示: sessionStorage で adminAuth が確認できれば即反映 -->
+    <script>
+      if (sessionStorage.getItem('adminAuth') === 'granted') {
+        document.querySelectorAll('.admin-mode-indicator').forEach(function (el) {
+          el.classList.remove('hidden');
         });
       }
     </script>
