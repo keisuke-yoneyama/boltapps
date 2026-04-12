@@ -827,6 +827,45 @@ function setupDeliveryEvents() {
   on('nav-to-bolt-btn',     'click', () => switchAppMode('bolt'));
   on('nav-to-delivery-btn', 'click', () => switchAppMode('delivery'));
 
+  // 管理画面ボタン: パスワードモーダルを開く
+  on('nav-to-admin-btn', 'click', () => {
+    const modal = document.getElementById('admin-password-modal');
+    const input = document.getElementById('admin-password-input');
+    const error = document.getElementById('admin-password-error');
+    if (!modal || !input) return;
+    input.value = '';
+    if (error) error.classList.add('hidden');
+    modal.classList.remove('hidden');
+    setTimeout(() => input.focus(), 50);
+  });
+
+  const tryAdminLogin = () => {
+    const input = document.getElementById('admin-password-input');
+    const error = document.getElementById('admin-password-error');
+    if (!input) return;
+    if (input.value === '4080') {
+      sessionStorage.setItem('adminAuth', 'granted');
+      window.location.href = '/admin/';
+    } else {
+      if (error) error.classList.remove('hidden');
+      input.value = '';
+      input.focus();
+    }
+  };
+
+  on('admin-password-submit', 'click', tryAdminLogin);
+  on('admin-password-cancel', 'click', () => {
+    const modal = document.getElementById('admin-password-modal');
+    if (modal) modal.classList.add('hidden');
+  });
+
+  const pwInput = document.getElementById('admin-password-input');
+  if (pwInput) {
+    pwInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') tryAdminLogin();
+    });
+  }
+
   // カレンダー操作
   on('dl-prev-month', 'click', () => {
     const d = deliveryState.displayMonth;
@@ -893,5 +932,5 @@ export async function initDelivery() {
   }
 
   setupDeliveryEvents();
-  switchAppMode('delivery');
+  switchAppMode('bolt');
 }
