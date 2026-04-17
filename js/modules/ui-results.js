@@ -17,6 +17,7 @@ import {
 } from "./calculator.js";
 import { showToast } from "./ui-notifications.js";
 import { getJointFilterId, getJointFilterLabel, getJointCategoryColorClasses, getBoltTooltipText } from "./ui-joints.js";
+import { updateProjectData } from "./db.js";
 
 // 集計状態の変数
 export let currentGroupingState = {};
@@ -38,6 +39,30 @@ export function setCurrentTempViewMode(mode) {
 export function resetCurrentTempGroupingState() {
   currentTempGroupingState = {};
 }
+
+// ─── 工区まとめ設定のDB保存ヘルパー ──────────────────────────────
+let _honGroupingSaveTimer = null;
+let _tempGroupingSaveTimer = null;
+
+const _saveHonGrouping = async (projectId) => {
+  try {
+    await updateProjectData(projectId, {
+      'groupingSettings.honBolt': { ...currentGroupingState },
+    });
+  } catch (e) {
+    console.error('[grouping] honBolt保存失敗 (non-fatal):', e);
+  }
+};
+
+const _saveTempGrouping = async (projectId) => {
+  try {
+    await updateProjectData(projectId, {
+      'groupingSettings.tempBolt': { ...currentTempGroupingState },
+    });
+  } catch (e) {
+    console.error('[grouping] tempBolt保存失敗 (non-fatal):', e);
+  }
+};
 
 // 部材アイコン（タリーシートで使用）
 const memberIconSvgRaw = `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>`;
@@ -96,6 +121,7 @@ export function renderGroupingControls(
   targetState,
   targetViewMode,
   customKeys = null,
+  onPersist = null,
 ) {
   if (!container) return;
 
@@ -173,6 +199,7 @@ export function renderGroupingControls(
       targetState[key] = index + 1;
     });
     onUpdate();
+    if (onPersist) onPersist();
   };
 
   actionArea.appendChild(resetBtn);
@@ -211,6 +238,7 @@ export function renderGroupingControls(
     select.addEventListener("change", (e) => {
       targetState[section] = Number(e.target.value);
       onUpdate();
+      if (onPersist) onPersist();
     });
 
     select.addEventListener("click", (e) => e.stopPropagation());
@@ -516,9 +544,16 @@ export const renderOrderDetails = (container, project, resultsByLocation) => {
         for (const key in currentGroupingState)
           delete currentGroupingState[key];
 
-        dataKeys.forEach((section, index) => {
-          currentGroupingState[section] = index + 1;
-        });
+        const savedHon = project.groupingSettings?.honBolt;
+        if (savedHon && dataKeys.some((k) => savedHon[k] !== undefined)) {
+          dataKeys.forEach((section, index) => {
+            currentGroupingState[section] = savedHon[section] ?? (index + 1);
+          });
+        } else {
+          dataKeys.forEach((section, index) => {
+            currentGroupingState[section] = index + 1;
+          });
+        }
       }
 
       const headerHtml = `
@@ -569,6 +604,11 @@ export const renderOrderDetails = (container, project, resultsByLocation) => {
           updateView,
           currentGroupingState,
           currentViewMode,
+          null,
+          () => {
+            clearTimeout(_honGroupingSaveTimer);
+            _honGroupingSaveTimer = setTimeout(() => _saveHonGrouping(project.id), 600);
+          },
         );
 
         let data, sortedKeys;
@@ -842,9 +882,16 @@ export const renderTempOrderDetails = (
           ? customKeysForControls.filter((k) => dataForControls[k])
           : getMasterOrderedKeys(project).filter((k) => dataForControls[k]);
 
-        keysToInit.forEach((key, index) => {
-          currentTempGroupingState[key] = index + 1;
-        });
+        const savedTemp = project.groupingSettings?.tempBolt;
+        if (savedTemp && keysToInit.some((k) => savedTemp[k] !== undefined)) {
+          keysToInit.forEach((key, index) => {
+            currentTempGroupingState[key] = savedTemp[key] ?? (index + 1);
+          });
+        } else {
+          keysToInit.forEach((key, index) => {
+            currentTempGroupingState[key] = index + 1;
+          });
+        }
       }
 
       renderGroupingControls(
@@ -855,6 +902,10 @@ export const renderTempOrderDetails = (
         currentTempGroupingState,
         currentTempViewMode,
         customKeysForControls,
+        () => {
+          clearTimeout(_tempGroupingSaveTimer);
+          _tempGroupingSaveTimer = setTimeout(() => _saveTempGrouping(project.id), 600);
+        },
       );
 
       let dataToRender, sortedKeysToRender;
