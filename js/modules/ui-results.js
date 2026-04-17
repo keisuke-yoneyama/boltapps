@@ -65,15 +65,20 @@ const aggregateTempBySection = (sourceData, project) => {
 
     const sizes = sourceData[locId];
     Object.keys(sizes).forEach((size) => {
+      const srcInfo = sizes[size];
       const count =
-        typeof sizes[size] === "object" && sizes[size].total !== undefined
-          ? sizes[size].total
-          : sizes[size];
+        typeof srcInfo === "object" && srcInfo.total !== undefined
+          ? srcInfo.total
+          : srcInfo;
 
-      if (!result[sectionKey][size]) {
-        result[sectionKey][size] = 0;
+      const existing = result[sectionKey][size] || { total: 0, joints: {} };
+      const merged = { total: existing.total + count, joints: { ...existing.joints } };
+      if (typeof srcInfo === "object" && srcInfo.joints) {
+        Object.entries(srcInfo.joints).forEach(([n, c]) => {
+          merged.joints[n] = (merged.joints[n] || 0) + c;
+        });
       }
-      result[sectionKey][size] += count;
+      result[sectionKey][size] = merged;
     });
   });
 
@@ -761,11 +766,19 @@ export const renderTempOrderDetails = (
         keys.forEach((key) => {
           const sizes = source[key];
           Object.keys(sizes).forEach((size) => {
+            const srcInfo = sizes[size];
             const qty =
-              typeof sizes[size] === "object" && sizes[size].total !== undefined
-                ? sizes[size].total
-                : sizes[size];
-            result[label][size] = (result[label][size] || 0) + qty;
+              typeof srcInfo === "object" && srcInfo.total !== undefined
+                ? srcInfo.total
+                : srcInfo;
+            const existing = result[label][size] || { total: 0, joints: {} };
+            const merged = { total: existing.total + qty, joints: { ...existing.joints } };
+            if (typeof srcInfo === "object" && srcInfo.joints) {
+              Object.entries(srcInfo.joints).forEach(([n, c]) => {
+                merged.joints[n] = (merged.joints[n] || 0) + c;
+              });
+            }
+            result[label][size] = merged;
           });
         });
       });
