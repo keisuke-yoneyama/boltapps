@@ -288,11 +288,21 @@ export function renderAggregatedTables(
 
         const commonCellClass = `px-4 py-2 border border-${color}-200 dark:border-slate-700 text-center`;
 
+        const hasJoints =
+          typeof rawValue === "object" &&
+          rawValue !== null &&
+          rawValue.joints &&
+          Object.keys(rawValue.joints).length > 0;
+        const detailsAttr = hasJoints
+          ? ` data-details='${JSON.stringify(rawValue.joints).replace(/'/g, "&#39;")}' data-bolt-size="${key}"`
+          : "";
+        const detailsClass = hasJoints ? " has-details cursor-pointer" : "";
+
         let rowContent = "";
         if (customHeader) {
           rowContent = `
                     <td class="${commonCellClass}">${key}</td>
-                    <td class="${commonCellClass} font-medium">${boltCount.toLocaleString()}</td>
+                    <td class="${commonCellClass} font-medium${detailsClass}"${detailsAttr}>${boltCount.toLocaleString()}</td>
                 `;
         } else {
           const displayKey = title === "柱用" ? key.replace("(本柱)", "") : key;
@@ -304,7 +314,7 @@ export function renderAggregatedTables(
           rowContent = `
                     <td class="${commonCellClass}">${type}</td>
                     <td class="${commonCellClass}">${displayKey}</td>
-                    <td class="${commonCellClass} font-medium">${boltCount.toLocaleString()}</td>
+                    <td class="${commonCellClass} font-medium${detailsClass}"${detailsAttr}>${boltCount.toLocaleString()}</td>
                     ${weightCell}
                 `;
         }

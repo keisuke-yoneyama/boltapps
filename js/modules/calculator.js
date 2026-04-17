@@ -211,8 +211,14 @@ export function aggregateByFloor(originalResults, project) {
       ) {
         const info = sizesObj[size];
         const qty = info.total || 0;
-        floorCounts[floorName][size] =
-          (floorCounts[floorName][size] || 0) + qty;
+        const existing = floorCounts[floorName][size] || { total: 0, joints: {} };
+        const merged = { total: existing.total + qty, joints: { ...existing.joints } };
+        if (info.joints) {
+          Object.entries(info.joints).forEach(([name, cnt]) => {
+            merged.joints[name] = (merged.joints[name] || 0) + cnt;
+          });
+        }
+        floorCounts[floorName][size] = merged;
       }
     });
   });
@@ -258,7 +264,14 @@ export function calculateAggregatedData(
       ) {
         const info = sizesObj[size];
         const qty = info.total || 0;
-        groups[groupID].sizes[size] = (groups[groupID].sizes[size] || 0) + qty;
+        const existing = groups[groupID].sizes[size] || { total: 0, joints: {} };
+        const merged = { total: existing.total + qty, joints: { ...existing.joints } };
+        if (info.joints) {
+          Object.entries(info.joints).forEach(([name, cnt]) => {
+            merged.joints[name] = (merged.joints[name] || 0) + cnt;
+          });
+        }
+        groups[groupID].sizes[size] = merged;
       }
     });
   });

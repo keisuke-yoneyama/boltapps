@@ -3050,7 +3050,7 @@ function setupResultsCardEvents() {
       const { resultsByLocation } = calculateResults(project);
       const container = document.getElementById("order-details-container");
       if (container) {
-        container.innerHTML = renderOrderDetails(project, resultsByLocation);
+        renderOrderDetails(container, project, resultsByLocation);
       } else {
         console.error("【エラー】 order-details-container が見つかりません！");
       }
@@ -3110,7 +3110,7 @@ function setupResultsCardEvents() {
       try {
         const detailsData = JSON.parse(targetCell.dataset.details);
         const row = targetCell.closest("tr");
-        const boltSize = row.querySelector("td:first-child").textContent;
+        const boltSize = targetCell.dataset.boltSize || row.querySelector("td:first-child").textContent;
         // 最終列かどうかで合計かを判定
         const isTotal =
           targetCell.textContent ===
@@ -3125,10 +3125,14 @@ function setupResultsCardEvents() {
             ? `${boltSize} の総合計内訳`
             : `${boltSize} の内訳`;
 
-          let contentHtml = '<ul class="space-y-2 text-base">';
           const sortedJoints = Object.entries(detailsData).sort((a, b) =>
             a[0].localeCompare(b[0]),
           );
+          const totalCount = sortedJoints.reduce((s, [, v]) => s + v, 0);
+          const memberCount = sortedJoints.length;
+
+          let contentHtml = `<p class="text-sm text-slate-500 dark:text-slate-400 mb-3">${memberCount}部材 / 合計 <span class="font-bold text-slate-900 dark:text-slate-100">${totalCount.toLocaleString()}本</span></p>`;
+          contentHtml += '<ul class="space-y-2 text-base">';
 
           for (const [name, count] of sortedJoints) {
             contentHtml += `
@@ -4083,7 +4087,7 @@ function setupAggregatedResultsEvents() {
         // データ属性から詳細情報を取得
         const detailsData = JSON.parse(targetCell.dataset.details);
         const row = targetCell.closest("tr");
-        const boltSize = row.querySelector("td:first-child").textContent;
+        const boltSize = targetCell.dataset.boltSize || row.querySelector("td:first-child").textContent;
 
         // 詳細モーダルの要素取得
         const modalTitle = document.getElementById("details-modal-title");
@@ -4093,10 +4097,14 @@ function setupAggregatedResultsEvents() {
         if (modalTitle && modalContent && detailsModal) {
           modalTitle.textContent = `${boltSize} の合計内訳`;
 
-          let contentHtml = '<ul class="space-y-2 text-base">';
           const sortedJoints = Object.entries(detailsData).sort((a, b) =>
             a[0].localeCompare(b[0]),
           );
+          const totalCount = sortedJoints.reduce((s, [, v]) => s + v, 0);
+          const memberCount = sortedJoints.length;
+
+          let contentHtml = `<p class="text-sm text-slate-500 dark:text-slate-400 mb-3">${memberCount}部材 / 合計 <span class="font-bold text-slate-900 dark:text-slate-100">${totalCount.toLocaleString()}本</span></p>`;
+          contentHtml += '<ul class="space-y-2 text-base">';
 
           for (const [name, count] of sortedJoints) {
             contentHtml += `
