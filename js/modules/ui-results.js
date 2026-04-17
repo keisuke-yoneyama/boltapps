@@ -1600,14 +1600,21 @@ export const renderResults = (project) => {
 
   const orderDetailsContainer = `<div id="order-details-container" data-section-title="本ボルト注文明細" data-section-color="pink" class="scroll-mt-24 mt-12"></div>`;
   const tempBoltsHtml = renderTempBoltResults(project);
+  const tempOrderDetailsContainer = `<div id="temp-order-details-container" data-section-title="仮ボルト注文明細" data-section-color="teal" class="scroll-mt-24 mt-12"></div>`;
 
   if (resultsCardContent) {
     resultsCardContent.innerHTML =
-      buttonsHtml + floorTableHtml + orderDetailsContainer + tempBoltsHtml;
+      buttonsHtml + floorTableHtml + orderDetailsContainer + tempBoltsHtml + tempOrderDetailsContainer;
   }
 
   const container = document.getElementById("order-details-container");
   if (container) renderOrderDetails(container, project, filteredData);
+
+  const tempContainer = document.getElementById("temp-order-details-container");
+  if (tempContainer) {
+    const { resultsByLocation: tempResultsByLocation } = calculateTempBoltResults(project);
+    renderTempOrderDetails(tempContainer, project, tempResultsByLocation);
+  }
 
   resultsCard.classList.remove("hidden");
 };

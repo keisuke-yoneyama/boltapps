@@ -68,6 +68,7 @@ import {
   cleanupAndSaveBoltSettings,
   getTallyList,
   calculateResults,
+  calculateTempBoltResults,
   getProjectLevels,
 } from "./calculator.js";
 
@@ -3060,7 +3061,8 @@ function setupResultsCardEvents() {
         "temp-order-details-container",
       );
       if (tempContainer) {
-        renderTempOrderDetails(tempContainer, project);
+        const { resultsByLocation: tempResultsByLocation } = calculateTempBoltResults(project);
+        renderTempOrderDetails(tempContainer, project, tempResultsByLocation);
       }
       return;
     }
@@ -3074,7 +3076,8 @@ function setupResultsCardEvents() {
         "temp-order-details-container",
       );
       if (tempContainer) {
-        renderTempOrderDetails(tempContainer, project);
+        const { resultsByLocation: tempResultsByLocation } = calculateTempBoltResults(project);
+        renderTempOrderDetails(tempContainer, project, tempResultsByLocation);
       }
       return;
     }
@@ -3086,7 +3089,8 @@ function setupResultsCardEvents() {
         "temp-order-details-container",
       );
       if (tempContainer) {
-        renderTempOrderDetails(tempContainer, project);
+        const { resultsByLocation: tempResultsByLocation } = calculateTempBoltResults(project);
+        renderTempOrderDetails(tempContainer, project, tempResultsByLocation);
       }
       return;
     }
@@ -3098,7 +3102,8 @@ function setupResultsCardEvents() {
         "temp-order-details-container",
       );
       if (tempContainer) {
-        renderTempOrderDetails(tempContainer, project);
+        const { resultsByLocation: tempResultsByLocation } = calculateTempBoltResults(project);
+        renderTempOrderDetails(tempContainer, project, tempResultsByLocation);
       }
       return;
     }
