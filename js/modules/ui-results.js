@@ -451,14 +451,25 @@ export const renderOrderDetails = (container, project, resultsByLocation) => {
         const data = locationData[size];
         const qty = data.total || 0;
 
+        const mergeSpecial = (target, key, srcData) => {
+          const ex = target[key] || { total: 0, joints: {} };
+          const merged = { total: ex.total + (srcData.total || 0), joints: { ...ex.joints } };
+          if (srcData.joints) {
+            Object.entries(srcData.joints).forEach(([n, c]) => {
+              merged.joints[n] = (merged.joints[n] || 0) + c;
+            });
+          }
+          target[key] = merged;
+        };
+
         if (size.includes("(本柱)")) {
-          specialBolts.column[size] = (specialBolts.column[size] || 0) + qty;
+          mergeSpecial(specialBolts.column, size, data);
         } else if (size.startsWith("D")) {
-          specialBolts.dLock[size] = (specialBolts.dLock[size] || 0) + qty;
+          mergeSpecial(specialBolts.dLock, size, data);
         } else if (size.startsWith("中ボ")) {
-          specialBolts.nakaM[size] = (specialBolts.nakaM[size] || 0) + qty;
+          mergeSpecial(specialBolts.nakaM, size, data);
         } else if (size.startsWith("中")) {
-          specialBolts.naka[size] = (specialBolts.naka[size] || 0) + qty;
+          mergeSpecial(specialBolts.naka, size, data);
         } else {
           filteredHonBolts[locId][size] = data;
         }
