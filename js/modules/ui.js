@@ -169,8 +169,7 @@ export const openBoltSelectorModal = (targetInputId) => {
   state.activeBoltTarget = document.getElementById(targetInputId);
 
   if (state.activeBoltTarget) {
-    const currentValue = state.activeBoltTarget.value;
-    populateBoltSelectorModal(currentValue);
+    populateGlobalBoltSelectorModal();
     const modal = document.getElementById("bolt-selector-modal");
     openModal(modal);
   }
