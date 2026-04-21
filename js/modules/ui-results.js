@@ -1669,7 +1669,7 @@ export const renderResults = (project) => {
 
   if (resultsCardContent) {
     resultsCardContent.innerHTML =
-      buttonsHtml + floorTableHtml + orderDetailsContainer + tempBoltsHtml + shopTempBoltsHtml + tempOrderDetailsContainer;
+      buttonsHtml + floorTableHtml + orderDetailsContainer + tempBoltsHtml + tempOrderDetailsContainer + shopTempBoltsHtml;
   }
 
   const container = document.getElementById("order-details-container");

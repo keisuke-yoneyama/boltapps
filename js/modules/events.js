@@ -273,9 +273,13 @@ function setupMasterFabEvents() {
   if (triggerAdd)
     triggerAdd.addEventListener("click", (e) => toggleSubMenu(subMenuAdd, e));
   if (triggerQuickNav)
-    triggerQuickNav.addEventListener("click", (e) =>
-      toggleSubMenu(subMenuQuickNav, e),
-    );
+    triggerQuickNav.addEventListener("click", (e) => {
+      toggleSubMenu(subMenuQuickNav, e);
+      // メニューが開かれた直後にセクション一覧を更新する
+      if (subMenuQuickNav && subMenuQuickNav.classList.contains("opacity-100")) {
+        document.dispatchEvent(new CustomEvent("quickNavLinksUpdate"));
+      }
+    });
 
   // =========================================================
   // 画面移動の実行 (検索窓の自動クローズ付き)
