@@ -96,7 +96,7 @@ export const performHistoryAction = (action) => {
 /**
  * グローバルボルト選択モーダルの中身（ボタン一覧）を種類ごとに生成する
  */
-export const populateGlobalBoltSelectorModal = () => {
+export const populateGlobalBoltSelectorModal = (currentValue = "") => {
   const container = document.getElementById("bolt-options-container");
   if (!container) return;
 
@@ -136,9 +136,11 @@ export const populateGlobalBoltSelectorModal = () => {
     grid.className = "grid grid-cols-3 gap-2";
 
     list.forEach((bolt) => {
+      const isSelected = currentValue && bolt.id === currentValue;
       const btn = document.createElement("button");
-      btn.className =
-        "bolt-option-btn text-sm p-2 hover:bg-yellow-200 border border-blue-200 rounded-md transition-transform duration-150 hover:scale-105 dark:border-slate-600 dark:hover:bg-yellow-600 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-200";
+      btn.className = isSelected
+        ? "bolt-option-btn text-sm p-2 border border-yellow-400 rounded-md font-bold bg-yellow-300 dark:bg-yellow-600 text-slate-900 dark:text-white ring-2 ring-yellow-400"
+        : "bolt-option-btn text-sm p-2 hover:bg-yellow-200 border border-blue-200 rounded-md transition-transform duration-150 hover:scale-105 dark:border-slate-600 dark:hover:bg-yellow-600 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-200";
       btn.textContent = bolt.label;
       btn.dataset.value = bolt.id;
 
@@ -169,7 +171,7 @@ export const openBoltSelectorModal = (targetInputId) => {
   state.activeBoltTarget = document.getElementById(targetInputId);
 
   if (state.activeBoltTarget) {
-    populateGlobalBoltSelectorModal();
+    populateGlobalBoltSelectorModal(state.activeBoltTarget.value || "");
     const modal = document.getElementById("bolt-selector-modal");
     openModal(modal);
   }

@@ -12,11 +12,22 @@ import { populateJointDropdownForEdit } from "./ui-joints.js";
 import { generateCustomInputFields } from "./ui-projects.js";
 
 /**
- * 新しい部材登録モーダルを開く
+ * 部材登録フォームへ移動してフォーカスする
+ * （部材登録はモーダルではなくインラインフォームのため、タブ切替＋スクロール）
  */
 export const openNewMemberModal = () => {
-  const modal = document.getElementById("add-member-modal");
-  openModal(modal);
+  // 部材タブへ切り替え（HTMLインラインscriptのswitchTabと同じ処理）
+  const switchBtn = document.getElementById("switch-view-members");
+  if (switchBtn) switchBtn.click();
+
+  // 部材名入力欄へスクロール＆フォーカス
+  const memberNameInput = document.getElementById("member-name");
+  if (memberNameInput) {
+    setTimeout(() => {
+      memberNameInput.scrollIntoView({ behavior: "smooth", block: "center" });
+      memberNameInput.focus();
+    }, 50);
+  }
 };
 
 /**

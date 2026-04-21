@@ -726,11 +726,10 @@ function setupBoltSizeInputClicked() {
         // 1. 現在操作中の入力欄を state に保存
         state.activeBoltTarget = e.target;
 
-        // 2. モーダルの中身（ボタン一覧）を生成
-        populateGlobalBoltSelectorModal();
+        // 2. モーダルの中身（ボタン一覧）を生成（現在値をハイライト）
+        populateGlobalBoltSelectorModal(e.target.value || "");
 
         // 3. モーダルを表示
-        // ※IDはHTMLに合わせて修正してください
         const modal = document.getElementById("bolt-selector-modal");
         openModal(modal);
       });
@@ -3770,15 +3769,14 @@ function setupBulkMemberActionEvents() {
         const allLevelLabel = document.createElement("label");
         allLevelLabel.className =
           "flex items-center gap-2 text-sm font-bold text-slate-800 dark:text-slate-200 cursor-pointer border-b pb-2";
-        const isAllChecked = currentSelection.length === 0;
-        allLevelLabel.innerHTML = `<input type="checkbox" id="bulk-level-select-all" class="h-4 w-4 rounded border-gray-300 text-blue-800 focus:ring-yellow-500" ${
-          isAllChecked ? "checked" : ""
-        }> 全階層を対象にする`;
+        // 初回起動時はチェックなし。再開時は保存済み選択を復元
+        const isAllChecked = false;
+        allLevelLabel.innerHTML = `<input type="checkbox" id="bulk-level-select-all" class="h-4 w-4 rounded border-gray-300 text-blue-800 focus:ring-yellow-500"> 全階層を対象にする`;
         bulkLevelOptionsContainer.appendChild(allLevelLabel);
 
         // 個別階層チェックボックス
         levels.forEach((lvl) => {
-          const isChecked = currentSelection.includes(lvl.id) || isAllChecked;
+          const isChecked = currentSelection.includes(lvl.id);
           const label = document.createElement("label");
           label.className =
             "flex items-center gap-2 text-sm cursor-pointer ml-3";
@@ -3909,7 +3907,6 @@ function setupBulkMemberActionEvents() {
 
       renderDetailView();
 
-      closeModal(bulkAddMemberModal);
       const jointName =
         bulkMemberJointSelect.options[bulkMemberJointSelect.selectedIndex].text;
       showToast(
