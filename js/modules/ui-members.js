@@ -12,22 +12,44 @@ import { populateJointDropdownForEdit } from "./ui-joints.js";
 import { generateCustomInputFields } from "./ui-projects.js";
 
 /**
- * 部材登録フォームへ移動してフォーカスする
- * （部材登録はモーダルではなくインラインフォームのため、タブ切替＋スクロール）
+ * 部材新規登録モーダルを開く（edit-member-modal を新規モードで流用）
  */
 export const openNewMemberModal = () => {
-  // 部材タブへ切り替え（HTMLインラインscriptのswitchTabと同じ処理）
-  const switchBtn = document.getElementById("switch-view-members");
-  if (switchBtn) switchBtn.click();
+  const project = state.projects.find((p) => p.id === state.currentProjectId);
+  if (!project) return;
 
-  // 部材名入力欄へスクロール＆フォーカス
-  const memberNameInput = document.getElementById("member-name");
-  if (memberNameInput) {
-    setTimeout(() => {
-      memberNameInput.scrollIntoView({ behavior: "smooth", block: "center" });
-      memberNameInput.focus();
-    }, 50);
+  // タイトルを新規登録用に変更
+  const title = document.querySelector("#edit-member-modal h3");
+  if (title) title.textContent = "部材の新規登録";
+
+  // ID を空にして新規モードを示す
+  const idInput = document.getElementById("edit-member-id");
+  if (idInput) idInput.value = "";
+
+  const nameInput = document.getElementById("edit-member-name");
+  if (nameInput) nameInput.value = "";
+
+  const jointSelect = document.getElementById("edit-member-joint-select");
+  populateJointDropdownForEdit(jointSelect, "");
+
+  // 階層チェックボックス生成（未選択）
+  const levelsContainer = document.getElementById("edit-member-levels-container");
+  if (levelsContainer) {
+    levelsContainer.innerHTML = "";
+    const levels = getProjectLevels(project);
+    levels.forEach((lvl) => {
+      const label = document.createElement("label");
+      label.className = "flex items-center gap-2 text-sm cursor-pointer";
+      label.innerHTML = `<input type="checkbox" value="${lvl.id}" class="level-checkbox h-4 w-4 text-blue-600 rounded border-gray-300">`;
+      label.append(` ${lvl.label}`);
+      levelsContainer.appendChild(label);
+    });
   }
+
+  const modal = document.getElementById("edit-member-modal");
+  openModal(modal);
+
+  if (nameInput) setTimeout(() => nameInput.focus(), 50);
 };
 
 /**
@@ -40,6 +62,9 @@ export const openEditMemberModal = (memberId) => {
 
   const member = (project.members || []).find((m) => m.id === memberId);
   if (!member) return;
+
+  const title = document.querySelector("#edit-member-modal h3");
+  if (title) title.textContent = "部材の編集";
 
   const idInput = document.getElementById("edit-member-id");
   const nameInput = document.getElementById("edit-member-name");
