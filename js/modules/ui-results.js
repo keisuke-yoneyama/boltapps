@@ -1664,11 +1664,12 @@ export const renderResults = (project) => {
 
   const orderDetailsContainer = `<div id="order-details-container" data-section-title="本ボルト注文明細" data-section-color="pink" class="scroll-mt-24 mt-12"></div>`;
   const tempBoltsHtml = renderTempBoltResults(project);
+  const shopTempBoltsHtml = renderShopTempBoltResults(project);
   const tempOrderDetailsContainer = `<div id="temp-order-details-container" data-section-title="仮ボルト注文明細" data-section-color="teal" class="scroll-mt-24 mt-12"></div>`;
 
   if (resultsCardContent) {
     resultsCardContent.innerHTML =
-      buttonsHtml + floorTableHtml + orderDetailsContainer + tempBoltsHtml + tempOrderDetailsContainer;
+      buttonsHtml + floorTableHtml + orderDetailsContainer + tempBoltsHtml + shopTempBoltsHtml + tempOrderDetailsContainer;
   }
 
   const container = document.getElementById("order-details-container");
