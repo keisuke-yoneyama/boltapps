@@ -898,12 +898,11 @@ export function updateQuickNavLinks() {
       ),
     ).filter((el) => !el.closest(".hidden"));
   } else if (state.activeTab === "tally") {
-    const tallyCard = document.getElementById("tally-card");
-    const resultSections = Array.from(
-      document.querySelectorAll("#results-card-content [data-section-title]"),
-    );
-    if (tallyCard && !tallyCard.classList.contains("hidden")) {
-      targets = [tallyCard, ...resultSections];
+    const tallySection = document.getElementById("tally-section");
+    if (tallySection && !tallySection.classList.contains("hidden")) {
+      targets = Array.from(
+        tallySection.querySelectorAll("[data-section-title]"),
+      );
     }
   }
 
