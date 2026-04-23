@@ -246,6 +246,7 @@ export const updateJointFormUI = (isModal) => {
   const isBundledInput = document.getElementById(
     `${prefix}is-bundled-with-column`,
   );
+  const groundAssemblyGroup = document.getElementById(`${prefix}ground-assembly-group`);
 
   const type = elements.type.value;
   const twoBoltTypes = ["girder", "beam", "other", "stud"];
@@ -262,6 +263,18 @@ export const updateJointFormUI = (isModal) => {
       if (isBundledInput) isBundledInput.checked = false;
     } else {
       bundleGroup.classList.remove("hidden");
+    }
+  }
+
+  // 工場地組み用・地組み用は girder/beam/stud/other のみ表示
+  const groundAssemblyApplicable = ["girder", "beam", "stud", "other"].includes(type);
+  if (groundAssemblyGroup) {
+    groundAssemblyGroup.classList.toggle("hidden", !groundAssemblyApplicable);
+    if (!groundAssemblyApplicable) {
+      const shopGA = document.getElementById(`${prefix}is-shop-ground-assembly`);
+      const ga = document.getElementById(`${prefix}is-ground-assembly`);
+      if (shopGA) shopGA.checked = false;
+      if (ga) ga.checked = false;
     }
   }
 
@@ -512,6 +525,8 @@ export function openEditModal(joint) {
   setVal("edit-shop-temp-bolt-size-w", joint.shopTempBoltSize_W || "");
 
   setCheck("edit-is-complex-spl", joint.isComplexSpl || false);
+  setCheck("edit-is-shop-ground-assembly", joint.isShopGroundAssembly || false);
+  setCheck("edit-is-ground-assembly", joint.isGroundAssembly || false);
   setVal("edit-complex-spl-count", joint.complexSplCount || "2");
 
   editComplexSplCache = Array.from({ length: 4 }, () => ({
@@ -594,6 +609,8 @@ export function openNewJointModal() {
   setCheck("edit-has-shop-spl", false);
   setCheck("edit-has-bolt-correction", false);
   setCheck("edit-is-complex-spl", false);
+  setCheck("edit-is-shop-ground-assembly", false);
+  setCheck("edit-is-ground-assembly", false);
 
   setVal("edit-temp-bolt-setting", "calculated");
   setVal("edit-complex-spl-count", "2");
@@ -692,6 +709,11 @@ export const resetJointForm = () => {
   }));
 
   if (isBundledWithColumnInput) isBundledWithColumnInput.checked = false;
+
+  const isShopGroundAssemblyInput = document.getElementById("is-shop-ground-assembly");
+  const isGroundAssemblyInput = document.getElementById("is-ground-assembly");
+  if (isShopGroundAssemblyInput) isShopGroundAssemblyInput.checked = false;
+  if (isGroundAssemblyInput) isGroundAssemblyInput.checked = false;
 
   updateJointFormUI(false);
 };

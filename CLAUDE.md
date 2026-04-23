@@ -1,5 +1,71 @@
 # CLAUDE.md
 
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
+---
+
+## 開発・実行環境
+
+**ビルドシステムなし。** package.json / npm / bundler は存在しない。
+
+- ブラウザのネイティブ ES modules (`type="module"`) を直接使用
+- Firebase SDK は CDN から読み込み (`https://www.gstatic.com/firebasejs/11.6.1/...`)
+- 開発時は静的ファイルサーバー（例: VS Code Live Server）で `index.html` を開く
+- bolt: ルート `index.html`
+- admin: `admin/index.html`
+- field: `field/index.html`
+- Netlify へのデプロイは `_redirects` がルーティングを担う
+
+---
+
+## bolt アプリのモジュール構成
+
+エントリポイント: `js/app.js` → `js/modules/`
+
+| モジュール | 責務 |
+|---|---|
+| `state.js` | シングルトン `state` オブジェクト。UI状態・選択状態・ヒストリー管理 |
+| `firebase.js` | Firebase初期化、`db`・`auth`・`appId`・`projectsCollectionRef` を export |
+| `db.js` | Firestore CRUD関数。`subscribeToProjects`・`getGlobalSettings` など |
+| `calculator.js` | ボルト本数計算ロジック（純粋関数寄り）。ボルトサイズ移行処理も担う |
+| `events.js` | DOMイベントリスナー一括登録。`setupEventListeners()` のみ export |
+| `ui.js` | メインUI描画・モーダル制御・タブ切替・クイックナビ |
+| `ui-joints.js` | 継手フォーム・継手リスト描画 |
+| `ui-members.js` | 部材フォーム・部材リスト描画 |
+| `ui-results.js` | 集計・発注詳細・工場使用仮ボルト集計 描画 |
+| `ui-modal.js` | 汎用モーダル開閉 (`openModal` / `closeModal`) |
+| `ui-projects.js` | プロジェクト一覧UI |
+| `ui-notifications.js` | トースト通知 |
+| `ui-theme.js` | ダーク/ライトテーマ切替 |
+| `delivery.js` / `delivery-db.js` / `delivery-state.js` | 搬入関連（bolt側） |
+| `config.js` | 定数・設定値 |
+
+### state → ui の流れ
+1. Firestore `onSnapshot` → `db.js` → `state.projects` 更新 → UI再描画
+2. ユーザー操作 → `events.js` → `state` 変更 → UI関数呼び出し
+3. グローバルボルトサイズは `state.globalBoltSizes`（Firestoreパス: `artifacts/${appId}/public/data/settings/global`）
+
+### モーダル再利用パターン
+- `edit-member-modal` は新規登録・編集の両方で使う（`edit-member-id` が空なら新規）
+- `edit-joint-modal` も同様
+- 新規登録時はタイトルを書き換えてIDをクリアして `openModal` を呼ぶ
+
+---
+
+## admin アプリのモジュール構成
+
+エントリポイント: `admin/app.js` → `admin/`（`js/admin/`ではなく`admin/`直下）
+
+| モジュール | 責務 |
+|---|---|
+| `admin/state.js` | `adminState` シングルトン |
+| `admin/db.js` | Firestore CRUD（deliveryPlan / truck / item） |
+| `admin/ui.js` | A0/A1/A2 画面描画 |
+| `admin/calendar.js` | カレンダー描画・シリーズ管理 |
+| `admin/suggest-data.js` | 入力補助データ |
+
+---
+
 ## このプロジェクトの目的
 このリポジトリは、建築鉄骨ファブ向けの業務アプリ群を管理する。
 

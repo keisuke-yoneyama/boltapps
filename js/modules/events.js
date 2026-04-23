@@ -2253,6 +2253,8 @@ function setupJointActionEvents() {
   const editIsBundledWithColumnInput = document.getElementById(
     "edit-is-bundled-with-column",
   );
+  const editIsShopGroundAssemblyInput = document.getElementById("edit-is-shop-ground-assembly");
+  const editIsGroundAssemblyInput = document.getElementById("edit-is-ground-assembly");
 
   // ボルト情報入力欄
   const editFlangeSizeInput = document.getElementById("edit-flange-size");
@@ -2382,6 +2384,12 @@ function setupJointActionEvents() {
           type !== "column" &&
           editIsBundledWithColumnInput &&
           editIsBundledWithColumnInput.checked,
+        isShopGroundAssembly:
+          ["girder", "beam", "stud", "other"].includes(type) &&
+          editIsShopGroundAssemblyInput?.checked || false,
+        isGroundAssembly:
+          ["girder", "beam", "stud", "other"].includes(type) &&
+          editIsGroundAssemblyInput?.checked || false,
         flangeSize: editFlangeSizeInput.value,
         flangeCount: parseInt(editFlangeCountInput.value) || 0,
         webSize: editWebSizeInput.value,
@@ -2566,6 +2574,8 @@ function setupAddActionEvents() {
   const isBundledWithColumnInput = document.getElementById(
     "is-bundled-with-column",
   ); // ID確認
+  const isShopGroundAssemblyInput = document.getElementById("is-shop-ground-assembly");
+  const isGroundAssemblyInput = document.getElementById("is-ground-assembly");
 
   const flangeSizeInput = document.getElementById("flange-size");
   const flangeCountInput = document.getElementById("flange-count");
@@ -2750,6 +2760,12 @@ function setupAddActionEvents() {
           type !== "column" &&
           isBundledWithColumnInput &&
           isBundledWithColumnInput.checked,
+        isShopGroundAssembly:
+          ["girder", "beam", "stud", "other"].includes(type) &&
+          isShopGroundAssemblyInput?.checked || false,
+        isGroundAssembly:
+          ["girder", "beam", "stud", "other"].includes(type) &&
+          isGroundAssemblyInput?.checked || false,
         shopTempBoltCount:
           parseInt(document.getElementById("shop-temp-bolt-count").value) ||
           null,

@@ -469,6 +469,8 @@ export const renderOrderDetails = (container, project, resultsByLocation) => {
     const filteredHonBolts = {};
     const specialBolts = {
       column: {},
+      shopGroundAssembly: {},
+      groundAssembly: {},
       dLock: {},
       naka: {},
       nakaM: {},
@@ -482,7 +484,6 @@ export const renderOrderDetails = (container, project, resultsByLocation) => {
 
       Object.keys(locationData).forEach((size) => {
         const data = locationData[size];
-        const qty = data.total || 0;
 
         const mergeSpecial = (target, key, srcData) => {
           const ex = target[key] || { total: 0, joints: {} };
@@ -497,6 +498,10 @@ export const renderOrderDetails = (container, project, resultsByLocation) => {
 
         if (size.includes("(本柱)")) {
           mergeSpecial(specialBolts.column, size, data);
+        } else if (size.includes("(工場地組)")) {
+          mergeSpecial(specialBolts.shopGroundAssembly, size.replace("(工場地組)", ""), data);
+        } else if (size.includes("(地組)")) {
+          mergeSpecial(specialBolts.groundAssembly, size.replace("(地組)", ""), data);
         } else if (size.startsWith("D")) {
           mergeSpecial(specialBolts.dLock, size, data);
         } else if (size.startsWith("中ボ")) {
@@ -516,6 +521,14 @@ export const renderOrderDetails = (container, project, resultsByLocation) => {
     const honBoltSection = document.createElement("section");
     honBoltSection.className = "mb-16";
     container.appendChild(honBoltSection);
+
+    const shopGroundAssemblySection = document.createElement("section");
+    shopGroundAssemblySection.className = "mb-16";
+    container.appendChild(shopGroundAssemblySection);
+
+    const groundAssemblySection = document.createElement("section");
+    groundAssemblySection.className = "mb-16";
+    container.appendChild(groundAssemblySection);
 
     const dLockSection = document.createElement("section");
     dLockSection.className = "mb-16";
@@ -651,6 +664,24 @@ export const renderOrderDetails = (container, project, resultsByLocation) => {
       updateView();
     };
 
+    const renderGroundAssemblySection = (section, data, title, borderColor, markerColor) => {
+      if (Object.keys(data).length === 0) {
+        section.style.display = "none";
+        return;
+      }
+      section.style.display = "block";
+      section.innerHTML = `
+        <div class="mt-12 mb-10 border-b-2 ${borderColor} pb-4">
+          <h2 class="text-2xl font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+            <span class="${markerColor}">■</span> ${title}
+          </h2>
+        </div>`;
+      const tableContainer = document.createElement("div");
+      tableContainer.className = "flex flex-wrap gap-8 items-start align-top";
+      section.appendChild(tableContainer);
+      renderAggregatedTables(tableContainer, { [title]: data }, [title], {});
+    };
+
     const renderDLockSection = () => {
       if (Object.keys(specialBolts.dLock).length === 0) {
         dLockSection.style.display = "none";
@@ -712,6 +743,20 @@ export const renderOrderDetails = (container, project, resultsByLocation) => {
     };
 
     renderHonBoltSection();
+    renderGroundAssemblySection(
+      shopGroundAssemblySection,
+      specialBolts.shopGroundAssembly,
+      "工場地組み用 注文明細",
+      "border-orange-500",
+      "text-orange-500",
+    );
+    renderGroundAssemblySection(
+      groundAssemblySection,
+      specialBolts.groundAssembly,
+      "地組み用 注文明細",
+      "border-violet-500",
+      "text-violet-500",
+    );
     renderDLockSection();
     renderNakaBoltSection();
   } catch (err) {
@@ -1499,6 +1544,9 @@ export const renderResults = (project) => {
     const sizesAtLoc = resultsByLocation[locId];
 
     for (const size in sizesAtLoc) {
+      // 独立集計カテゴリはフロア集計表から除外
+      if (size.includes("(工場地組)") || size.includes("(地組)")) continue;
+
       const data = sizesAtLoc[size];
       const filteredJoints = {};
       let filteredTotal = 0;

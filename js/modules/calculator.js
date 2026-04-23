@@ -329,11 +329,13 @@ export const calculateResults = (project) => {
 
         parts.forEach((part) => {
           if (part.size && part.count > 0) {
-            // ▼▼▼ 修正: タイプがcolumn または「同梱フラグ」がある場合に (本柱) を付与 ▼▼▼
-            const isColumn =
-              joint.type === "column" || joint.isBundledWithColumn;
-            const displaySize = isColumn ? `${part.size}(本柱)` : part.size;
-            // ▲▲▲ 修正ここまで ▲▲▲
+            const isColumn = joint.type === "column" || joint.isBundledWithColumn;
+            let displaySize = isColumn ? `${part.size}(本柱)` : part.size;
+            if (!isColumn && joint.isShopGroundAssembly) {
+              displaySize = `${part.size}(工場地組)`;
+            } else if (!isColumn && joint.isGroundAssembly) {
+              displaySize = `${part.size}(地組)`;
+            }
             allBoltSizes.add(displaySize);
 
             if (!resultsByLocation[locationId][displaySize]) {
