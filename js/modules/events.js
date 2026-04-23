@@ -180,6 +180,8 @@ export function setupEventListeners() {
 
   setupProjectListNewEvents();
 
+  setupExclusiveJointCategoryEvents(); // 同梱・地組み系チェックの排他制御
+
   setupTallyClipboardEvents();
 }
 
@@ -612,6 +614,32 @@ function setupEditModalEvents() {
         }
       });
     });
+}
+
+/**
+ * 「本柱と同梱」「工場地組み用」「地組み用」を排他制御する
+ * どれか1つが ON になったら残り2つを disabled にする
+ */
+function setupExclusiveJointCategoryEvents() {
+  // [新規フォーム用ID群, 編集モーダル用ID群] のペア
+  const groups = [
+    ["is-bundled-with-column", "is-shop-ground-assembly", "is-ground-assembly"],
+    ["edit-is-bundled-with-column", "edit-is-shop-ground-assembly", "edit-is-ground-assembly"],
+  ];
+
+  groups.forEach((ids) => {
+    const inputs = ids.map((id) => document.getElementById(id)).filter(Boolean);
+    if (inputs.length === 0) return;
+
+    const syncDisabled = () => {
+      const anyChecked = inputs.some((el) => el.checked);
+      inputs.forEach((el) => {
+        el.disabled = anyChecked && !el.checked;
+      });
+    };
+
+    inputs.forEach((el) => el.addEventListener("change", syncDisabled));
+  });
 }
 
 //削除確認モーダルのキャンセル終了の動作登録

@@ -547,6 +547,7 @@ export function openEditModal(joint) {
   updateJointFormUI(true);
 
   const editModal = document.getElementById("edit-joint-modal");
+  syncExclusiveJointCheckboxes(true);
   openModal(editModal);
 }
 
@@ -635,9 +636,27 @@ export function openNewJointModal() {
   if (colorPaletteChevron) colorPaletteChevron.classList.remove("rotate-180");
 
   updateJointFormUI(true);
+  syncExclusiveJointCheckboxes(true);
 
   const modal = document.getElementById("edit-joint-modal");
   openModal(modal);
+}
+
+/**
+ * 同梱・地組み系チェックボックスの disabled 状態を同期する
+ */
+export function syncExclusiveJointCheckboxes(isModal) {
+  const prefix = isModal ? "edit-" : "";
+  const ids = [
+    `${prefix}is-bundled-with-column`,
+    `${prefix}is-shop-ground-assembly`,
+    `${prefix}is-ground-assembly`,
+  ];
+  const inputs = ids.map((id) => document.getElementById(id)).filter(Boolean);
+  const anyChecked = inputs.some((el) => el.checked);
+  inputs.forEach((el) => {
+    el.disabled = anyChecked && !el.checked;
+  });
 }
 
 /**
