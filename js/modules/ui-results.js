@@ -1401,6 +1401,8 @@ export const renderTallySheet = (project, renderResultsFn) => {
     )
     .join("");
 
+  const savedScrollLeft = tallySheetContainer.firstElementChild?.scrollLeft ?? 0;
+
   tallySheetContainer.innerHTML = `
     <div class="overflow-x-auto custom-scrollbar">
       <table class="w-max min-w-full table-fixed text-sm border-collapse">
@@ -1423,6 +1425,10 @@ export const renderTallySheet = (project, renderResultsFn) => {
         </tfoot>
       </table>
     </div>`;
+
+  if (savedScrollLeft > 0 && tallySheetContainer.firstElementChild) {
+    tallySheetContainer.firstElementChild.scrollLeft = savedScrollLeft;
+  }
 
   tallySheetContainer.querySelectorAll(".bolt-info-trigger").forEach((el) => {
     el.onclick = () => {
