@@ -326,8 +326,9 @@ export function renderAggregatedTables(
           rawValue !== null &&
           rawValue.joints &&
           Object.keys(rawValue.joints).length > 0;
+        const qtyMapJson = (hasJoints && rawValue.qtyMap) ? JSON.stringify(rawValue.qtyMap).replace(/'/g, "&#39;") : "{}";
         const detailsAttr = hasJoints
-          ? ` data-details='${JSON.stringify(rawValue.joints).replace(/'/g, "&#39;")}' data-bolt-size="${key}"`
+          ? ` data-details='${JSON.stringify(rawValue.joints).replace(/'/g, "&#39;")}' data-bolt-size="${key}" data-qty='${qtyMapJson}'`
           : "";
         const detailsClass = hasJoints ? " has-details cursor-pointer" : "";
 
@@ -486,11 +487,16 @@ export const renderOrderDetails = (container, project, resultsByLocation) => {
         const data = locationData[size];
 
         const mergeSpecial = (target, key, srcData) => {
-          const ex = target[key] || { total: 0, joints: {} };
-          const merged = { total: ex.total + (srcData.total || 0), joints: { ...ex.joints } };
+          const ex = target[key] || { total: 0, joints: {}, qtyMap: {} };
+          const merged = { total: ex.total + (srcData.total || 0), joints: { ...ex.joints }, qtyMap: { ...(ex.qtyMap || {}) } };
           if (srcData.joints) {
             Object.entries(srcData.joints).forEach(([n, c]) => {
               merged.joints[n] = (merged.joints[n] || 0) + c;
+            });
+          }
+          if (srcData.qtyMap) {
+            Object.entries(srcData.qtyMap).forEach(([n, q]) => {
+              merged.qtyMap[n] = (merged.qtyMap[n] || 0) + q;
             });
           }
           target[key] = merged;
@@ -1095,6 +1101,7 @@ export const renderTempBoltResults = (project) => {
   sortedSizes.forEach((size) => {
     let grandTotal = 0;
     const grandTotalJoints = {};
+    const grandTotalQtyMap = {};
     let rowHtml = `<tr class="hover:bg-slate-50 dark:hover:bg-slate-700/50"><td class="px-2 py-2 font-bold text-gray-900 dark:text-gray-100 sticky left-0 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700">${size}</td>`;
 
     locations.forEach((loc) => {
@@ -1110,9 +1117,15 @@ export const renderTempBoltResults = (project) => {
           .join("\n");
         detailsClass =
           "has-details cursor-pointer hover:bg-yellow-100 dark:hover:bg-yellow-800/50 transition-colors";
-        dataAttribute = `data-details='${JSON.stringify(cellData.joints)}'`;
+        const qtyJson = JSON.stringify(cellData.qtyMap || {});
+        dataAttribute = `data-details='${JSON.stringify(cellData.joints)}' data-qty='${qtyJson}'`;
         for (const [name, count] of Object.entries(cellData.joints)) {
           grandTotalJoints[name] = (grandTotalJoints[name] || 0) + count;
+        }
+        if (cellData.qtyMap) {
+          for (const [name, qty] of Object.entries(cellData.qtyMap)) {
+            grandTotalQtyMap[name] = (grandTotalQtyMap[name] || 0) + qty;
+          }
         }
       }
 
@@ -1126,14 +1139,13 @@ export const renderTempBoltResults = (project) => {
       .sort((a, b) => a[0].localeCompare(b[0]))
       .map(([name, count]) => `${name}: ${count.toLocaleString()}本`)
       .join("\n");
-    const grandTotalDetailsClass =
-      Object.keys(grandTotalJoints).length > 0
-        ? "has-details cursor-pointer hover:bg-yellow-200 dark:hover:bg-yellow-700/50 transition-colors"
-        : "";
-    const grandTotalDataAttribute =
-      Object.keys(grandTotalJoints).length > 0
-        ? `data-details='${JSON.stringify(grandTotalJoints)}'`
-        : "";
+    const hasGrandTotalJoints = Object.keys(grandTotalJoints).length > 0;
+    const grandTotalDetailsClass = hasGrandTotalJoints
+      ? "has-details cursor-pointer hover:bg-yellow-200 dark:hover:bg-yellow-700/50 transition-colors"
+      : "";
+    const grandTotalDataAttribute = hasGrandTotalJoints
+      ? `data-details='${JSON.stringify(grandTotalJoints)}' data-qty='${JSON.stringify(grandTotalQtyMap)}'`
+      : "";
 
     rowHtml += `<td class="px-2 py-2 text-center font-bold sticky right-0 bg-yellow-100 dark:bg-yellow-900/50 border border-yellow-200 dark:border-yellow-800 ${grandTotalDetailsClass}" title="${grandTotalTooltip}" ${grandTotalDataAttribute}>${
       grandTotal > 0 ? grandTotal.toLocaleString() : "-"
