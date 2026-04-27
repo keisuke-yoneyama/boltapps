@@ -3161,6 +3161,7 @@ function setupResultsCardEvents() {
     if (targetCell) {
       try {
         const detailsData = JSON.parse(targetCell.dataset.details);
+        const qtyData = targetCell.dataset.qty ? JSON.parse(targetCell.dataset.qty) : null;
         const row = targetCell.closest("tr");
         const boltSize = targetCell.dataset.boltSize || row.querySelector("td:first-child").textContent;
         // 最終列かどうかで合計かを判定
@@ -3187,9 +3188,13 @@ function setupResultsCardEvents() {
           contentHtml += '<ul class="space-y-2 text-base">';
 
           for (const [name, count] of sortedJoints) {
+            const qty = qtyData?.[name];
+            const qtyHtml = qty != null
+              ? `<span class="text-sm text-slate-500 dark:text-slate-400 ml-1">(${qty}箇所)</span>`
+              : "";
             contentHtml += `
                     <li class="flex justify-between items-center border-b border-slate-200 dark:border-slate-700 pb-2">
-                        <span class="text-slate-700 dark:text-slate-300">${name}:</span>
+                        <span class="text-slate-700 dark:text-slate-300">${name}${qtyHtml}:</span>
                         <span class="font-bold text-lg text-slate-900 dark:text-slate-100">${count.toLocaleString()}本</span>
                     </li>`;
           }

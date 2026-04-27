@@ -342,6 +342,7 @@ export const calculateResults = (project) => {
               resultsByLocation[locationId][displaySize] = {
                 total: 0,
                 joints: {},
+                qtyMap: {},
               };
             }
 
@@ -353,6 +354,8 @@ export const calculateResults = (project) => {
             const memberName = item.name;
             currentData.joints[memberName] =
               (currentData.joints[memberName] || 0) + boltCount;
+            currentData.qtyMap[memberName] =
+              (currentData.qtyMap[memberName] || 0) + quantity;
           }
         });
       }

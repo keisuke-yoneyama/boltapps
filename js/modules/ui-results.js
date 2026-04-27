@@ -1555,6 +1555,7 @@ export const renderResults = (project) => {
 
       const data = sizesAtLoc[size];
       const filteredJoints = {};
+      const filteredQtyMap = {};
       let filteredTotal = 0;
 
       for (const [itemName, count] of Object.entries(data.joints)) {
@@ -1565,6 +1566,9 @@ export const renderResults = (project) => {
         ) {
           filteredJoints[itemName] = count;
           filteredTotal += count;
+          if (data.qtyMap?.[itemName] !== undefined) {
+            filteredQtyMap[itemName] = data.qtyMap[itemName];
+          }
         }
       }
 
@@ -1572,6 +1576,7 @@ export const renderResults = (project) => {
         filteredData[locId][size] = {
           total: filteredTotal,
           joints: filteredJoints,
+          qtyMap: filteredQtyMap,
         };
         filteredBoltSizes.add(size);
         grandTotalBolts += filteredTotal;
@@ -1667,11 +1672,13 @@ export const renderResults = (project) => {
   sortedSizes.forEach((size) => {
     let rowTotal = 0;
     const rowTotalJoints = {};
+    const rowTotalQty = {};
     floorTableHtml += `<tr class="hover:bg-slate-50 dark:hover:bg-slate-800/40"><td class="px-2 py-2 font-bold sticky left-0 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 break-all">${size}</td>`;
 
     floorColumns.forEach((col) => {
       let cellValue = 0;
       let jointData = {};
+      let qtyData = {};
       if (col.isTotal) {
         const areas =
           project.mode === "advanced"
@@ -1687,31 +1694,38 @@ export const renderResults = (project) => {
             cellValue += d.total;
             for (const [n, c] of Object.entries(d.joints))
               jointData[n] = (jointData[n] || 0) + c;
+            if (d.qtyMap) {
+              for (const [n, q] of Object.entries(d.qtyMap))
+                qtyData[n] = (qtyData[n] || 0) + q;
+            }
           }
         });
       } else {
         const d = filteredData[col.id]?.[size];
         cellValue = d?.total || 0;
         if (d?.joints) jointData = d.joints;
+        if (d?.qtyMap) qtyData = d.qtyMap;
       }
 
       if (!col.isTotal) {
         rowTotal += cellValue;
         for (const [n, c] of Object.entries(jointData))
           rowTotalJoints[n] = (rowTotalJoints[n] || 0) + c;
+        for (const [n, q] of Object.entries(qtyData))
+          rowTotalQty[n] = (rowTotalQty[n] || 0) + q;
       }
 
-      const detailsDataAttr =
-        Object.keys(jointData).length > 0
-          ? `data-details='${JSON.stringify(jointData)}'`
-          : "";
+      const hasJoints = Object.keys(jointData).length > 0;
+      const detailsDataAttr = hasJoints
+        ? `data-details='${JSON.stringify(jointData)}' data-qty='${JSON.stringify(qtyData)}'`
+        : "";
       floorTableHtml += `<td class="px-2 py-2 text-center border border-slate-200 dark:border-slate-700 ${col.isTotal ? "bg-blue-50/50 dark:bg-blue-900/20 font-bold" : ""} has-details cursor-pointer hover:bg-yellow-100 dark:hover:bg-yellow-900/40" ${detailsDataAttr}>${cellValue > 0 ? cellValue.toLocaleString() : "-"}</td>`;
     });
 
-    const rowTotalDetailsAttr =
-      Object.keys(rowTotalJoints).length > 0
-        ? `data-details='${JSON.stringify(rowTotalJoints)}'`
-        : "";
+    const hasRowJoints = Object.keys(rowTotalJoints).length > 0;
+    const rowTotalDetailsAttr = hasRowJoints
+      ? `data-details='${JSON.stringify(rowTotalJoints)}' data-qty='${JSON.stringify(rowTotalQty)}'`
+      : "";
     floorTableHtml += `<td class="px-2 py-2 text-center font-bold sticky right-0 bg-yellow-100 dark:bg-yellow-900/30 border border-yellow-200 dark:border-yellow-800 has-details cursor-pointer hover:bg-yellow-200" ${rowTotalDetailsAttr}>${rowTotal > 0 ? rowTotal.toLocaleString() : "-"}</td></tr>`;
   });
   floorTableHtml += `</tbody></table></div></div>`;
