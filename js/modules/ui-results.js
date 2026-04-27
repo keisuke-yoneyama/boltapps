@@ -1550,9 +1550,6 @@ export const renderResults = (project) => {
     const sizesAtLoc = resultsByLocation[locId];
 
     for (const size in sizesAtLoc) {
-      // 独立集計カテゴリはフロア集計表から除外
-      if (size.includes("(工場地組)") || size.includes("(地組)")) continue;
-
       const data = sizesAtLoc[size];
       const filteredJoints = {};
       const filteredQtyMap = {};
