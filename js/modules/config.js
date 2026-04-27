@@ -63,6 +63,8 @@ export const HUG_BOLT_SIZES = {
   M22: Array.from({ length: 10 }, (_, i) => `M22×${50 + i * 10}`),
 };
 
+export const GROUND_ASSEMBLY_JOINT_TYPES = ["girder", "beam", "stud", "other"];
+
 // 指定されたボルト種類の定義
 export const BOLT_TYPES = [
   "M16",

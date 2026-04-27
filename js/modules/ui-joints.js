@@ -1,7 +1,7 @@
 // ui-joints.js
 // 継手関連のUI関数
 
-import { PRESET_COLORS, HUG_BOLT_SIZES } from "./config.js";
+import { PRESET_COLORS, HUG_BOLT_SIZES, GROUND_ASSEMBLY_JOINT_TYPES } from "./config.js";
 import { state } from "./state.js";
 import { boltSort, getTempBoltInfo, getProjectLevels } from "./calculator.js";
 import { openModal } from "./ui-modal.js";
@@ -267,7 +267,7 @@ export const updateJointFormUI = (isModal) => {
   }
 
   // 工場地組み用・地組み用は girder/beam/stud/other のみ表示
-  const groundAssemblyApplicable = ["girder", "beam", "stud", "other"].includes(type);
+  const groundAssemblyApplicable = GROUND_ASSEMBLY_JOINT_TYPES.includes(type);
   if (groundAssemblyGroup) {
     groundAssemblyGroup.classList.toggle("hidden", !groundAssemblyApplicable);
     if (!groundAssemblyApplicable) {

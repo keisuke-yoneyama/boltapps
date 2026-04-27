@@ -45,6 +45,7 @@ import {
   populateJointSelectorModal,
   openEditProjectModal,
   // openCopyProjectModal,
+  syncExclusiveJointCheckboxes,
 } from "./ui.js"; // ui.jsで作った関数を使う
 
 import {
@@ -56,7 +57,7 @@ import {
 
 import { updateProjectData, addProject, deleteProject } from "./db.js";
 
-import { BOLT_TYPES } from "./config.js";
+import { BOLT_TYPES, GROUND_ASSEMBLY_JOINT_TYPES } from "./config.js";
 
 import {
   saveGlobalBoltSizes,
@@ -616,29 +617,17 @@ function setupEditModalEvents() {
     });
 }
 
-/**
- * 「本柱と同梱」「工場地組み用」「地組み用」を排他制御する
- * どれか1つが ON になったら残り2つを disabled にする
- */
 function setupExclusiveJointCategoryEvents() {
-  // [新規フォーム用ID群, 編集モーダル用ID群] のペア
-  const groups = [
-    ["is-bundled-with-column", "is-shop-ground-assembly", "is-ground-assembly"],
-    ["edit-is-bundled-with-column", "edit-is-shop-ground-assembly", "edit-is-ground-assembly"],
-  ];
-
-  groups.forEach((ids) => {
+  [false, true].forEach((isModal) => {
+    const prefix = isModal ? "edit-" : "";
+    const ids = [
+      `${prefix}is-bundled-with-column`,
+      `${prefix}is-shop-ground-assembly`,
+      `${prefix}is-ground-assembly`,
+    ];
     const inputs = ids.map((id) => document.getElementById(id)).filter(Boolean);
     if (inputs.length === 0) return;
-
-    const syncDisabled = () => {
-      const anyChecked = inputs.some((el) => el.checked);
-      inputs.forEach((el) => {
-        el.disabled = anyChecked && !el.checked;
-      });
-    };
-
-    inputs.forEach((el) => el.addEventListener("change", syncDisabled));
+    inputs.forEach((el) => el.addEventListener("change", () => syncExclusiveJointCheckboxes(isModal)));
   });
 }
 
@@ -2413,11 +2402,9 @@ function setupJointActionEvents() {
           editIsBundledWithColumnInput &&
           editIsBundledWithColumnInput.checked,
         isShopGroundAssembly:
-          ["girder", "beam", "stud", "other"].includes(type) &&
-          editIsShopGroundAssemblyInput?.checked || false,
+          (GROUND_ASSEMBLY_JOINT_TYPES.includes(type) && editIsShopGroundAssemblyInput?.checked) || false,
         isGroundAssembly:
-          ["girder", "beam", "stud", "other"].includes(type) &&
-          editIsGroundAssemblyInput?.checked || false,
+          (GROUND_ASSEMBLY_JOINT_TYPES.includes(type) && editIsGroundAssemblyInput?.checked) || false,
         flangeSize: editFlangeSizeInput.value,
         flangeCount: parseInt(editFlangeCountInput.value) || 0,
         webSize: editWebSizeInput.value,
@@ -2789,11 +2776,9 @@ function setupAddActionEvents() {
           isBundledWithColumnInput &&
           isBundledWithColumnInput.checked,
         isShopGroundAssembly:
-          ["girder", "beam", "stud", "other"].includes(type) &&
-          isShopGroundAssemblyInput?.checked || false,
+          (GROUND_ASSEMBLY_JOINT_TYPES.includes(type) && isShopGroundAssemblyInput?.checked) || false,
         isGroundAssembly:
-          ["girder", "beam", "stud", "other"].includes(type) &&
-          isGroundAssemblyInput?.checked || false,
+          (GROUND_ASSEMBLY_JOINT_TYPES.includes(type) && isGroundAssemblyInput?.checked) || false,
         shopTempBoltCount:
           parseInt(document.getElementById("shop-temp-bolt-count").value) ||
           null,
