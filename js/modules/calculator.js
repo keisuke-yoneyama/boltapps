@@ -985,6 +985,8 @@ export const ensureProjectBoltSizes = async (project) => {
     "Dユニ12",
     "Dドブ16",
     "Dユニ16",
+    "Dドブ20",
+    "Dユニ20",
   ];
   const typeOrder = {};
   typeOrderList.forEach((t, i) => (typeOrder[t] = i));
@@ -1071,6 +1073,8 @@ export const sortGlobalBoltSizes = () => {
     "Dユニ12",
     "Dドブ16",
     "Dユニ16",
+    "Dドブ20",
+    "Dユニ20",
   ];
   const typeOrder = {};
   typeOrderList.forEach((t, i) => (typeOrder[t] = i));
