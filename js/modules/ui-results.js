@@ -18,6 +18,7 @@ import {
 import { showToast } from "./ui-notifications.js";
 import { getJointFilterId, getJointFilterLabel, getJointCategoryColorClasses, getBoltTooltipText } from "./ui-joints.js";
 import { updateProjectData } from "./db.js";
+import { DEFAULT_TEMP_BOLT_KIND } from "./config.js";
 
 // 集計状態の変数
 export let currentGroupingState = {};
@@ -264,6 +265,7 @@ export function renderAggregatedTables(
   specialBolts = {},
   onlySpecial = false,
   isTempBolt = false,
+  tempBoltKind = null,
 ) {
   container.innerHTML = "";
 
@@ -317,6 +319,8 @@ export function renderAggregatedTables(
         let type = "-";
         if (!isTempBolt) {
           type = key.includes("■") ? "F8T" : "S10T";
+        } else if (tempBoltKind) {
+          type = tempBoltKind;
         }
 
         const commonCellClass = `px-4 py-2 border border-${color}-200 dark:border-slate-700 text-center`;
@@ -986,6 +990,7 @@ export const renderTempOrderDetails = (
         {},
         false,
         true,
+        project.tempBoltKind || DEFAULT_TEMP_BOLT_KIND,
       );
     };
 
@@ -1082,8 +1087,9 @@ export const renderTempBoltResults = (project) => {
 
   const sortedSizes = Array.from(filteredBoltSizes).sort(boltSort);
 
+  const _tempKindLabel = project.tempBoltKind || DEFAULT_TEMP_BOLT_KIND;
   let floorTable = `<div id="anchor-temp-bolt" data-section-title="仮ボルト集計：フロア工区別" data-section-color="green" class="scroll-mt-24">
-                    <h2 class="text-2xl font-bold mt-8 mb-4 border-b-2 border-green-400 pb-2 text-slate-900 dark:text-slate-100">仮ボルト本数集計</h2>
+                    <h2 class="text-2xl font-bold mt-8 mb-4 border-b-2 border-green-400 pb-2 text-slate-900 dark:text-slate-100 flex items-baseline gap-3">仮ボルト本数集計<span class="text-sm font-normal px-2 py-0.5 bg-yellow-100 text-yellow-800 dark:bg-yellow-900/40 dark:text-yellow-200 rounded border border-yellow-300 dark:border-yellow-700">使用する仮ボルト：${_tempKindLabel}</span></h2>
                       <h3 class="text-xl font-semibold text-slate-800 dark:text-slate-200 mb-2">フロア工区別</h3>
                       <div class="overflow-x-auto custom-scrollbar">
                         <table class="w-auto text-sm border-collapse">
@@ -1184,9 +1190,10 @@ export const renderShopTempBoltResults = (project) => {
                 `;
   });
 
+  const _shopKindLabel = project.tempBoltKind || DEFAULT_TEMP_BOLT_KIND;
   return `
                 <div id="anchor-shop-bolt" data-section-title="工場仮ボルト集計" data-section-color="cyan" class="scroll-mt-24">
-                    <h2 class="text-2xl font-bold mt-8 mb-4 border-b-2 border-cyan-400 pb-2 text-slate-900 dark:text-slate-100">工場使用仮ボルト集計</h2>
+                    <h2 class="text-2xl font-bold mt-8 mb-4 border-b-2 border-cyan-400 pb-2 text-slate-900 dark:text-slate-100 flex items-baseline gap-3">工場使用仮ボルト集計<span class="text-sm font-normal px-2 py-0.5 bg-yellow-100 text-yellow-800 dark:bg-yellow-900/40 dark:text-yellow-200 rounded border border-yellow-300 dark:border-yellow-700">使用する仮ボルト：${_shopKindLabel}</span></h2>
                 <div class="overflow-x-auto custom-scrollbar">
                     <table class="w-auto text-sm border-collapse">
                         <thead class="bg-slate-200 dark:bg-slate-700 text-xs text-slate-700 dark:text-slate-300">

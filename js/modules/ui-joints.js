@@ -1,7 +1,7 @@
 // ui-joints.js
 // 継手関連のUI関数
 
-import { PRESET_COLORS, HUG_BOLT_SIZES, GROUND_ASSEMBLY_JOINT_TYPES } from "./config.js";
+import { PRESET_COLORS, HUG_BOLT_SIZES, GROUND_ASSEMBLY_JOINT_TYPES, DEFAULT_TEMP_BOLT_KIND } from "./config.js";
 import { state } from "./state.js";
 import { boltSort, getTempBoltInfo, getProjectLevels } from "./calculator.js";
 import { openModal } from "./ui-modal.js";
@@ -1101,8 +1101,12 @@ export const renderJointsList = (project) => {
     },
   ];
 
-  // 凡例の追加
+  // 仮ボルト種別インジケーター + 凡例
+  const _kindLabel = project.tempBoltKind || DEFAULT_TEMP_BOLT_KIND;
   let html = `
+    <div class="flex items-center justify-between mb-3 px-2 py-1.5 bg-yellow-50 dark:bg-yellow-900/10 rounded-lg border border-yellow-200 dark:border-yellow-800/50">
+      <span class="text-xs text-slate-600 dark:text-slate-400">使用する仮ボルト：<span class="font-semibold text-yellow-800 dark:text-yellow-300">${_kindLabel}</span></span>
+    </div>
     <div class="flex justify-end mb-2 px-2">
       <span class="inline-flex items-center gap-1.5 text-xs font-medium text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded">
         <span class="text-emerald-600 dark:text-emerald-400">${memberIconSvgRaw}</span>
