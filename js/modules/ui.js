@@ -12,7 +12,12 @@ export * from "./ui-projects.js";
 export * from "./ui-results.js";
 
 // ─── 必要なインポート ─────────────────────────────────────────────
-import { HUG_BOLT_SIZES } from "./config.js";
+import {
+  HUG_BOLT_SIZES,
+  TEMP_BOLT_KINDS,
+  DEFAULT_TEMP_BOLT_KIND,
+  TEMP_BOLT_KIND_SERIES_MAP,
+} from "./config.js";
 import { state } from "./state.js";
 import {
   ensureProjectBoltSizes,
@@ -946,6 +951,33 @@ export function openTempBoltSettingsModal() {
   openModal(modal);
 }
 
+// 種別と本ボルト系統からマッピング行HTMLを生成する
+const _buildTempBoltMappingRows = (sortedFinalBolts, kind, existingMap) =>
+  sortedFinalBolts
+    .map((boltSize) => {
+      const seriesMatch = boltSize.match(/M\d+/);
+      if (!seriesMatch) return "";
+      const mainSeries = seriesMatch[0];
+      const kindKey = TEMP_BOLT_KIND_SERIES_MAP[kind]?.[mainSeries] || "";
+      const availableSizes = HUG_BOLT_SIZES[kindKey] || [];
+      const saved = existingMap[boltSize] || "";
+      const options = availableSizes
+        .map(
+          (s) =>
+            `<option value="${s}" ${s === saved ? "selected" : ""}>${s}</option>`,
+        )
+        .join("");
+      return `
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 items-center p-3 bg-slate-50 dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700">
+          <label class="font-medium text-slate-800 dark:text-slate-100">本ボルト: ${boltSize}</label>
+          <select data-final-bolt="${boltSize}" class="temp-bolt-map-select w-full bg-white dark:bg-slate-700 border-slate-300 dark:border-slate-600 text-slate-900 dark:text-slate-100 rounded-lg p-2 focus:ring-yellow-500 focus:border-yellow-500">
+            <option value="">仮ボルトを選択...</option>
+            ${options}
+          </select>
+        </div>`;
+    })
+    .join("");
+
 // ─── populateTempBoltMappingModal ─────────────────────────────────
 export const populateTempBoltMappingModal = (project) => {
   if (!project) return;
@@ -953,9 +985,17 @@ export const populateTempBoltMappingModal = (project) => {
   const container = document.getElementById("temp-bolt-mapping-container");
   if (!container) return;
 
-  container.innerHTML = "";
-  const requiredFinalBolts = new Set();
+  const currentKind = project.tempBoltKind || DEFAULT_TEMP_BOLT_KIND;
 
+  const kindSelectorHtml = `
+    <div class="mb-4 flex items-center gap-4 p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg border border-yellow-200 dark:border-yellow-700">
+      <label class="text-sm font-medium text-slate-700 dark:text-slate-300 whitespace-nowrap">使用する仮ボルト種別</label>
+      <select id="temp-bolt-kind-select" class="bg-white dark:bg-slate-700 border-slate-300 dark:border-slate-600 text-slate-900 dark:text-slate-100 rounded-lg p-2 focus:ring-yellow-500 focus:border-yellow-500">
+        ${TEMP_BOLT_KINDS.map((k) => `<option value="${k}" ${k === currentKind ? "selected" : ""}>${k}</option>`).join("")}
+      </select>
+    </div>`;
+
+  const requiredFinalBolts = new Set();
   project.joints
     .filter(
       (j) =>
@@ -977,6 +1017,7 @@ export const populateTempBoltMappingModal = (project) => {
 
   if (requiredFinalBolts.size === 0) {
     container.innerHTML =
+      kindSelectorHtml +
       '<p class="text-slate-500">仮ボルトを使用する継手が登録されていません。</p>';
     return;
   }
@@ -995,29 +1036,24 @@ export const populateTempBoltMappingModal = (project) => {
   });
 
   const existingMap = project.tempBoltMap || {};
-  const rowsHtml = sortedFinalBolts
-    .map((boltSize) => {
-      const boltSeriesMatch = boltSize.match(/M\d+/);
-      if (!boltSeriesMatch) return "";
-      const boltSeries = boltSeriesMatch[0];
-      const availableHugBolts = HUG_BOLT_SIZES[boltSeries] || [];
-      const savedHugBolt = existingMap[boltSize] || "";
-      const hugBoltOptions = availableHugBolts
-        .map(
-          (size) =>
-            `<option value="${size}" ${size === savedHugBolt ? "selected" : ""}>${size}</option>`,
-        )
-        .join("");
-      return `
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 items-center p-3 bg-slate-50 dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700">
-          <label class="font-medium text-slate-800 dark:text-slate-100">本ボルト: ${boltSize}</label>
-          <select data-final-bolt="${boltSize}" class="temp-bolt-map-select w-full bg-white dark:bg-slate-700 border-slate-300 dark:border-slate-600 text-slate-900 dark:text-slate-100 rounded-lg p-2 focus:ring-yellow-500 focus:border-yellow-500">
-            <option value="">仮ボルトを選択...</option>
-            ${hugBoltOptions}
-          </select>
-        </div>`;
-    })
-    .join("");
 
-  container.innerHTML = `<div class="space-y-3">${rowsHtml}</div>`;
+  container.innerHTML =
+    kindSelectorHtml +
+    `<div id="temp-bolt-mapping-rows" class="space-y-3">
+      ${_buildTempBoltMappingRows(sortedFinalBolts, currentKind, existingMap)}
+    </div>`;
+
+  const kindSelect = document.getElementById("temp-bolt-kind-select");
+  if (kindSelect) {
+    kindSelect.addEventListener("change", () => {
+      const rowsContainer = document.getElementById("temp-bolt-mapping-rows");
+      if (rowsContainer) {
+        rowsContainer.innerHTML = _buildTempBoltMappingRows(
+          sortedFinalBolts,
+          kindSelect.value,
+          existingMap,
+        );
+      }
+    });
+  }
 };

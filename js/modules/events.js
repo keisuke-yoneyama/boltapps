@@ -57,7 +57,11 @@ import {
 
 import { updateProjectData, addProject, deleteProject } from "./db.js";
 
-import { BOLT_TYPES, GROUND_ASSEMBLY_JOINT_TYPES } from "./config.js";
+import {
+  BOLT_TYPES,
+  GROUND_ASSEMBLY_JOINT_TYPES,
+  DEFAULT_TEMP_BOLT_KIND,
+} from "./config.js";
 
 import {
   saveGlobalBoltSizes,
@@ -2202,7 +2206,6 @@ function setupTempBoltMappingEvents() {
       const selects = tempBoltMappingContainer.querySelectorAll(
         ".temp-bolt-map-select",
       );
-
       selects.forEach((select) => {
         const finalBolt = select.dataset.finalBolt;
         const tempBolt = select.value;
@@ -2211,12 +2214,16 @@ function setupTempBoltMappingEvents() {
         }
       });
 
+      const kindSelectEl = document.getElementById("temp-bolt-kind-select");
+      const newKind = kindSelectEl?.value || DEFAULT_TEMP_BOLT_KIND;
+
       // 1. ローカルのstateを更新
       const project = state.projects.find(
         (p) => p.id === state.currentProjectId,
       );
       if (project) {
         project.tempBoltMap = newMap;
+        project.tempBoltKind = newKind;
       }
 
       // 2. UI再描画
@@ -2227,14 +2234,15 @@ function setupTempBoltMappingEvents() {
       showToast("仮ボルト設定を保存しました。");
 
       // 4. DB保存処理
-      updateProjectData(state.currentProjectId, { tempBoltMap: newMap }).catch(
-        (err) => {
-          console.error("仮ボルト設定の保存に失敗しました: ", err);
-          showCustomAlert(
-            "設定の保存に失敗しました。エラーが発生したため、リロードが必要な場合があります。",
-          );
-        },
-      );
+      updateProjectData(state.currentProjectId, {
+        tempBoltMap: newMap,
+        tempBoltKind: newKind,
+      }).catch((err) => {
+        console.error("仮ボルト設定の保存に失敗しました: ", err);
+        showCustomAlert(
+          "設定の保存に失敗しました。エラーが発生したため、リロードが必要な場合があります。",
+        );
+      });
     });
   }
 }

@@ -58,9 +58,25 @@ export const PRESET_COLORS = [
 ];
 
 export const HUG_BOLT_SIZES = {
-  M16: Array.from({ length: 4 }, (_, i) => `M16×${30 + i * 10}`),
-  M20: Array.from({ length: 7 }, (_, i) => `M20×${40 + i * 10}`),
-  M22: Array.from({ length: 10 }, (_, i) => `M22×${50 + i * 10}`),
+  "M16(HUG)": Array.from({ length: 4 }, (_, i) => `M16×${30 + i * 10}`),
+  "M20(HUG)": Array.from({ length: 7 }, (_, i) => `M20×${40 + i * 10}`),
+  "M22(HUG)": Array.from({ length: 10 }, (_, i) => `M22×${50 + i * 10}`),
+  "W5/8":  [38, 45, 50, 55].map((l) => `W5/8×${l}`),
+  "W3/4":  [38, 45, 50, 55, 60, 65, 70, 75, 80, 90, 100].map((l) => `W3/4×${l}`),
+  "W7/8":  [45, 50, 55, 60, 65, 70, 75, 80, 90, 100, 115].map((l) => `W7/8×${l}`),
+  M16: [35, 40, 45, 50, 55, 60].map((l) => `M16×${l}`),
+  M20: [35, 40, 45, 50, 55, 60, 65, 70, 75, 80, 85, 90, 95, 100].map((l) => `M20×${l}`),
+  M22: [50, 55, 60, 65, 70, 75, 80, 85, 90, 95, 100, 110].map((l) => `M22×${l}`),
+};
+
+export const TEMP_BOLT_KINDS = ["HUG", "中ボルト(Mネジ)", "中ボルト(Wネジ)"];
+export const DEFAULT_TEMP_BOLT_KIND = "HUG";
+
+// 種別 × 本ボルト系統 → HUG_BOLT_SIZES のキー
+export const TEMP_BOLT_KIND_SERIES_MAP = {
+  HUG: { M16: "M16(HUG)", M20: "M20(HUG)", M22: "M22(HUG)" },
+  "中ボルト(Mネジ)": { M16: "M16", M20: "M20", M22: "M22" },
+  "中ボルト(Wネジ)": { M16: "W5/8", M20: "W3/4", M22: "W7/8" },
 };
 
 export const GROUND_ASSEMBLY_JOINT_TYPES = ["girder", "beam", "stud", "other"];
