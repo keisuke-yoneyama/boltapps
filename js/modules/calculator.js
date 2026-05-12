@@ -727,7 +727,10 @@ export const calculateShopTempBoltResults = (project) => {
           }
         });
       } else if (joint.type === "column") {
-        const boltSize = joint.shopTempBoltSize;
+        // サイズは仮ボルト対応設定モーダルで管理（旧データは shopTempBoltSize にフォールバック）
+        const boltSize =
+          (project.tempBoltMap || {})[joint.flangeSize] ||
+          joint.shopTempBoltSize;
         const shopBoltCount = joint.shopTempBoltCount;
         if (boltSize && shopBoltCount > 0) {
           if (!totals[boltSize])

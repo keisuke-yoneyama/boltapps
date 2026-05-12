@@ -2629,9 +2629,9 @@ function setupAddActionEvents() {
       const isComplexSpl = isComplexSplInput.checked;
 
       // 仮ボルト詳細のバリデーション
+      // 本柱のサイズは仮ボルト対応設定モーダルで管理するため、ここではサイズ検証しない
       const showSingle =
-        type === "column" ||
-        (isPin && isDoubleShear && tempSetting === "none" && hasShopSpl);
+        isPin && isDoubleShear && tempSetting === "none" && hasShopSpl;
       const showDual =
         !isPin && tempSetting === "none" && hasShopSpl && type !== "column";
 

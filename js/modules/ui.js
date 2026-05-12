@@ -1024,13 +1024,15 @@ export const populateTempBoltMappingModal = (project) => {
   project.joints
     .filter(
       (j) =>
-        j.tempBoltSetting === "calculated" &&
         j.type !== "wall_girt" &&
         j.type !== "roof_purlin" &&
-        j.type !== "column",
+        (j.type === "column" || j.tempBoltSetting === "calculated"),
     )
     .forEach((j) => {
-      if (j.isComplexSpl && j.webInputs) {
+      if (j.type === "column") {
+        // 本柱はエレクションサイズ（flangeSize）を対象とする
+        if (j.flangeSize) requiredFinalBolts.add(j.flangeSize);
+      } else if (j.isComplexSpl && j.webInputs) {
         j.webInputs.forEach((input) => {
           if (input.size) requiredFinalBolts.add(input.size);
         });

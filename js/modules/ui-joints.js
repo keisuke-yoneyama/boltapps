@@ -1,7 +1,7 @@
 // ui-joints.js
 // 継手関連のUI関数
 
-import { PRESET_COLORS, HUG_BOLT_SIZES, GROUND_ASSEMBLY_JOINT_TYPES, DEFAULT_TEMP_BOLT_KIND, TEMP_BOLT_KINDS } from "./config.js";
+import { PRESET_COLORS, HUG_BOLT_SIZES, GROUND_ASSEMBLY_JOINT_TYPES, DEFAULT_TEMP_BOLT_KIND } from "./config.js";
 import { state } from "./state.js";
 import { boltSort, getTempBoltInfo, getProjectLevels } from "./calculator.js";
 import { openModal } from "./ui-modal.js";
@@ -238,6 +238,9 @@ export const updateJointFormUI = (isModal) => {
     manualTempBoltGroupDual: document.getElementById(
       `${prefix}shop-temp-bolt-group-dual`,
     ),
+    manualTempBoltSizeCol: document.getElementById(
+      `${prefix}shop-temp-bolt-size-col`,
+    ),
     flangePlaceholder: document.getElementById(`${prefix}flange-size`),
     flangeLabel: document.getElementById(`${prefix}flange-label`),
   };
@@ -343,6 +346,9 @@ export const updateJointFormUI = (isModal) => {
   if (type === "column") {
     if (elements.manualTempBoltGroupSingle)
       elements.manualTempBoltGroupSingle.classList.remove("hidden");
+    // 本柱のサイズは仮ボルト対応設定モーダルで管理するため非表示
+    if (elements.manualTempBoltSizeCol)
+      elements.manualTempBoltSizeCol.classList.add("hidden");
     if (elements.flangePlaceholder)
       elements.flangePlaceholder.placeholder = "エレクションサイズ";
     if (elements.flangeLabel) elements.flangeLabel.textContent = "エレクション";
@@ -362,6 +368,9 @@ export const updateJointFormUI = (isModal) => {
       if (isPin && isDoubleShear) {
         if (elements.manualTempBoltGroupSingle)
           elements.manualTempBoltGroupSingle.classList.remove("hidden");
+        // 非column の場合はサイズ列を表示
+        if (elements.manualTempBoltSizeCol)
+          elements.manualTempBoltSizeCol.classList.remove("hidden");
       } else if (!isPin) {
         if (elements.manualTempBoltGroupDual)
           elements.manualTempBoltGroupDual.classList.remove("hidden");
@@ -873,8 +882,16 @@ export const renderJointsList = (project) => {
   };
 
   const _getTempKindBadgesHtml = (joint) => {
-    const excluded = ["wall_girt", "roof_purlin", "column"];
-    if (excluded.includes(joint.type) || joint.tempBoltSetting !== "calculated") return "";
+    const excluded = ["wall_girt", "roof_purlin"];
+    if (excluded.includes(joint.type)) return "";
+    // column は shopTempBoltCount が設定されている場合のみバッジを表示
+    if (joint.type === "column") {
+      if (!joint.shopTempBoltCount) return "";
+      const kindMap = project.tempBoltKindMap || {};
+      const kind = kindMap[joint.flangeSize] || DEFAULT_TEMP_BOLT_KIND;
+      return `<span class="ml-1 text-xs px-1 py-0.5 bg-yellow-100 text-yellow-800 dark:bg-yellow-900/40 dark:text-yellow-200 rounded border border-yellow-300 dark:border-yellow-700 font-medium leading-none">${_shortKindLabel(kind)}</span>`;
+    }
+    if (joint.tempBoltSetting !== "calculated") return "";
     const kindMap = project.tempBoltKindMap || {};
     const kinds = new Set();
     if (joint.isComplexSpl && joint.webInputs) {
