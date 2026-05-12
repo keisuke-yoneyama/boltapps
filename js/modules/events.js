@@ -60,7 +60,6 @@ import { updateProjectData, addProject, deleteProject } from "./db.js";
 import {
   BOLT_TYPES,
   GROUND_ASSEMBLY_JOINT_TYPES,
-  DEFAULT_TEMP_BOLT_KIND,
 } from "./config.js";
 
 import {
@@ -2193,19 +2192,16 @@ function setupTempBoltMappingEvents() {
       if (!tempBoltMappingContainer) return;
 
       const newMap = {};
-      const selects = tempBoltMappingContainer.querySelectorAll(
-        ".temp-bolt-map-select",
-      );
-      selects.forEach((select) => {
+      const newKindMap = {};
+      tempBoltMappingContainer.querySelectorAll(".temp-bolt-map-select").forEach((select) => {
         const finalBolt = select.dataset.finalBolt;
         const tempBolt = select.value;
-        if (finalBolt && tempBolt) {
-          newMap[finalBolt] = tempBolt;
-        }
+        if (finalBolt && tempBolt) newMap[finalBolt] = tempBolt;
       });
-
-      const kindSelectEl = document.getElementById("temp-bolt-kind-select");
-      const newKind = kindSelectEl?.value || DEFAULT_TEMP_BOLT_KIND;
+      tempBoltMappingContainer.querySelectorAll(".temp-bolt-kind-row-select").forEach((select) => {
+        const boltSize = select.dataset.boltSize;
+        if (boltSize) newKindMap[boltSize] = select.value;
+      });
 
       // 1. ローカルのstateを更新
       const project = state.projects.find(
@@ -2213,7 +2209,7 @@ function setupTempBoltMappingEvents() {
       );
       if (project) {
         project.tempBoltMap = newMap;
-        project.tempBoltKind = newKind;
+        project.tempBoltKindMap = newKindMap;
       }
 
       // 2. UI再描画
@@ -2226,7 +2222,7 @@ function setupTempBoltMappingEvents() {
       // 4. DB保存処理
       updateProjectData(state.currentProjectId, {
         tempBoltMap: newMap,
-        tempBoltKind: newKind,
+        tempBoltKindMap: newKindMap,
       }).catch((err) => {
         console.error("仮ボルト設定の保存に失敗しました: ", err);
         showCustomAlert(

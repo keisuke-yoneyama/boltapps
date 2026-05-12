@@ -982,32 +982,36 @@ export function openTempBoltSettingsModal() {
   openModal(modal);
 }
 
-// 種別と本ボルト系統からマッピング行HTMLを生成する
-const _buildTempBoltMappingRows = (sortedFinalBolts, kind, existingMap) =>
-  sortedFinalBolts
-    .map((boltSize) => {
-      const seriesMatch = boltSize.match(/M\d+/);
-      if (!seriesMatch) return "";
-      const mainSeries = seriesMatch[0];
-      const kindKey = TEMP_BOLT_KIND_SERIES_MAP[kind]?.[mainSeries] || "";
-      const availableSizes = HUG_BOLT_SIZES[kindKey] || [];
-      const saved = existingMap[boltSize] || "";
-      const options = availableSizes
-        .map(
-          (s) =>
-            `<option value="${s}" ${s === saved ? "selected" : ""}>${s}</option>`,
-        )
-        .join("");
-      return `
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 items-center p-3 bg-slate-50 dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700">
-          <label class="font-medium text-slate-800 dark:text-slate-100">本ボルト: ${boltSize}</label>
-          <select data-final-bolt="${boltSize}" class="temp-bolt-map-select w-full bg-white dark:bg-slate-700 border-slate-300 dark:border-slate-600 text-slate-900 dark:text-slate-100 rounded-lg p-2 focus:ring-yellow-500 focus:border-yellow-500">
-            <option value="">仮ボルトを選択...</option>
-            ${options}
-          </select>
-        </div>`;
-    })
+// 1行分のHTML生成（本ボルトサイズ・既存マップ・既存種別マップを受け取る）
+const _buildTempBoltMappingRow = (boltSize, existingMap, existingKindMap) => {
+  const seriesMatch = boltSize.match(/M\d+/);
+  if (!seriesMatch) return "";
+  const mainSeries = seriesMatch[0];
+  const savedKind = existingKindMap[boltSize] || DEFAULT_TEMP_BOLT_KIND;
+  const savedSize = existingMap[boltSize] || "";
+
+  const kindOptions = TEMP_BOLT_KINDS.map(
+    (k) => `<option value="${k}" ${k === savedKind ? "selected" : ""}>${k}</option>`,
+  ).join("");
+
+  const kindKey = TEMP_BOLT_KIND_SERIES_MAP[savedKind]?.[mainSeries] || "";
+  const availableSizes = HUG_BOLT_SIZES[kindKey] || [];
+  const sizeOptions = availableSizes
+    .map((s) => `<option value="${s}" ${s === savedSize ? "selected" : ""}>${s}</option>`)
     .join("");
+
+  return `
+    <div class="grid grid-cols-3 gap-3 items-center p-3 bg-slate-50 dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700">
+      <label class="font-medium text-slate-800 dark:text-slate-100 text-sm">本ボルト: ${boltSize}</label>
+      <select data-bolt-size="${boltSize}" class="temp-bolt-kind-row-select w-full bg-white dark:bg-slate-700 border-slate-300 dark:border-slate-600 text-slate-900 dark:text-slate-100 rounded-lg p-2 text-sm focus:ring-yellow-500 focus:border-yellow-500">
+        ${kindOptions}
+      </select>
+      <select data-final-bolt="${boltSize}" class="temp-bolt-map-select w-full bg-white dark:bg-slate-700 border-slate-300 dark:border-slate-600 text-slate-900 dark:text-slate-100 rounded-lg p-2 text-sm focus:ring-yellow-500 focus:border-yellow-500">
+        <option value="">選択...</option>
+        ${sizeOptions}
+      </select>
+    </div>`;
+};
 
 // ─── populateTempBoltMappingModal ─────────────────────────────────
 export const populateTempBoltMappingModal = (project) => {
@@ -1015,16 +1019,6 @@ export const populateTempBoltMappingModal = (project) => {
 
   const container = document.getElementById("temp-bolt-mapping-container");
   if (!container) return;
-
-  const currentKind = project.tempBoltKind || DEFAULT_TEMP_BOLT_KIND;
-
-  const kindSelectorHtml = `
-    <div class="mb-4 flex items-center gap-4 p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg border border-yellow-200 dark:border-yellow-700">
-      <label class="text-sm font-medium text-slate-700 dark:text-slate-300 whitespace-nowrap">使用する仮ボルト種別</label>
-      <select id="temp-bolt-kind-select" class="bg-white dark:bg-slate-700 border-slate-300 dark:border-slate-600 text-slate-900 dark:text-slate-100 rounded-lg p-2 focus:ring-yellow-500 focus:border-yellow-500">
-        ${TEMP_BOLT_KINDS.map((k) => `<option value="${k}" ${k === currentKind ? "selected" : ""}>${k}</option>`).join("")}
-      </select>
-    </div>`;
 
   const requiredFinalBolts = new Set();
   project.joints
@@ -1047,9 +1041,7 @@ export const populateTempBoltMappingModal = (project) => {
     });
 
   if (requiredFinalBolts.size === 0) {
-    container.innerHTML =
-      kindSelectorHtml +
-      '<p class="text-slate-500">仮ボルトを使用する継手が登録されていません。</p>';
+    container.innerHTML = '<p class="text-slate-500">仮ボルトを使用する継手が登録されていません。</p>';
     return;
   }
 
@@ -1067,24 +1059,35 @@ export const populateTempBoltMappingModal = (project) => {
   });
 
   const existingMap = project.tempBoltMap || {};
+  const existingKindMap = project.tempBoltKindMap || {};
 
-  container.innerHTML =
-    kindSelectorHtml +
-    `<div id="temp-bolt-mapping-rows" class="space-y-3">
-      ${_buildTempBoltMappingRows(sortedFinalBolts, currentKind, existingMap)}
+  const headerHtml = `
+    <div class="grid grid-cols-3 gap-3 px-3 pb-1 text-xs font-semibold text-slate-500 dark:text-slate-400">
+      <span>本ボルト</span><span>仮ボルト種別</span><span>仮ボルトサイズ</span>
     </div>`;
 
-  const kindSelect = document.getElementById("temp-bolt-kind-select");
-  if (kindSelect) {
-    kindSelect.addEventListener("change", () => {
-      const rowsContainer = document.getElementById("temp-bolt-mapping-rows");
-      if (rowsContainer) {
-        rowsContainer.innerHTML = _buildTempBoltMappingRows(
-          sortedFinalBolts,
-          kindSelect.value,
-          existingMap,
-        );
-      }
-    });
-  }
+  container.innerHTML =
+    headerHtml +
+    `<div class="space-y-2">
+      ${sortedFinalBolts.map((b) => _buildTempBoltMappingRow(b, existingMap, existingKindMap)).join("")}
+    </div>`;
+
+  // 種別変更時に仮ボルトサイズの選択肢を更新（イベント委譲）
+  container.addEventListener("change", (e) => {
+    const kindSel = e.target.closest(".temp-bolt-kind-row-select");
+    if (!kindSel) return;
+    const boltSize = kindSel.dataset.boltSize;
+    const seriesMatch = boltSize.match(/M\d+/);
+    if (!seriesMatch) return;
+    const mainSeries = seriesMatch[0];
+    const newKind = kindSel.value;
+    const kindKey = TEMP_BOLT_KIND_SERIES_MAP[newKind]?.[mainSeries] || "";
+    const availableSizes = HUG_BOLT_SIZES[kindKey] || [];
+    const sizeSelect = container.querySelector(`.temp-bolt-map-select[data-final-bolt="${boltSize}"]`);
+    if (sizeSelect) {
+      sizeSelect.innerHTML =
+        `<option value="">選択...</option>` +
+        availableSizes.map((s) => `<option value="${s}">${s}</option>`).join("");
+    }
+  });
 };

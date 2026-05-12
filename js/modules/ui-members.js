@@ -7,7 +7,6 @@ import {
   getTempBoltInfo,
   getProjectLevels,
 } from "./calculator.js";
-import { DEFAULT_TEMP_BOLT_KIND } from "./config.js";
 import { openModal } from "./ui-modal.js";
 import { populateJointDropdownForEdit } from "./ui-joints.js";
 import { generateCustomInputFields } from "./ui-projects.js";
@@ -453,14 +452,6 @@ export const renderMemberLists = (project) => {
       ],
     },
   ];
-
-  // ヘッダーバーのインジケーターを更新（継手タブと共有）
-  const _indicator = document.getElementById("temp-bolt-kind-indicator");
-  if (_indicator) {
-    const _kindLabel = project.tempBoltKind || DEFAULT_TEMP_BOLT_KIND;
-    _indicator.textContent = `使用する仮ボルト：${_kindLabel}`;
-    _indicator.classList.remove("hidden");
-  }
 
   // 凡例
   let html = `

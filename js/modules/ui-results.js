@@ -20,6 +20,26 @@ import { getJointFilterId, getJointFilterLabel, getJointCategoryColorClasses, ge
 import { updateProjectData } from "./db.js";
 import { DEFAULT_TEMP_BOLT_KIND } from "./config.js";
 
+// tempBoltMap + tempBoltKindMap から { tempBoltSize: shortKindLabel } を構築
+const _buildTempSizeKindMap = (project) => {
+  const result = {};
+  const boltMap = project.tempBoltMap || {};
+  const kindMap = project.tempBoltKindMap || {};
+  Object.keys(boltMap).forEach((mainSize) => {
+    const tempSize = boltMap[mainSize];
+    if (!tempSize) return;
+    const kind = kindMap[mainSize] || DEFAULT_TEMP_BOLT_KIND;
+    result[tempSize] = _shortKindLabel(kind);
+  });
+  return result;
+};
+
+const _shortKindLabel = (kind) => {
+  if (kind === "中ボルト(Mネジ)") return "中ボM";
+  if (kind === "中ボルト(Wネジ)") return "中ボW";
+  return "HUG";
+};
+
 // 集計状態の変数
 export let currentGroupingState = {};
 export let currentViewMode = "detailed";
@@ -265,7 +285,7 @@ export function renderAggregatedTables(
   specialBolts = {},
   onlySpecial = false,
   isTempBolt = false,
-  tempBoltKind = null,
+  tempSizeKindMap = null,
 ) {
   container.innerHTML = "";
 
@@ -319,8 +339,8 @@ export function renderAggregatedTables(
         let type = "-";
         if (!isTempBolt) {
           type = key.includes("■") ? "F8T" : "S10T";
-        } else if (tempBoltKind) {
-          type = tempBoltKind;
+        } else if (tempSizeKindMap) {
+          type = tempSizeKindMap[key] || "-";
         }
 
         const commonCellClass = `px-4 py-2 border border-${color}-200 dark:border-slate-700 text-center`;
@@ -990,7 +1010,7 @@ export const renderTempOrderDetails = (
         {},
         false,
         true,
-        project.tempBoltKind || DEFAULT_TEMP_BOLT_KIND,
+        _buildTempSizeKindMap(project),
       );
     };
 
@@ -1087,9 +1107,9 @@ export const renderTempBoltResults = (project) => {
 
   const sortedSizes = Array.from(filteredBoltSizes).sort(boltSort);
 
-  const _tempKindLabel = project.tempBoltKind || DEFAULT_TEMP_BOLT_KIND;
+  const _tempSizeKindMap = _buildTempSizeKindMap(project);
   let floorTable = `<div id="anchor-temp-bolt" data-section-title="仮ボルト集計：フロア工区別" data-section-color="green" class="scroll-mt-24">
-                    <h2 class="text-2xl font-bold mt-8 mb-4 border-b-2 border-green-400 pb-2 text-slate-900 dark:text-slate-100 flex items-baseline gap-3">仮ボルト本数集計<span class="text-sm font-normal px-2 py-0.5 bg-yellow-100 text-yellow-800 dark:bg-yellow-900/40 dark:text-yellow-200 rounded border border-yellow-300 dark:border-yellow-700">使用する仮ボルト：${_tempKindLabel}</span></h2>
+                    <h2 class="text-2xl font-bold mt-8 mb-4 border-b-2 border-green-400 pb-2 text-slate-900 dark:text-slate-100">仮ボルト本数集計</h2>
                       <h3 class="text-xl font-semibold text-slate-800 dark:text-slate-200 mb-2">フロア工区別</h3>
                       <div class="overflow-x-auto custom-scrollbar">
                         <table class="w-auto text-sm border-collapse">
@@ -1108,7 +1128,8 @@ export const renderTempBoltResults = (project) => {
     let grandTotal = 0;
     const grandTotalJoints = {};
     const grandTotalQtyMap = {};
-    let rowHtml = `<tr class="hover:bg-slate-50 dark:hover:bg-slate-700/50"><td class="px-2 py-2 font-bold text-gray-900 dark:text-gray-100 sticky left-0 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700">${size}</td>`;
+    const _kindSuffix = _tempSizeKindMap[size] ? `(${_tempSizeKindMap[size]})` : "";
+    let rowHtml = `<tr class="hover:bg-slate-50 dark:hover:bg-slate-700/50"><td class="px-2 py-2 font-bold text-gray-900 dark:text-gray-100 sticky left-0 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700">${size}${_kindSuffix}</td>`;
 
     locations.forEach((loc) => {
       const cellData = resultsByLocation[loc.id]?.[size];
@@ -1175,25 +1196,26 @@ export const renderShopTempBoltResults = (project) => {
   }
 
   const sortedSizes = Object.keys(totals).sort(boltSort);
+  const _shopSizeKindMap = _buildTempSizeKindMap(project);
 
   let tableRows = "";
   sortedSizes.forEach((size) => {
     const data = totals[size];
     const jointNamesString = Array.from(data.joints).join(", ");
+    const kindSuffix = _shopSizeKindMap[size] ? `(${_shopSizeKindMap[size]})` : "";
 
     tableRows += `
                     <tr class="hover:bg-slate-50 dark:hover:bg-slate-700/50">
-                        <td class="px-2 py-2 border border-slate-200 dark:border-slate-700 text-center">${size}</td>
+                        <td class="px-2 py-2 border border-slate-200 dark:border-slate-700 text-center">${size}${kindSuffix}</td>
                         <td class="px-2 py-2 border border-slate-200 dark:border-slate-700 text-center">${data.total.toLocaleString()}</td>
                         <td class="px-2 py-2 border border-slate-200 dark:border-slate-700 text-center">${jointNamesString}</td>
                     </tr>
                 `;
   });
 
-  const _shopKindLabel = project.tempBoltKind || DEFAULT_TEMP_BOLT_KIND;
   return `
                 <div id="anchor-shop-bolt" data-section-title="工場仮ボルト集計" data-section-color="cyan" class="scroll-mt-24">
-                    <h2 class="text-2xl font-bold mt-8 mb-4 border-b-2 border-cyan-400 pb-2 text-slate-900 dark:text-slate-100 flex items-baseline gap-3">工場使用仮ボルト集計<span class="text-sm font-normal px-2 py-0.5 bg-yellow-100 text-yellow-800 dark:bg-yellow-900/40 dark:text-yellow-200 rounded border border-yellow-300 dark:border-yellow-700">使用する仮ボルト：${_shopKindLabel}</span></h2>
+                    <h2 class="text-2xl font-bold mt-8 mb-4 border-b-2 border-cyan-400 pb-2 text-slate-900 dark:text-slate-100">工場使用仮ボルト集計</h2>
                 <div class="overflow-x-auto custom-scrollbar">
                     <table class="w-auto text-sm border-collapse">
                         <thead class="bg-slate-200 dark:bg-slate-700 text-xs text-slate-700 dark:text-slate-300">

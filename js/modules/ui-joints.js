@@ -1,7 +1,7 @@
 // ui-joints.js
 // 継手関連のUI関数
 
-import { PRESET_COLORS, HUG_BOLT_SIZES, GROUND_ASSEMBLY_JOINT_TYPES, DEFAULT_TEMP_BOLT_KIND } from "./config.js";
+import { PRESET_COLORS, HUG_BOLT_SIZES, GROUND_ASSEMBLY_JOINT_TYPES, DEFAULT_TEMP_BOLT_KIND, TEMP_BOLT_KINDS } from "./config.js";
 import { state } from "./state.js";
 import { boltSort, getTempBoltInfo, getProjectLevels } from "./calculator.js";
 import { openModal } from "./ui-modal.js";
@@ -866,6 +866,29 @@ export const renderJointsList = (project) => {
   const editIconSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>`;
   const memberIconSvgRaw = `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>`;
 
+  const _shortKindLabel = (kind) => {
+    if (kind === "中ボルト(Mネジ)") return "中ボ(M)";
+    if (kind === "中ボルト(Wネジ)") return "中ボ(W)";
+    return "HUG";
+  };
+
+  const _getTempKindBadgesHtml = (joint) => {
+    const excluded = ["wall_girt", "roof_purlin", "column"];
+    if (excluded.includes(joint.type) || joint.tempBoltSetting !== "calculated") return "";
+    const kindMap = project.tempBoltKindMap || {};
+    const kinds = new Set();
+    if (joint.isComplexSpl && joint.webInputs) {
+      joint.webInputs.forEach((w) => { if (w.size) kinds.add(kindMap[w.size] || DEFAULT_TEMP_BOLT_KIND); });
+    } else {
+      if (joint.flangeSize) kinds.add(kindMap[joint.flangeSize] || DEFAULT_TEMP_BOLT_KIND);
+      if (joint.webSize && joint.webSize !== joint.flangeSize) kinds.add(kindMap[joint.webSize] || DEFAULT_TEMP_BOLT_KIND);
+    }
+    if (kinds.size === 0) return "";
+    return Array.from(kinds).map((k) =>
+      `<span class="ml-1 text-xs px-1 py-0.5 bg-yellow-100 text-yellow-800 dark:bg-yellow-900/40 dark:text-yellow-200 rounded border border-yellow-300 dark:border-yellow-700 font-medium leading-none">${_shortKindLabel(k)}</span>`
+    ).join("");
+  };
+
   const populateTable = (tbodyId, joints, color) => {
     const tbody = document.getElementById(tbodyId);
     if (!tbody) return;
@@ -880,6 +903,8 @@ export const renderJointsList = (project) => {
         const memberIconHtml = joint.countAsMember
           ? `<span class="inline-flex items-center justify-center ml-1 text-emerald-600 dark:text-emerald-400 cursor-help" title="部材として集計される継手">${memberIconSvgRaw}</span>`
           : "";
+
+        const tempKindBadgesHtml = _getTempKindBadgesHtml(joint);
 
         let boltInfo = "";
         const borderColor = "border-slate-400",
@@ -947,8 +972,8 @@ export const renderJointsList = (project) => {
                     </div>
                 </td>
                 <td class="px-4 py-3 font-medium text-gray-900 dark:text-gray-100 border-b border-r js-searchable-name ${borderColor} ${darkBorderColor}">
-                    <div class="flex items-center">
-                        ${joint.name}${colorBadge}${memberIconHtml}
+                    <div class="flex items-center flex-wrap gap-y-1">
+                        ${joint.name}${colorBadge}${memberIconHtml}${tempKindBadgesHtml}
                     </div>
                 </td>
                 ${boltInfo}
@@ -1100,14 +1125,6 @@ export const renderJointsList = (project) => {
       ],
     },
   ];
-
-  // ヘッダーバーのインジケーターを更新
-  const _indicator = document.getElementById("temp-bolt-kind-indicator");
-  if (_indicator) {
-    const _kindLabel = project.tempBoltKind || DEFAULT_TEMP_BOLT_KIND;
-    _indicator.textContent = `使用する仮ボルト：${_kindLabel}`;
-    _indicator.classList.remove("hidden");
-  }
 
   // 凡例
   let html = `
