@@ -40,6 +40,29 @@ const _shortKindLabel = (kind) => {
   return "HUG";
 };
 
+// 種別→系統→ボルト長さ の順でソートする比較関数を返す
+const _makeTempBoltSortFn = (tempSizeKindMap) => (a, b) => {
+  const kindOrder = ["HUG", "中ボM", "中ボW"];
+  const map = tempSizeKindMap || {};
+  const kindA = map[a] || "HUG";
+  const kindB = map[b] || "HUG";
+  const kindRankA = kindOrder.indexOf(kindA) >= 0 ? kindOrder.indexOf(kindA) : kindOrder.length;
+  const kindRankB = kindOrder.indexOf(kindB) >= 0 ? kindOrder.indexOf(kindB) : kindOrder.length;
+  if (kindRankA !== kindRankB) return kindRankA - kindRankB;
+
+  const seriesRank = (s) => {
+    if (/^M16/.test(s) || /^W5\/8/.test(s)) return 16;
+    if (/^M20/.test(s) || /^W3\/4/.test(s)) return 20;
+    if (/^M22/.test(s) || /^W7\/8/.test(s)) return 22;
+    return 99;
+  };
+  const srA = seriesRank(a), srB = seriesRank(b);
+  if (srA !== srB) return srA - srB;
+
+  const len = (s) => { const m = s.match(/[×xX](\d+)/); return m ? parseInt(m[1]) : 999; };
+  return len(a) - len(b);
+};
+
 // 集計状態の変数
 export let currentGroupingState = {};
 export let currentViewMode = "detailed";
@@ -311,8 +334,11 @@ export function renderAggregatedTables(
     let body = "";
     let tableTotalWeight = 0;
 
+    const _sortFn = isTempBolt && tempSizeKindMap
+      ? _makeTempBoltSortFn(tempSizeKindMap)
+      : boltSort;
     Object.keys(data)
-      .sort(boltSort)
+      .sort(_sortFn)
       .forEach((key) => {
         const rawValue = data[key];
         const boltCount =
@@ -1105,9 +1131,8 @@ export const renderTempBoltResults = (project) => {
     return "";
   }
 
-  const sortedSizes = Array.from(filteredBoltSizes).sort(boltSort);
-
   const _tempSizeKindMap = _buildTempSizeKindMap(project);
+  const sortedSizes = Array.from(filteredBoltSizes).sort(_makeTempBoltSortFn(_tempSizeKindMap));
   let floorTable = `<div id="anchor-temp-bolt" data-section-title="仮ボルト集計：フロア工区別" data-section-color="green" class="scroll-mt-24">
                     <h2 class="text-2xl font-bold mt-8 mb-4 border-b-2 border-green-400 pb-2 text-slate-900 dark:text-slate-100">仮ボルト本数集計</h2>
                       <h3 class="text-xl font-semibold text-slate-800 dark:text-slate-200 mb-2">フロア工区別</h3>
@@ -1195,18 +1220,19 @@ export const renderShopTempBoltResults = (project) => {
     return "";
   }
 
-  const sortedSizes = Object.keys(totals).sort(boltSort);
   const _shopSizeKindMap = _buildTempSizeKindMap(project);
+  const sortedSizes = Object.keys(totals).sort(_makeTempBoltSortFn(_shopSizeKindMap));
 
   let tableRows = "";
   sortedSizes.forEach((size) => {
     const data = totals[size];
     const jointNamesString = Array.from(data.joints).join(", ");
-    const kindSuffix = _shopSizeKindMap[size] ? `(${_shopSizeKindMap[size]})` : "";
+    const kindLabel = _shopSizeKindMap[size] || "HUG";
 
     tableRows += `
                     <tr class="hover:bg-slate-50 dark:hover:bg-slate-700/50">
-                        <td class="px-2 py-2 border border-slate-200 dark:border-slate-700 text-center">${size}${kindSuffix}</td>
+                        <td class="px-2 py-2 border border-slate-200 dark:border-slate-700 text-center">${kindLabel}</td>
+                        <td class="px-2 py-2 border border-slate-200 dark:border-slate-700 text-center">${size}</td>
                         <td class="px-2 py-2 border border-slate-200 dark:border-slate-700 text-center">${data.total.toLocaleString()}</td>
                         <td class="px-2 py-2 border border-slate-200 dark:border-slate-700 text-center">${jointNamesString}</td>
                     </tr>
@@ -1220,6 +1246,7 @@ export const renderShopTempBoltResults = (project) => {
                     <table class="w-auto text-sm border-collapse">
                         <thead class="bg-slate-200 dark:bg-slate-700 text-xs text-slate-700 dark:text-slate-300">
                             <tr>
+                                <th class="px-2 py-3 border border-slate-300 dark:border-slate-600 text-center">種別</th>
                                 <th class="px-2 py-3 border border-slate-300 dark:border-slate-600 text-center">ボルトサイズ</th>
                                 <th class="px-2 py-3 border border-slate-300 dark:border-slate-600 text-center">本数</th>
                                 <th class="px-2 py-3 border border-slate-300 dark:border-slate-600 text-center">継手名</th>
