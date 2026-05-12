@@ -75,6 +75,35 @@ const BOLT_TYPE_ORDER = [
   "Dユニ16",
 ];
 
+// ─── ボルト種別フィルタ ───────────────────────────────────────────
+// フランジ・ウェブサイズ入力に対し、継手種別に応じた除外フィルタを返す
+const _BOLT_SIZE_INPUT_IDS = new Set([
+  "flange-size", "web-size", "web-size-2", "web-size-3", "web-size-4",
+  "edit-flange-size", "edit-web-size", "edit-web-size-2", "edit-web-size-3", "edit-web-size-4",
+]);
+
+const _STANDARD_M_TYPES = new Set([
+  "M16", "M16めっき", "M20", "M20めっき", "M22", "M22めっき",
+]);
+
+const _getJointTypeExcludeFilter = (inputId) => {
+  if (!_BOLT_SIZE_INPUT_IDS.has(inputId)) return null;
+  const isEdit = inputId.startsWith("edit-");
+  const jointType = document.getElementById(isEdit ? "edit-joint-type" : "joint-type")?.value;
+  if (!jointType) return null;
+
+  if (jointType === "wall_girt" || jointType === "roof_purlin") {
+    // 胴縁・母屋: M系6種を除外
+    return (type) => _STANDARD_M_TYPES.has(type);
+  }
+  // 大梁・小梁・本柱・間柱・その他: 中ボ系・Dドブ系・Dユニ系を除外
+  return (type) =>
+    type.startsWith("中ボルト") ||
+    type.startsWith("中ボ") ||
+    type.startsWith("Dドブ") ||
+    type.startsWith("Dユニ");
+};
+
 // ─── モジュールレベル変数 ──────────────────────────────────────────
 let isQuickNavOpen = false;
 
@@ -101,7 +130,7 @@ export const performHistoryAction = (action) => {
 /**
  * グローバルボルト選択モーダルの中身（ボタン一覧）を種類ごとに生成する
  */
-export const populateGlobalBoltSelectorModal = (currentValue = "") => {
+export const populateGlobalBoltSelectorModal = (currentValue = "", excludeType = null) => {
   const container = document.getElementById("bolt-options-container");
   if (!container) return;
 
@@ -109,9 +138,10 @@ export const populateGlobalBoltSelectorModal = (currentValue = "") => {
 
   const bolts = state.globalBoltSizes || [];
 
-  // 種類ごとにグループ化
+  // 種類ごとにグループ化（継手種別によるフィルタを適用）
   const grouped = {};
   bolts.forEach((b) => {
+    if (excludeType && excludeType(b.type)) return;
     const type = b.type;
     if (!grouped[type]) grouped[type] = [];
     grouped[type].push(b);
@@ -176,7 +206,8 @@ export const openBoltSelectorModal = (targetInputId) => {
   state.activeBoltTarget = document.getElementById(targetInputId);
 
   if (state.activeBoltTarget) {
-    populateGlobalBoltSelectorModal(state.activeBoltTarget.value || "");
+    const excludeType = _getJointTypeExcludeFilter(targetInputId);
+    populateGlobalBoltSelectorModal(state.activeBoltTarget.value || "", excludeType);
     const modal = document.getElementById("bolt-selector-modal");
     openModal(modal);
   }

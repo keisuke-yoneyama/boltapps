@@ -739,20 +739,10 @@ function setupBoltSizeInputClicked() {
 
   boltInputIds.forEach((id) => {
     const inputElement = document.getElementById(id);
-
-    // 要素が存在する場合のみイベントを設定
     if (inputElement) {
-      // クリックされたらボルト選択モーダルを開く
-      inputElement.addEventListener("click", (e) => {
-        // 1. 現在操作中の入力欄を state に保存
-        state.activeBoltTarget = e.target;
-
-        // 2. モーダルの中身（ボタン一覧）を生成（現在値をハイライト）
-        populateGlobalBoltSelectorModal(e.target.value || "");
-
-        // 3. モーダルを表示
-        const modal = document.getElementById("bolt-selector-modal");
-        openModal(modal);
+      // openBoltSelectorModal 経由にすることで継手種別フィルタが適用される
+      inputElement.addEventListener("click", () => {
+        openBoltSelectorModal(id);
       });
     }
   });
