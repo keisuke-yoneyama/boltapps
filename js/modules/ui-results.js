@@ -42,7 +42,18 @@ const _shortKindLabel = (kind) => {
 
 // ボルトサイズキーから表示用の cleanSize と typeLabel を分解する
 // 例: "M22×65■(地組)" → { cleanSize: "M22×65", typeLabel: "F8T(地組)" }
+// 例: "Dユニ16×45"    → { cleanSize: "M16×45",  typeLabel: "Dユニ" }
+// 例: "中ボM16×45"    → { cleanSize: "M16×45",  typeLabel: "中ボ" }
 const _parseBoltSizeKey = (key) => {
+  // D-Lock系: Dユニ16×45, Dドブ20×50 など
+  const dLockMatch = key.match(/^(Dユニ|Dドブ)(\d.*)$/);
+  if (dLockMatch) return { cleanSize: `M${dLockMatch[2]}`, typeLabel: dLockMatch[1] };
+
+  // 中ボルト系: 中ボM16×45, 中ボM20×65 など ("中ボ" の2文字を除いた残りがサイズ)
+  if (key.startsWith("中ボ")) return { cleanSize: key.slice(2), typeLabel: "中ボ" };
+  if (key.startsWith("中")) return { cleanSize: key.replace(/^中[^\d×]*/, ""), typeLabel: "中ボ(ミリ)" };
+
+  // M系ボルト: ■・(地組)・(工場地組)・(本柱) サフィックスを解析
   const isPlated = key.includes("■");
   const isShopAssembly = key.includes("(工場地組)");
   const isGroundAssembly = key.includes("(地組)");
@@ -331,14 +342,15 @@ export function renderAggregatedTables(
 ) {
   container.innerHTML = "";
 
-  const renderTableHtml = (title, data, color, customHeader = null) => {
+  // skipWeight: D-Lock/中ボ系など重量列が不要なテーブルに true を渡す
+  const renderTableHtml = (title, data, color, customHeader = null, skipWeight = false) => {
     if (!data || Object.keys(data).length === 0) return "";
 
     let headers = "";
     if (customHeader) {
       headers = customHeader;
     } else {
-      const weightHeader = !isTempBolt
+      const weightHeader = !isTempBolt && !skipWeight
         ? `<th class="px-4 py-2 border border-${color}-300 dark:border-slate-600 text-center bg-${color}-200 dark:bg-slate-700 text-${color}-800 dark:text-${color}-200 whitespace-nowrap">重量(kg)</th>`
         : "";
 
@@ -371,7 +383,7 @@ export function renderAggregatedTables(
         let weightValue = "-";
         let weightTooltip = "";
 
-        if (!isTempBolt) {
+        if (!isTempBolt && !skipWeight) {
           const singleWeightG = getBoltWeight(key);
           rowWeightKg = (boltCount * singleWeightG) / 1000;
           tableTotalWeight += rowWeightKg;
@@ -381,13 +393,15 @@ export function renderAggregatedTables(
             singleWeightG > 0 ? `単体重量: ${singleWeightG} g` : "";
         }
 
+        // typeLabel は _parseBoltSizeKey で一元管理（D-Lock/中ボ/F8T/S10T を正しく判定）
         let type = "-";
         if (!isTempBolt) {
-          type = key.includes("■") ? "F8T" : "S10T";
+          type = _parseBoltSizeKey(key).typeLabel;
         } else if (tempSizeKindMap) {
           type = tempSizeKindMap[key] || "-";
         }
 
+        const { cleanSize: _cs } = _parseBoltSizeKey(key);
         const commonCellClass = `px-4 py-2 border border-${color}-200 dark:border-slate-700 text-center`;
 
         const hasJoints =
@@ -397,7 +411,7 @@ export function renderAggregatedTables(
           Object.keys(rawValue.joints).length > 0;
         const qtyMapJson = (hasJoints && rawValue.qtyMap) ? JSON.stringify(rawValue.qtyMap).replace(/'/g, "&#39;") : "{}";
         const detailsAttr = hasJoints
-          ? ` data-details='${JSON.stringify(rawValue.joints).replace(/'/g, "&#39;")}' data-bolt-size="${key}" data-qty='${qtyMapJson}'`
+          ? ` data-details='${JSON.stringify(rawValue.joints).replace(/'/g, "&#39;")}' data-bolt-size="${_cs}" data-qty='${qtyMapJson}'`
           : "";
         const detailsClass = hasJoints ? " has-details cursor-pointer" : "";
 
@@ -408,16 +422,13 @@ export function renderAggregatedTables(
                     <td class="${commonCellClass} font-medium${detailsClass}"${detailsAttr}>${boltCount.toLocaleString()}</td>
                 `;
         } else {
-          const { cleanSize: _cs } = _parseBoltSizeKey(key);
-          const displayKey = _cs;
-
-          const weightCell = !isTempBolt
+          const weightCell = !isTempBolt && !skipWeight
             ? `<td class="${commonCellClass} text-slate-500" title="${weightTooltip}">${weightValue}</td>`
             : "";
 
           rowContent = `
                     <td class="${commonCellClass}">${type}</td>
-                    <td class="${commonCellClass}">${displayKey}</td>
+                    <td class="${commonCellClass}">${_cs}</td>
                     <td class="${commonCellClass} font-medium${detailsClass}"${detailsAttr}>${boltCount.toLocaleString()}</td>
                     ${weightCell}
                 `;
@@ -427,7 +438,7 @@ export function renderAggregatedTables(
       });
 
     const totalWeightDisplay =
-      !isTempBolt && !customHeader && tableTotalWeight > 0
+      !isTempBolt && !customHeader && !skipWeight && tableTotalWeight > 0
         ? `<span class="ml-auto text-sm font-bold text-red-600 dark:text-red-400">合計: ${tableTotalWeight.toFixed(
             1,
           )} kg</span>`
@@ -482,34 +493,14 @@ export function renderAggregatedTables(
       tablesHtml += renderTableHtml("柱用", specialBolts.column, "purple");
     }
 
-    const simpleHeader = (color) => `<tr>
-            <th class="px-4 py-2 border border-${color}-300 dark:border-slate-600 text-center bg-${color}-200 dark:bg-slate-700 text-${color}-800 dark:text-${color}-200 whitespace-nowrap">ボルトサイズ</th>
-            <th class="px-4 py-2 border border-${color}-300 dark:border-slate-600 text-center bg-${color}-200 dark:bg-slate-700 text-${color}-800 dark:text-${color}-200 whitespace-nowrap">本数</th>
-        </tr>`;
-
     if (specialBolts.dLock) {
-      tablesHtml += renderTableHtml(
-        "D-Lock",
-        specialBolts.dLock,
-        "gray",
-        simpleHeader("gray"),
-      );
+      tablesHtml += renderTableHtml("D-Lock", specialBolts.dLock, "gray", null, true);
     }
     if (specialBolts.naka) {
-      tablesHtml += renderTableHtml(
-        "中ボルト(ミリ)",
-        specialBolts.naka,
-        "blue",
-        simpleHeader("blue"),
-      );
+      tablesHtml += renderTableHtml("中ボルト(ミリ)", specialBolts.naka, "blue", null, true);
     }
     if (specialBolts.nakaM) {
-      tablesHtml += renderTableHtml(
-        "中ボルト(Mネジ)",
-        specialBolts.nakaM,
-        "teal",
-        simpleHeader("teal"),
-      );
+      tablesHtml += renderTableHtml("中ボルト(Mネジ)", specialBolts.nakaM, "teal", null, true);
     }
   }
 
