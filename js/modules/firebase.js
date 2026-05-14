@@ -22,53 +22,40 @@ import {
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // --- Firebase Configuration ---
-// const netlifyFirebaseConfig = {
-//   apiKey: "AIzaSyD91klyordRm3DGALHb-pYyxJzVY4NmCn0",←古いキー
-//   authDomain: "bolt-calculator-3b175.firebaseapp.com",
-//   projectId: "bolt-calculator-3b175",
-//   storageBucket: "bolt-calculator-3b175.firebasestorage.app",
-//   messagingSenderId: "809544857551",
-//   appId: "1:809544857551:web:9e191c0267e315e80b44ba",
-//   measurementId: "G-ELKPMVBL71",
-// };
 //
-// 自動生成されるファイルをインポート
-// ※ ローカル開発時はこのファイルがないのでエラーにならないよう工夫が必要
+// 設定の優先順位:
+//   1. __firebase_config グローバル変数 (Canvas開発環境 / Netlifyスニペット注入)
+//      → Netlify: Site Settings > Build & Deploy > Snippet injection で注入
+//   2. firebase-env.js (ローカル開発用オプション。.gitignore 対象)
+//
+// Netlify本番では スニペットで __firebase_config と __app_id を定義すること。
+
+// ローカル開発用: firebase-env.js が存在すればそこから読む（任意）
 let firebaseEnv = {};
 try {
   const env = await import("./firebase-env.js");
   firebaseEnv = env.firebaseEnv;
-  console.log("✅ firebase.js: Loaded configuration from firebase-env.js");
+  console.log("✅ firebase.js: firebase-env.js から設定を読み込みました");
 } catch (e) {
-  console.log("firebase-env.js not found, using fallback or local config");
+  // firebase-env.js なし → __firebase_config を使用
 }
-
-// Netlifyの設定 (環境変数から生成されたオブジェクトを使用)
-const netlifyFirebaseConfig = {
-  apiKey: firebaseEnv.apiKey,
-  authDomain: firebaseEnv.authDomain,
-  projectId: firebaseEnv.projectId,
-  storageBucket: firebaseEnv.storageBucket,
-  messagingSenderId: firebaseEnv.messagingSenderId,
-  appId: firebaseEnv.appId,
-  measurementId: firebaseEnv.measurementId,
-};
-
-// --- 3. 最終的な設定値の確認 ---
-// ※ 重要: APIキーが空になっていないかコンソールで確認してください
-console.log(
-  "🔥 firebase.js: Final Config API Key:",
-  netlifyFirebaseConfig.apiKey ? "OK (Exists)" : "MISSING (Empty!)",
-);
-console.log(
-  "🔥 firebase.js: Final Config Project ID:",
-  netlifyFirebaseConfig.projectId,
-);
 
 const firebaseConfig =
   typeof __firebase_config !== "undefined"
     ? JSON.parse(__firebase_config)
-    : netlifyFirebaseConfig;
+    : {
+        apiKey: firebaseEnv.apiKey,
+        authDomain: firebaseEnv.authDomain,
+        projectId: firebaseEnv.projectId,
+        storageBucket: firebaseEnv.storageBucket,
+        messagingSenderId: firebaseEnv.messagingSenderId,
+        appId: firebaseEnv.appId,
+        measurementId: firebaseEnv.measurementId,
+      };
+
+if (!firebaseConfig.apiKey) {
+  console.error("❌ Firebase設定が取得できませんでした。Netlifyスニペットまたはfirebase-env.jsを確認してください。");
+}
 
 export const isDevelopmentEnvironment =
   typeof __firebase_config !== "undefined";
