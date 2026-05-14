@@ -1159,7 +1159,8 @@ export const renderTempBoltResults = (project) => {
                       <div class="overflow-x-auto custom-scrollbar">
                         <table class="w-auto text-sm border-collapse">
                             <thead class="bg-slate-200 dark:bg-slate-700 text-xs text-slate-700 dark:text-slate-300"><tr>
-                                <th class="px-2 py-3 sticky left-0 bg-slate-200 dark:bg-slate-700 z-10 border border-slate-300 dark:border-slate-600">仮ボルトサイズ</th>
+                                <th class="px-2 py-3 border border-slate-300 dark:border-slate-600 whitespace-nowrap">種別</th>
+                                <th class="px-2 py-3 text-center sticky left-0 bg-slate-200 dark:bg-slate-700 z-10 border border-slate-300 dark:border-slate-600">仮ボルトサイズ</th>
                                 ${locations
                                   .map(
                                     (loc) =>
@@ -1173,8 +1174,8 @@ export const renderTempBoltResults = (project) => {
     let grandTotal = 0;
     const grandTotalJoints = {};
     const grandTotalQtyMap = {};
-    const _kindSuffix = _tempSizeKindMap[size] ? `(${_tempSizeKindMap[size]})` : "";
-    let rowHtml = `<tr class="hover:bg-slate-50 dark:hover:bg-slate-700/50"><td class="px-2 py-2 font-bold text-gray-900 dark:text-gray-100 sticky left-0 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700">${size}${_kindSuffix}</td>`;
+    const _kindLabel = _tempSizeKindMap[size] || "-";
+    let rowHtml = `<tr class="hover:bg-slate-50 dark:hover:bg-slate-700/50"><td class="px-2 py-2 text-center border border-slate-200 dark:border-slate-700 whitespace-nowrap text-xs">${_kindLabel}</td><td class="px-2 py-2 font-bold text-center text-gray-900 dark:text-gray-100 sticky left-0 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700">${size}</td>`;
 
     locations.forEach((loc) => {
       const cellData = resultsByLocation[loc.id]?.[size];
@@ -1190,7 +1191,7 @@ export const renderTempBoltResults = (project) => {
         detailsClass =
           "has-details cursor-pointer hover:bg-yellow-100 dark:hover:bg-yellow-800/50 transition-colors";
         const qtyJson = JSON.stringify(cellData.qtyMap || {});
-        dataAttribute = `data-details='${JSON.stringify(cellData.joints)}' data-qty='${qtyJson}'`;
+        dataAttribute = `data-details='${JSON.stringify(cellData.joints)}' data-qty='${qtyJson}' data-bolt-size="${size}"`;
         for (const [name, count] of Object.entries(cellData.joints)) {
           grandTotalJoints[name] = (grandTotalJoints[name] || 0) + count;
         }
@@ -1216,7 +1217,7 @@ export const renderTempBoltResults = (project) => {
       ? "has-details cursor-pointer hover:bg-yellow-200 dark:hover:bg-yellow-700/50 transition-colors"
       : "";
     const grandTotalDataAttribute = hasGrandTotalJoints
-      ? `data-details='${JSON.stringify(grandTotalJoints)}' data-qty='${JSON.stringify(grandTotalQtyMap)}'`
+      ? `data-details='${JSON.stringify(grandTotalJoints)}' data-qty='${JSON.stringify(grandTotalQtyMap)}' data-bolt-size="${size}"`
       : "";
 
     rowHtml += `<td class="px-2 py-2 text-center font-bold sticky right-0 bg-yellow-100 dark:bg-yellow-900/50 border border-yellow-200 dark:border-yellow-800 ${grandTotalDetailsClass}" title="${grandTotalTooltip}" ${grandTotalDataAttribute}>${
@@ -1748,7 +1749,7 @@ export const renderResults = (project) => {
                 <thead class="bg-slate-200 dark:bg-slate-700 text-xs">
                     <tr>
                         <th class="px-2 py-3 border border-slate-300 dark:border-slate-600 whitespace-nowrap">種別</th>
-                        <th class="px-2 py-3 sticky left-0 bg-slate-200 dark:bg-slate-700 z-10 border border-slate-300 dark:border-slate-600 min-w-[120px]">ボルトサイズ</th>
+                        <th class="px-2 py-3 text-center sticky left-0 bg-slate-200 dark:bg-slate-700 z-10 border border-slate-300 dark:border-slate-600 min-w-[120px]">ボルトサイズ</th>
                         ${floorColumns.map((col) => `<th class="px-2 py-3 text-center border border-slate-300 dark:border-slate-600 ${col.isTotal ? "bg-blue-100 dark:bg-blue-900/50 text-blue-800 dark:text-blue-200" : ""}">${col.label}</th>`).join("")}
                         <th class="px-2 py-3 text-center sticky right-0 bg-yellow-300 dark:bg-yellow-800/80 text-yellow-900 dark:text-yellow-100 border border-yellow-400 dark:border-yellow-700 font-bold">総合計</th>
                     </tr>
@@ -1760,7 +1761,7 @@ export const renderResults = (project) => {
     const rowTotalJoints = {};
     const rowTotalQty = {};
     const { cleanSize, typeLabel } = _parseBoltSizeKey(size);
-    floorTableHtml += `<tr class="hover:bg-slate-50 dark:hover:bg-slate-800/40"><td class="px-2 py-2 text-center border border-slate-200 dark:border-slate-700 whitespace-nowrap text-xs">${typeLabel}</td><td class="px-2 py-2 font-bold sticky left-0 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 break-all">${cleanSize}</td>`;
+    floorTableHtml += `<tr class="hover:bg-slate-50 dark:hover:bg-slate-800/40"><td class="px-2 py-2 text-center border border-slate-200 dark:border-slate-700 whitespace-nowrap text-xs">${typeLabel}</td><td class="px-2 py-2 font-bold sticky left-0 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-center break-all">${cleanSize}</td>`;
 
     floorColumns.forEach((col) => {
       let cellValue = 0;
