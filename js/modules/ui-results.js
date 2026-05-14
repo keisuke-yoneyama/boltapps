@@ -40,6 +40,25 @@ const _shortKindLabel = (kind) => {
   return "HUG";
 };
 
+// ボルトサイズキーから表示用の cleanSize と typeLabel を分解する
+// 例: "M22×65■(地組)" → { cleanSize: "M22×65", typeLabel: "F8T(地組)" }
+const _parseBoltSizeKey = (key) => {
+  const isPlated = key.includes("■");
+  const isShopAssembly = key.includes("(工場地組)");
+  const isGroundAssembly = key.includes("(地組)");
+  const isColumn = key.includes("(本柱)");
+  const cleanSize = key
+    .replace("■", "")
+    .replace("(工場地組)", "")
+    .replace("(地組)", "")
+    .replace("(本柱)", "");
+  let typeLabel = isPlated ? "F8T" : "S10T";
+  if (isColumn) typeLabel += "(本柱)";
+  else if (isShopAssembly) typeLabel += "(工場地組)";
+  else if (isGroundAssembly) typeLabel += "(地組)";
+  return { cleanSize, typeLabel };
+};
+
 // 種別→系統→ボルト長さ の順でソートする比較関数を返す
 const _makeTempBoltSortFn = (tempSizeKindMap) => (a, b) => {
   const kindOrder = ["HUG", "中ボM", "中ボW"];
@@ -389,7 +408,8 @@ export function renderAggregatedTables(
                     <td class="${commonCellClass} font-medium${detailsClass}"${detailsAttr}>${boltCount.toLocaleString()}</td>
                 `;
         } else {
-          const displayKey = title === "柱用" ? key.replace("(本柱)", "") : key;
+          const { cleanSize: _cs } = _parseBoltSizeKey(key);
+          const displayKey = _cs;
 
           const weightCell = !isTempBolt
             ? `<td class="${commonCellClass} text-slate-500" title="${weightTooltip}">${weightValue}</td>`
@@ -1727,6 +1747,7 @@ export const renderResults = (project) => {
             <table class="w-auto text-sm border-collapse">
                 <thead class="bg-slate-200 dark:bg-slate-700 text-xs">
                     <tr>
+                        <th class="px-2 py-3 border border-slate-300 dark:border-slate-600 whitespace-nowrap">種別</th>
                         <th class="px-2 py-3 sticky left-0 bg-slate-200 dark:bg-slate-700 z-10 border border-slate-300 dark:border-slate-600 min-w-[120px]">ボルトサイズ</th>
                         ${floorColumns.map((col) => `<th class="px-2 py-3 text-center border border-slate-300 dark:border-slate-600 ${col.isTotal ? "bg-blue-100 dark:bg-blue-900/50 text-blue-800 dark:text-blue-200" : ""}">${col.label}</th>`).join("")}
                         <th class="px-2 py-3 text-center sticky right-0 bg-yellow-300 dark:bg-yellow-800/80 text-yellow-900 dark:text-yellow-100 border border-yellow-400 dark:border-yellow-700 font-bold">総合計</th>
@@ -1738,7 +1759,8 @@ export const renderResults = (project) => {
     let rowTotal = 0;
     const rowTotalJoints = {};
     const rowTotalQty = {};
-    floorTableHtml += `<tr class="hover:bg-slate-50 dark:hover:bg-slate-800/40"><td class="px-2 py-2 font-bold sticky left-0 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 break-all">${size}</td>`;
+    const { cleanSize, typeLabel } = _parseBoltSizeKey(size);
+    floorTableHtml += `<tr class="hover:bg-slate-50 dark:hover:bg-slate-800/40"><td class="px-2 py-2 text-center border border-slate-200 dark:border-slate-700 whitespace-nowrap text-xs">${typeLabel}</td><td class="px-2 py-2 font-bold sticky left-0 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 break-all">${cleanSize}</td>`;
 
     floorColumns.forEach((col) => {
       let cellValue = 0;
@@ -1782,14 +1804,14 @@ export const renderResults = (project) => {
 
       const hasJoints = Object.keys(jointData).length > 0;
       const detailsDataAttr = hasJoints
-        ? `data-details='${JSON.stringify(jointData)}' data-qty='${JSON.stringify(qtyData)}'`
+        ? `data-details='${JSON.stringify(jointData)}' data-qty='${JSON.stringify(qtyData)}' data-bolt-size="${cleanSize}"`
         : "";
       floorTableHtml += `<td class="px-2 py-2 text-center border border-slate-200 dark:border-slate-700 ${col.isTotal ? "bg-blue-50/50 dark:bg-blue-900/20 font-bold" : ""} has-details cursor-pointer hover:bg-yellow-100 dark:hover:bg-yellow-900/40" ${detailsDataAttr}>${cellValue > 0 ? cellValue.toLocaleString() : "-"}</td>`;
     });
 
     const hasRowJoints = Object.keys(rowTotalJoints).length > 0;
     const rowTotalDetailsAttr = hasRowJoints
-      ? `data-details='${JSON.stringify(rowTotalJoints)}' data-qty='${JSON.stringify(rowTotalQty)}'`
+      ? `data-details='${JSON.stringify(rowTotalJoints)}' data-qty='${JSON.stringify(rowTotalQty)}' data-bolt-size="${cleanSize}"`
       : "";
     floorTableHtml += `<td class="px-2 py-2 text-center font-bold sticky right-0 bg-yellow-100 dark:bg-yellow-900/30 border border-yellow-200 dark:border-yellow-800 has-details cursor-pointer hover:bg-yellow-200" ${rowTotalDetailsAttr}>${rowTotal > 0 ? rowTotal.toLocaleString() : "-"}</td></tr>`;
   });
