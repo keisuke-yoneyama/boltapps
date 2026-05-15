@@ -329,6 +329,93 @@ export function renderGroupingControls(
 }
 
 /**
+ * 注文明細セクションをExcel貼付け用HTMLとしてクリップボードにコピーする
+ * - 重量列は除外
+ * - 外枠: 太線 (2pt)、内枠: 細線 (0.5pt)
+ */
+const _copyOrderSectionToClipboard = (tableContainer) => {
+  const cards = tableContainer.querySelectorAll('[data-order-card]');
+  if (cards.length === 0) { showToast('コピーするデータがありません'); return; }
+
+  const _esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+  const allCardData = [];
+  cards.forEach((card) => {
+    const groupTitle = card.querySelector('h3')?.textContent?.trim() || '';
+    const table = card.querySelector('table');
+    if (!table) return;
+
+    // 重量列のインデックスを特定
+    let weightColIdx = -1;
+    const firstTr = table.querySelector('tr');
+    if (firstTr) {
+      Array.from(firstTr.querySelectorAll('th')).forEach((th, i) => {
+        if (th.textContent.trim().includes('重量')) weightColIdx = i;
+      });
+    }
+
+    const rows = Array.from(table.querySelectorAll('tr')).map((tr) => {
+      return Array.from(tr.querySelectorAll('th, td'))
+        .filter((_, i) => i !== weightColIdx)
+        .map((cell) => ({ text: cell.textContent.trim(), isHeader: cell.tagName === 'TH' }));
+    }).filter((row) => row.length > 0);
+
+    if (rows.length > 0) allCardData.push({ groupTitle, rows });
+  });
+
+  if (allCardData.length === 0) { showToast('コピーするデータがありません'); return; }
+
+  const maxCols = Math.max(...allCardData.map((c) => Math.max(...c.rows.map((r) => r.length))));
+  let tableRows = '';
+  const textLines = [];
+
+  allCardData.forEach((card, cardIdx) => {
+    const { groupTitle, rows } = card;
+    const totalRows = rows.length;
+    const colCount = Math.max(...rows.map((r) => r.length));
+
+    if (cardIdx > 0) {
+      tableRows += `<tr><td colspan="${maxCols}" style="border:none;height:6pt;"></td></tr>`;
+      textLines.push('');
+    }
+
+    if (groupTitle) {
+      tableRows += `<tr><td colspan="${maxCols}" style="font-weight:bold;padding:3px 8px;border-top:2pt solid black;border-left:2pt solid black;border-right:2pt solid black;border-bottom:0.5pt solid black;background-color:#f1f5f9;font-size:10pt;">${_esc(groupTitle)}</td></tr>`;
+      textLines.push(groupTitle);
+    }
+
+    rows.forEach((row, rIdx) => {
+      const isFirst = rIdx === 0;
+      const isLast = rIdx === totalRows - 1;
+      const cellsHtml = row.map((cell, cIdx) => {
+        const bTop    = (isFirst && !groupTitle) ? '2pt' : '0.5pt';
+        const bBottom = isLast ? '2pt' : '0.5pt';
+        const bLeft   = cIdx === 0 ? '2pt' : '0.5pt';
+        const bRight  = cIdx === colCount - 1 ? '2pt' : '0.5pt';
+        const bg  = cell.isHeader ? 'background-color:#e2e8f0;' : '';
+        const fw  = cell.isHeader ? 'font-weight:bold;' : '';
+        return `<td style="padding:3px 8px;text-align:center;border-top:${bTop} solid black;border-bottom:${bBottom} solid black;border-left:${bLeft} solid black;border-right:${bRight} solid black;${bg}${fw}">${_esc(cell.text)}</td>`;
+      }).join('');
+      tableRows += `<tr>${cellsHtml}</tr>`;
+      textLines.push(row.map((c) => c.text).join('\t'));
+    });
+  });
+
+  const html = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40"><head><meta charset="utf-8"></head><body><table style="border-collapse:collapse;font-family:Meiryo,Arial,sans-serif;font-size:10pt;">${tableRows}</table></body></html>`;
+  const text = textLines.join('\n');
+
+  navigator.clipboard.write([
+    new ClipboardItem({
+      'text/html': new Blob([html], { type: 'text/html' }),
+      'text/plain': new Blob([text], { type: 'text/plain' }),
+    }),
+  ]).then(() => showToast('クリップボードにコピーしました'))
+    .catch(() => showToast('コピーに失敗しました'));
+};
+
+const _COPY_BTN_HTML = `<button type="button" class="copy-order-section-btn flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-bold bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm transition-all active:scale-95"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>コピー</button>`;
+
+/**
  * テーブル群を描画する関数（汎用版）
  */
 export function renderAggregatedTables(
@@ -445,7 +532,7 @@ export function renderAggregatedTables(
         : "";
 
     return `
-            <div class="min-w-[320px] flex-grow-0 flex-shrink-0 bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden mb-6">
+            <div data-order-card class="min-w-[320px] flex-grow-0 flex-shrink-0 bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden mb-6">
                 <div class="px-4 py-3 bg-slate-50 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between">
                     <h3 class="text-lg font-bold text-slate-800 dark:text-slate-200 truncate pr-2" title="${title}">${title}</h3>
                     ${totalWeightDisplay}
@@ -645,9 +732,12 @@ export const renderOrderDetails = (container, project, resultsByLocation) => {
                         <p class="text-sm text-slate-500 dark:text-slate-400 pl-6 mt-1">S10T / F8T / 柱用ボルト</p>
                     </div>
 
-                    <div class="flex bg-slate-100 dark:bg-slate-800 p-1 rounded-lg border border-slate-200 dark:border-slate-700">
-                        <button id="view-mode-detailed" type="button" class="px-4 py-2 text-sm font-medium rounded-md transition-all">工区別 (詳細)</button>
-                        <button id="view-mode-floor" type="button" class="px-4 py-2 text-sm font-medium rounded-md transition-all">フロア別 (集計)</button>
+                    <div class="flex items-center gap-3">
+                        ${_COPY_BTN_HTML}
+                        <div class="flex bg-slate-100 dark:bg-slate-800 p-1 rounded-lg border border-slate-200 dark:border-slate-700">
+                            <button id="view-mode-detailed" type="button" class="px-4 py-2 text-sm font-medium rounded-md transition-all">工区別 (詳細)</button>
+                            <button id="view-mode-floor" type="button" class="px-4 py-2 text-sm font-medium rounded-md transition-all">フロア別 (集計)</button>
+                        </div>
                     </div>
                 </div>
             `;
@@ -660,6 +750,10 @@ export const renderOrderDetails = (container, project, resultsByLocation) => {
       tableContainer.className =
         "flex flex-wrap gap-8 items-start align-top content-start";
       honBoltSection.appendChild(tableContainer);
+
+      honBoltSection.querySelector('.copy-order-section-btn').addEventListener('click', () => {
+        _copyOrderSectionToClipboard(tableContainer);
+      });
 
       const updateView = () => {
         const btnDetail = honBoltSection.querySelector("#view-mode-detailed");
@@ -738,15 +832,19 @@ export const renderOrderDetails = (container, project, resultsByLocation) => {
       }
       section.style.display = "block";
       section.innerHTML = `
-        <div class="mt-12 mb-10 border-b-2 ${borderColor} pb-4">
+        <div class="mt-12 mb-10 border-b-2 ${borderColor} pb-4 flex items-end justify-between">
           <h2 class="text-2xl font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
             <span class="${markerColor}">■</span> ${title}
           </h2>
+          ${_COPY_BTN_HTML}
         </div>`;
       const tableContainer = document.createElement("div");
       tableContainer.className = "flex flex-wrap gap-8 items-start align-top";
       section.appendChild(tableContainer);
       renderAggregatedTables(tableContainer, { [title]: data }, [title], {});
+      section.querySelector('.copy-order-section-btn').addEventListener('click', () => {
+        _copyOrderSectionToClipboard(tableContainer);
+      });
     };
 
     const renderDLockSection = () => {
@@ -757,10 +855,11 @@ export const renderOrderDetails = (container, project, resultsByLocation) => {
       dLockSection.style.display = "block";
 
       const headerHtml = `
-                <div class="mt-12 mb-10 border-b-2 border-gray-500 pb-4">
+                <div class="mt-12 mb-10 border-b-2 border-gray-500 pb-4 flex items-end justify-between">
                     <h2 class="text-2xl font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
                         <span class="text-gray-500">■</span> D-Lock 注文明細
                     </h2>
+                    ${_COPY_BTN_HTML}
                 </div>
             `;
       dLockSection.innerHTML = headerHtml;
@@ -776,6 +875,9 @@ export const renderOrderDetails = (container, project, resultsByLocation) => {
         { dLock: specialBolts.dLock },
         true,
       );
+      dLockSection.querySelector('.copy-order-section-btn').addEventListener('click', () => {
+        _copyOrderSectionToClipboard(tableContainer);
+      });
     };
 
     const renderNakaBoltSection = () => {
@@ -788,10 +890,11 @@ export const renderOrderDetails = (container, project, resultsByLocation) => {
       nakaBoltSection.style.display = "block";
 
       const headerHtml = `
-                <div class="mt-12 mb-10 border-b-2 border-blue-500 pb-4">
+                <div class="mt-12 mb-10 border-b-2 border-blue-500 pb-4 flex items-end justify-between">
                     <h2 class="text-2xl font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
                         <span class="text-blue-500">■</span> 中ボルト注文明細
                     </h2>
+                    ${_COPY_BTN_HTML}
                 </div>
             `;
       nakaBoltSection.innerHTML = headerHtml;
@@ -807,6 +910,9 @@ export const renderOrderDetails = (container, project, resultsByLocation) => {
         { naka: specialBolts.naka, nakaM: specialBolts.nakaM },
         true,
       );
+      nakaBoltSection.querySelector('.copy-order-section-btn').addEventListener('click', () => {
+        _copyOrderSectionToClipboard(tableContainer);
+      });
     };
 
     renderHonBoltSection();
@@ -881,10 +987,13 @@ export const renderTempOrderDetails = (
                 </h2>
                 <p class="text-sm text-slate-500 dark:text-slate-400 pl-6 mt-1">現場建方用ボルト</p>
             </div>
-            <div class="flex bg-slate-100 dark:bg-slate-800 p-1 rounded-lg border border-slate-200 dark:border-slate-700">
-                <button id="temp-view-mode-detailed" type="button" class="px-4 py-2 text-sm font-medium rounded-md transition-all">工区別 (詳細)</button>
-                <button id="temp-view-mode-section" type="button" class="px-4 py-2 text-sm font-medium rounded-md transition-all">工区別 (集計)</button>
-                <button id="temp-view-mode-floor" type="button" class="px-4 py-2 text-sm font-medium rounded-md transition-all">フロア別 (集計)</button>
+            <div class="flex items-center gap-3">
+                ${_COPY_BTN_HTML}
+                <div class="flex bg-slate-100 dark:bg-slate-800 p-1 rounded-lg border border-slate-200 dark:border-slate-700">
+                    <button id="temp-view-mode-detailed" type="button" class="px-4 py-2 text-sm font-medium rounded-md transition-all">工区別 (詳細)</button>
+                    <button id="temp-view-mode-section" type="button" class="px-4 py-2 text-sm font-medium rounded-md transition-all">工区別 (集計)</button>
+                    <button id="temp-view-mode-floor" type="button" class="px-4 py-2 text-sm font-medium rounded-md transition-all">フロア別 (集計)</button>
+                </div>
             </div>
         </div>
     `;
@@ -897,6 +1006,10 @@ export const renderTempOrderDetails = (
     tableContainer.className =
       "flex flex-wrap gap-8 items-start align-top content-start";
     tempBoltSection.appendChild(tableContainer);
+
+    tempBoltSection.querySelector('.copy-order-section-btn').addEventListener('click', () => {
+      _copyOrderSectionToClipboard(tableContainer);
+    });
 
     const calculateLocalAggregation = (source, stateObj) => {
       const result = {};
