@@ -1591,9 +1591,17 @@ export const renderResults = (project) => {
   const activeType = state.activeTallyType || "all";
 
   const allTallyItems = getTallyList(project);
-  const nameToJointMap = new Map(
-    allTallyItems.map((item) => [item.name, item.joint]),
-  );
+  // 同一名の部材が複数あってもすべての種別IDを保持するよう Set で管理する
+  // (Map だと後勝ちで先の joint が消えてフィルタが外れるバグを防ぐ)
+  const nameToFilterIds = new Map();
+  for (const item of allTallyItems) {
+    const fid = getJointFilterId(item.joint);
+    if (!nameToFilterIds.has(item.name)) {
+      nameToFilterIds.set(item.name, new Set([fid]));
+    } else {
+      nameToFilterIds.get(item.name).add(fid);
+    }
+  }
 
   const targetLocationIds = new Set();
   if (project.mode === "advanced") {
@@ -1636,10 +1644,10 @@ export const renderResults = (project) => {
       let filteredTotal = 0;
 
       for (const [itemName, count] of Object.entries(data.joints)) {
-        const jointObj = nameToJointMap.get(itemName);
+        const filterIdSet = nameToFilterIds.get(itemName);
         if (
           activeType === "all" ||
-          (jointObj && getJointFilterId(jointObj) === activeType)
+          (filterIdSet && filterIdSet.has(activeType))
         ) {
           filteredJoints[itemName] = count;
           filteredTotal += count;
