@@ -96,7 +96,13 @@ const _getJointTypeExcludeFilter = (inputId) => {
     // 胴縁・母屋: M系6種を除外
     return (type) => _STANDARD_M_TYPES.has(type);
   }
-  // 大梁・小梁・本柱・間柱・その他: 中ボ系・Dドブ系・Dユニ系を除外
+  if (jointType === "other") {
+    // その他: 中ボ系のみ除外（D-lock系は表示する）
+    return (type) =>
+      type.startsWith("中ボルト") ||
+      type.startsWith("中ボ");
+  }
+  // 大梁・小梁・本柱・間柱: 中ボ系・Dドブ系・Dユニ系を除外
   return (type) =>
     type.startsWith("中ボルト") ||
     type.startsWith("中ボ") ||
