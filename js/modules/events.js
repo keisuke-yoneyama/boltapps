@@ -752,16 +752,6 @@ function setupBoltSizeInputClicked() {
  */
 const setupProjectFormEvents = () => {
   // --- 1. 新規工事登録フォームの要素 ---
-  const advancedSettingsToggle = document.getElementById(
-    "advanced-settings-toggle",
-  );
-  const simpleProjectSettings = document.getElementById(
-    "simple-project-settings",
-  );
-  const advancedProjectSettings = document.getElementById(
-    "advanced-project-settings",
-  );
-
   const addCustomLevelsCountInput = document.getElementById(
     "add-custom-levels-count",
   );
@@ -808,18 +798,6 @@ const setupProjectFormEvents = () => {
   const incrementAreasBtn = document.getElementById("increment-areas-btn");
 
   // ▼▼▼ 新規登録フォームのイベント ▼▼▼
-
-  // 詳細設定トグル
-  if (
-    advancedSettingsToggle &&
-    simpleProjectSettings &&
-    advancedProjectSettings
-  ) {
-    advancedSettingsToggle.addEventListener("change", (e) => {
-      simpleProjectSettings.classList.toggle("hidden", e.target.checked);
-      advancedProjectSettings.classList.toggle("hidden", !e.target.checked);
-    });
-  }
 
   // 階層数 (新規)
   if (addDecrementLevelsBtn) {
@@ -1316,15 +1294,6 @@ function setupProjectActionEvents() {
   const addProjectBtn = document.getElementById("add-project-btn");
   const projectNameInput = document.getElementById("project-name");
   const propertyNameInput = document.getElementById("property-name");
-  const advancedSettingsToggle = document.getElementById(
-    "advanced-settings-toggle",
-  );
-  const simpleProjectSettings = document.getElementById(
-    "simple-project-settings",
-  );
-  const advancedProjectSettings = document.getElementById(
-    "advanced-project-settings",
-  );
 
   const addCustomLevelsCountInput = document.getElementById(
     "add-custom-levels-count",
@@ -1338,10 +1307,6 @@ function setupProjectActionEvents() {
   const customAreasContainer = document.getElementById(
     "custom-areas-container",
   );
-
-  const projectFloorsInput = document.getElementById("project-floors");
-  const projectSectionsInput = document.getElementById("project-sections");
-  const projectHasPhInput = document.getElementById("project-has-ph");
 
   // --- 複製用 ---
   const executeCopyBtn = document.getElementById("execute-copy-btn");
@@ -1368,60 +1333,39 @@ function setupProjectActionEvents() {
           invalidElements: [projectNameInput],
         });
 
-      let newProjectData;
-      if (advancedSettingsToggle.checked) {
-        const levelsCount = parseInt(addCustomLevelsCountInput.value),
-          areasCount = parseInt(addCustomAreasCountInput.value);
-        if (isNaN(levelsCount) || levelsCount < 1)
-          return showCustomAlert("階層数は1以上の数値を入力してください。", {
-            invalidElements: [addCustomLevelsCountInput], // 変数名注意
-          });
-        if (isNaN(areasCount) || areasCount < 1)
-          return showCustomAlert("エリア数は1以上の数値を入力してください。", {
-            invalidElements: [addCustomAreasCountInput], // 変数名注意
-          });
+      const levelsCount = parseInt(addCustomLevelsCountInput.value),
+        areasCount = parseInt(addCustomAreasCountInput.value);
+      if (isNaN(levelsCount) || levelsCount < 1)
+        return showCustomAlert("階層数は1以上の数値を入力してください。", {
+          invalidElements: [addCustomLevelsCountInput],
+        });
+      if (isNaN(areasCount) || areasCount < 1)
+        return showCustomAlert("エリア数は1以上の数値を入力してください。", {
+          invalidElements: [addCustomAreasCountInput],
+        });
 
-        const customLevels = Array.from(
-          document.querySelectorAll("#custom-levels-container input"),
-        ).map((input) => input.value.trim());
-        const customAreas = Array.from(
-          document.querySelectorAll("#custom-areas-container input"),
-        ).map((input) => input.value.trim());
+      const customLevels = Array.from(
+        document.querySelectorAll("#custom-levels-container input"),
+      ).map((input) => input.value.trim());
+      const customAreas = Array.from(
+        document.querySelectorAll("#custom-areas-container input"),
+      ).map((input) => input.value.trim());
 
-        if (
-          customLevels.some((l) => l === "") ||
-          customAreas.some((a) => a === "")
-        )
-          return showCustomAlert(
-            "すべての階層名とエリア名を入力してください。",
-          );
-        newProjectData = {
-          name,
-          propertyName,
-          mode: "advanced",
-          customLevels,
-          customAreas,
-        };
-      } else {
-        const floors = parseInt(projectFloorsInput.value),
-          sections = parseInt(projectSectionsInput.value);
-        if (isNaN(sections) || sections < 1)
-          return showCustomAlert("工区数を正しく入力してください。", {
-            invalidElements: [projectSectionsInput],
-          });
-        if (isNaN(floors) || floors <= 1)
-          return showCustomAlert("階数は2以上の数値を入力してください。", {
-            invalidElements: [projectFloorsInput],
-          });
-        newProjectData = {
-          name,
-          propertyName,
-          mode: "simple",
-          floors,
-          sections,
-          hasPH: projectHasPhInput.checked,
-        };
-      }
+      if (
+        customLevels.some((l) => l === "") ||
+        customAreas.some((a) => a === "")
+      )
+        return showCustomAlert(
+          "すべての階層名とエリア名を入力してください。",
+        );
+
+      const newProjectData = {
+        name,
+        propertyName,
+        mode: "advanced",
+        customLevels,
+        customAreas,
+      };
 
       const newProject = {
         ...newProjectData,
@@ -1452,12 +1396,6 @@ function setupProjectActionEvents() {
       // フォームのリセット (state.newLevelNameCache もリセット)
       projectNameInput.value = "";
       if (propertyNameInput) propertyNameInput.value = "";
-      projectFloorsInput.value = "";
-      projectSectionsInput.value = "";
-      projectHasPhInput.checked = false;
-      advancedSettingsToggle.checked = false;
-      simpleProjectSettings.classList.remove("hidden");
-      advancedProjectSettings.classList.add("hidden");
       addCustomLevelsCountInput.value = "1";
       addCustomAreasCountInput.value = "1";
 

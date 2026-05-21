@@ -535,51 +535,7 @@
               class="w-full bg-white dark:bg-slate-700 border-slate-300 dark:border-slate-600 text-slate-900 dark:text-slate-100 rounded-lg p-3 focus:ring-yellow-500 focus:border-yellow-500 mb-4 dark:placeholder-slate-400"
               placeholder="物件名（グループ化用、任意）"
             />
-            <div class="flex items-center gap-2 mb-4">
-              <input
-                type="checkbox"
-                id="advanced-settings-toggle"
-                class="h-4 w-4 rounded border-gray-300 text-blue-800 focus:ring-yellow-500"
-              />
-              <label
-                for="advanced-settings-toggle"
-                class="text-sm font-medium text-slate-700 dark:text-slate-300"
-                >細かい設定</label
-              >
-            </div>
-            <div id="simple-project-settings">
-              <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <input
-                  type="number"
-                  id="project-floors"
-                  min="2"
-                  class="w-full bg-white dark:bg-slate-700 border-slate-300 dark:border-slate-600 text-slate-900 dark:text-slate-100 rounded-lg p-3 focus:ring-yellow-500 focus:border-yellow-500 dark:placeholder-slate-400"
-                  placeholder="階数 (R, PH階を除く)"
-                />
-                <input
-                  type="number"
-                  id="project-sections"
-                  min="1"
-                  class="w-full bg-white dark:bg-slate-700 border-slate-300 dark:border-slate-600 text-slate-900 dark:text-slate-100 rounded-lg p-3 focus:ring-yellow-500 focus:border-yellow-500 dark:placeholder-slate-400"
-                  placeholder="工区数"
-                />
-                <div
-                  class="sm:col-span-2 flex items-center gap-4 bg-slate-100 dark:bg-slate-700/50 p-3 rounded-lg"
-                >
-                  <label
-                    for="project-has-ph"
-                    class="font-medium text-slate-700 dark:text-slate-300"
-                    >PH階 (塔屋) はありますか？</label
-                  >
-                  <input
-                    type="checkbox"
-                    id="project-has-ph"
-                    class="h-5 w-5 rounded border-gray-300 text-blue-800 focus:ring-yellow-500"
-                  />
-                </div>
-              </div>
-            </div>
-            <div id="advanced-project-settings" class="hidden space-y-4">
+            <div id="advanced-project-settings" class="space-y-4">
               <div>
                 <label
                   for="add-custom-levels-count"
