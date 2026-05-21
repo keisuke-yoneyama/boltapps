@@ -71,6 +71,8 @@ const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
 export const db = getFirestore(app);
 
+console.log(`🔑 appId (Firestoreパス用): "${appId}"`);
+
 export const projectsCollectionRef = collection(
   db,
   `artifacts/${appId}/public/data/projects`,
