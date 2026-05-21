@@ -1013,6 +1013,7 @@ export const renderTempOrderDetails = (
 
     const calculateLocalAggregation = (source, stateObj) => {
       const result = {};
+      const sortOrder = {};
       const groups = {};
 
       Object.keys(stateObj).forEach((key) => {
@@ -1025,8 +1026,9 @@ export const renderTempOrderDetails = (
 
       Object.keys(groups).forEach((groupNum) => {
         const keys = groups[groupNum];
-        const label = `No.${groupNum} (${keys.join(", ")})`;
+        const label = keys.join(" + ");
         result[label] = {};
+        sortOrder[label] = parseInt(groupNum);
 
         keys.forEach((key) => {
           const sizes = source[key];
@@ -1047,7 +1049,7 @@ export const renderTempOrderDetails = (
           });
         });
       });
-      return result;
+      return { data: result, sortOrder };
     };
 
     const updateView = () => {
@@ -1140,17 +1142,15 @@ export const renderTempOrderDetails = (
         dataToRender = result.data;
         sortedKeysToRender = result.order;
       } else {
-        dataToRender = calculateLocalAggregation(
+        const { data: aggData, sortOrder } = calculateLocalAggregation(
           dataForControls,
           currentTempGroupingState,
         );
+        dataToRender = aggData;
 
-        const allAggregatedKeys = Object.keys(dataToRender);
-        sortedKeysToRender = allAggregatedKeys.sort((a, b) => {
-          const numA = parseInt(a.match(/No\.(\d+)/)?.[1] || "0");
-          const numB = parseInt(b.match(/No\.(\d+)/)?.[1] || "0");
-          return numA - numB;
-        });
+        sortedKeysToRender = Object.keys(dataToRender).sort(
+          (a, b) => (sortOrder[a] || 0) - (sortOrder[b] || 0),
+        );
       }
 
       renderAggregatedTables(
