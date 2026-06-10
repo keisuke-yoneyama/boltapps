@@ -1978,6 +1978,13 @@ function bindEvents() {
     if (!cell) {
       // アイテム以外をクリックしたらダブルクリック状態をリセット
       _lastClickedItemId = null;
+      // view モード中は品目詳細を閉じて idle に戻す
+      if (adminState.rightPanelMode === 'view') {
+        adminState.rightPanelMode = 'idle';
+        adminState.selectedItemId = null;
+        adminState.multiSelectedItemIds = [];
+        renderRightPanel();
+      }
       return;
     }
 
@@ -2173,6 +2180,17 @@ function bindEvents() {
       ae.tagName === 'INPUT' || ae.tagName === 'TEXTAREA' ||
       ae.tagName === 'SELECT' || ae.isContentEditable
     );
+
+    if (e.key === 'Escape') {
+      if (adminState.rightPanelMode === 'view') {
+        adminState.rightPanelMode       = 'idle';
+        adminState.selectedItemId       = null;
+        adminState.multiSelectedItemIds = [];
+        renderRightPanel();
+        renderMainGrid(); // 選択ハイライトを解除
+      }
+      return;
+    }
 
     if (e.key === 'Delete') {
       if (isEditing) return;
