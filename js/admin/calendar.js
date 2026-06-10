@@ -850,15 +850,32 @@ function handleA1PreviewDrawingNoChange(rowIndex, value) {
  * 工事選択コンボの <option> HTML を返す
  * id / projectId 両フィールドに対応（bolt プロジェクトのフィールド差異を吸収）
  */
+function renderPropertyOptions() {
+  const { boltProjects, form } = adminState.a1;
+  const seen  = new Set();
+  const names = [];
+  for (const p of (boltProjects || [])) {
+    const pn = p.propertyName || '';
+    if (!seen.has(pn)) { seen.add(pn); names.push(pn); }
+  }
+  return names.map(pn => {
+    const label = pn || '（物件名未設定）';
+    return `<option value="${esc(pn)}"${pn === (form.propertyName ?? '') ? ' selected' : ''}>${esc(label)}</option>`;
+  }).join('');
+}
+
 function renderBoltProjectOptions() {
   const { boltProjects, form } = adminState.a1;
-  const selectedId = String(form.projectId ?? '');
+  const selectedId   = String(form.projectId ?? '');
+  const propertyName = form.propertyName ?? '';
 
-  return (boltProjects || []).map(p => {
-    const id   = String(p.id || p.projectId || '');
-    const name = projDisplayName(p) || id;
-    return `<option value="${esc(id)}"${id === selectedId ? ' selected' : ''}>${esc(name)}</option>`;
-  }).join('');
+  return (boltProjects || [])
+    .filter(p => (p.propertyName || '') === propertyName)
+    .map(p => {
+      const id   = String(p.id || p.projectId || '');
+      const name = projDisplayName(p) || id;
+      return `<option value="${esc(id)}"${id === selectedId ? ' selected' : ''}>${esc(name)}</option>`;
+    }).join('');
 }
 
 /**
@@ -879,13 +896,23 @@ function renderA1HeaderSection() {
     ['all_days_holiday', '平日+土日+祝日モード'],
   ];
 
+  const hasProperty = !!form.propertyName;
+
   return `
     <div>
+      <label class="text-xs text-gray-400 block mb-1">物件 <span class="text-red-400">*</span></label>
+      <select id="a1-property-id" class="${inp}">
+        <option value="">— 物件を選択 —</option>
+        ${renderPropertyOptions()}
+      </select>
+    </div>
+
+    <div>
       <label class="text-xs text-gray-400 block mb-1">工事 <span class="text-red-400">*</span></label>
-      <select id="a1-project-id" class="${inp}">
+      <select id="a1-project-id" class="${inp}" ${hasProperty ? '' : 'disabled'}>
         <option value="">— 工事を選択 —</option>
         ${renderBoltProjectOptions()}
-        <option value="__new__"${'__new__' === form.projectId ? ' selected' : ''}>＋ 新規工事を作成…</option>
+        ${hasProperty ? `<option value="__new__"${'__new__' === form.projectId ? ' selected' : ''}>＋ 新規工事を作成…</option>` : ''}
       </select>
     </div>
 
@@ -1020,6 +1047,17 @@ let _planFormEventsBound = false;
 /** ヘッダ部（工事・日数・モード）のイベントを el に委譲してバインドする */
 function bindA1HeaderEvents(el) {
   el.addEventListener('change', e => {
+    if (e.target.id === 'a1-property-id') {
+      updateA1FormField('propertyName', e.target.value);
+      updateA1FormField('projectId', '');
+      document.getElementById('pf-new-project-area')?.classList.add('hidden');
+      const projectSel = document.getElementById('a1-project-id');
+      if (projectSel) {
+        projectSel.disabled = !e.target.value;
+        projectSel.innerHTML = `<option value="">— 工事を選択 —</option>${renderBoltProjectOptions()}${e.target.value ? '<option value="__new__">＋ 新規工事を作成…</option>' : ''}`;
+      }
+      return;
+    }
     if (e.target.id === 'a1-project-id') {
       updateA1FormField('projectId', e.target.value);
       document.getElementById('pf-new-project-area')
@@ -1094,6 +1132,10 @@ function previewRowToPlanData(row) {
 async function handlePlanFormSave() {
   const { form, previewRows } = adminState.a1;
 
+  if (!form.propertyName) {
+    document.getElementById('a1-property-id')?.classList.add('ring-1', 'ring-red-500');
+    return;
+  }
   if (!form.projectId) {
     document.getElementById('a1-project-id')?.classList.add('ring-1', 'ring-red-500');
     return;
@@ -1174,6 +1216,7 @@ function initializeA1State(startDate) {
   adminState.a1 = {
     boltProjects: [],   // loadA1BoltProjects で上書きされる
     form: {
+      propertyName:      '',
       projectId:         '',
       newProjectName:    '',
       startDate,         // カレンダー選択日で固定
