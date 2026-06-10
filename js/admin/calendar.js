@@ -65,8 +65,9 @@ function buildBarLayout(plans, boltProjects) {
     if (!byDate[plan.deliveryDate]) byDate[plan.deliveryDate] = [];
 
     const proj  = boltProjects.find(p => p.id === plan.projectId);
-    const name  = projDisplayName(proj) || '工事';
-    const color = getProjectColor(plan.projectId || '');
+    // 物件名付きプランは物件名を優先表示・物件名で色を統一する
+    const name  = plan.propertyName || projDisplayName(proj) || '工事';
+    const color = getProjectColor(plan.propertyName || plan.projectId || '');
 
     let position = 'bar-single';
     if (plan.deliverySeriesId && plan.deliverySeriesLength > 1) {
@@ -1182,18 +1183,24 @@ async function handlePlanFormSave() {
     return;
   }
 
-  // 登録対象の projectId 配列を確定
-  let projectIds = [];
+  // 登録先の projectId と付加データを確定
+  let representativeProjectId;
+  let extraPlanFields = {};
+
   if (form.propertyName !== '') {
-    // 名前付き物件: その物件の全工事をまとめて登録
-    projectIds = (adminState.a1.boltProjects || [])
-      .filter(p => (p.propertyName || '') === form.propertyName)
-      .map(p => String(p.id || p.projectId || ''))
-      .filter(Boolean);
-    if (!projectIds.length) {
+    // 名前付き物件: 最初の工事を代表として ONE プランを作成
+    // 全関連工事IDを linkedProjectIds に保存（サジェスト参照用）
+    const propProjects = (adminState.a1.boltProjects || [])
+      .filter(p => (p.propertyName || '') === form.propertyName);
+    if (!propProjects.length) {
       alert('この物件に工事が登録されていません');
       return;
     }
+    representativeProjectId = String(propProjects[0].id || propProjects[0].projectId || '');
+    extraPlanFields = {
+      propertyName:     form.propertyName,
+      linkedProjectIds: propProjects.map(p => String(p.id || p.projectId || '')).filter(Boolean),
+    };
   } else {
     // 物件名未設定: 選択した工事1件のみ
     if (!form.projectId) {
@@ -1210,7 +1217,7 @@ async function handlePlanFormSave() {
       adminState.a1.boltProjects.push(created);
       pid = created.id;
     }
-    projectIds = [pid];
+    representativeProjectId = pid;
   }
 
   if (!previewRows?.length) {
@@ -1224,23 +1231,21 @@ async function handlePlanFormSave() {
   const affectedMonths = new Set();
   const validRows      = previewRows.filter(row => row.deliveryDate);
   const seriesLength   = validRows.length;
+  const seriesId       = `s-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
 
   try {
-    for (const pid of projectIds) {
-      // 工事ごとに独立したシリーズIDを生成
-      const seriesId = `s-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
-      for (let idx = 0; idx < validRows.length; idx++) {
-        const row = validRows[idx];
-        await createPlan(pid, {
-          ...previewRowToPlanData(row),
-          deliverySeriesId:     seriesId,
-          deliverySeriesIndex:  idx + 1,
-          deliverySeriesLength: seriesLength,
-          dateAssignMode:       form.dateAssignMode,
-        });
-        const [y, mo] = row.deliveryDate.split('-');
-        affectedMonths.add(`${y}-${mo}`);
-      }
+    for (let idx = 0; idx < validRows.length; idx++) {
+      const row = validRows[idx];
+      await createPlan(representativeProjectId, {
+        ...previewRowToPlanData(row),
+        ...extraPlanFields,
+        deliverySeriesId:     seriesId,
+        deliverySeriesIndex:  idx + 1,
+        deliverySeriesLength: seriesLength,
+        dateAssignMode:       form.dateAssignMode,
+      });
+      const [y, mo] = row.deliveryDate.split('-');
+      affectedMonths.add(`${y}-${mo}`);
     }
   } catch (err) {
     console.error('[A1] save failed', err);

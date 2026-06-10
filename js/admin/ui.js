@@ -170,10 +170,53 @@ const JOINT_TYPE_TO_ADMIN_CAT = {
 // カテゴリーフィルタが有効な種別（ボルト系は bolt 部材に存在しない）
 const SUGGEST_FILTERABLE_CATS = new Set(['大梁', '小梁', '柱', '間柱']);
 
+/**
+ * 現在の計画に紐づく bolt プロジェクト一覧を返す
+ * 物件プラン（linkedProjectIds あり）の場合は全関連工事、通常は selectedProjectId の1件
+ */
+function _getLinkedBoltProjects() {
+  const { selectedProjectId, a1, a2 } = adminState;
+  const linkedIds = a2?.currentPlan?.linkedProjectIds;
+  if (Array.isArray(linkedIds) && linkedIds.length > 0) {
+    return (a1?.boltProjects ?? []).filter(p => linkedIds.includes(p.id ?? p.projectId ?? ''));
+  }
+  const single = (a1?.boltProjects ?? []).find(p => p.id === selectedProjectId);
+  return single ? [single] : [];
+}
+
+/**
+ * 複数の bolt プロジェクトを1つのバーチャルプロジェクトにマージする
+ * 部材・継手を全工事から統合し、レベルタブなし（全部材をフラット表示）
+ */
+function _getMergedBoltProject() {
+  const projs = _getLinkedBoltProjects();
+  if (projs.length === 0) return null;
+  if (projs.length === 1) return projs[0];
+
+  const members      = [];
+  const joints       = [];
+  const seenNames    = new Set();
+  const seenJointIds = new Set();
+
+  for (const p of projs) {
+    for (const j of (p.joints ?? [])) {
+      if (!seenJointIds.has(j.id)) { seenJointIds.add(j.id); joints.push(j); }
+    }
+    for (const m of (p.members ?? [])) {
+      if (!seenNames.has(m.name)) {
+        seenNames.add(m.name);
+        members.push({ ...m, targetLevels: [] }); // 全部材を全レベル対象に
+      }
+    }
+  }
+
+  // mode: 'advanced', customLevels: [] にするとレベルタブが出ず全部材をフラット表示できる
+  return { ...projs[0], members, joints, mode: 'advanced', customLevels: [] };
+}
+
 /** 現在工事に紐づく bolt プロジェクトを返す（なければ null） */
 function _getBoltProject() {
-  const { selectedProjectId, a1 } = adminState;
-  return (a1?.boltProjects ?? []).find(p => p.id === selectedProjectId) ?? null;
+  return _getMergedBoltProject();
 }
 
 /** サジェスト専用サイドバーを表示すべきか判定する */
