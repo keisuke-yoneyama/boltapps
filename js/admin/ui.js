@@ -3,8 +3,7 @@
 import { adminState, addItemToState, updateItemInState, removeItemFromState, addTruckToState, updateTruckInState, removeTruckFromState } from './state.js';
 import { getTrucksForPlan, getItemsForTruck, createItem, updateItem, deleteItem, createTruck, updateTruck, deleteTruckCascade } from './db.js';
 import { sortItems, buildItemName } from '../../packages/shared-domain/src/index.js';
-import { getSuggestions, getAllCandidates, naturalCompare } from './suggest-data.js';
-import { getProjectLevels } from '../modules/calculator.js';
+import { getSuggestions, getAllCandidates } from './suggest-data.js';
 
 // ── 種別順（ボルトアプリ準拠） ─────────────────────────────
 const CATEGORY_ORDER = [
@@ -27,7 +26,6 @@ const elTruckList      = document.getElementById('admin-truck-list');
 const elMainGrid       = document.getElementById('admin-main-grid');
 const elRightContent   = document.getElementById('admin-right-content');
 const elHeaderInfo     = document.getElementById('admin-header-info');
-const elSuggestSidebar = document.getElementById('admin-suggest-sidebar');
 
 // ── Helpers ────────────────────────────────────────────────
 
@@ -69,17 +67,10 @@ let _pendingRestoreEntry = null;
 // ── Right Panel: フォーム入力保持 draft ────────────────────
 // 同一 A2 / 同一搬入日の操作中に保持し、initGridScreen でリセット
 // 号車切替では保持し続ける（同日内の連続作業を想定）
-let _singleFormDraft = null; // null | { prefix, baseName, separator, suffix, note, category, cautionNote, loadingInstruction }
-let _bulkFormDraft   = null; // null | { category, prefix, baseName, separator, suffixStart, note, count, autoIncrement }
+let _singleFormDraft = null; // null | { baseName, note, category, cautionNote, loadingInstruction }
+let _bulkFormDraft   = null; // null | { category, baseName, separator, suffixStart, note, count, autoIncrement }
 
-// ── サジェスト専用サイドバー state ──────────────────────────
-// bolt 連携工事のとき baseName フォーカス中のみ表示する
 const NO_SUGGEST_CATS = new Set(['ボルト', '仮ボルト', 'コン止め', 'デッキ', 'ブレス', 'その他']);
-let _suggestLevel       = 'all'; // アクティブ階層タブ ID
-let _suggestSearch      = '';    // 絞り込み検索文字列
-let _activeSuggestInput = null;  // 現在フォーカス中の baseName input 要素
-let _activeSuggestCatEl = null;  // 現在フォーカス中の category select 要素
-let _sidebarBlurTimer   = null;  // blur 時の遅延非表示タイマー
 
 // ── ダブルクリック検出（click-timer 方式） ──────────────────
 // native dblclick はDOM再構築後に元要素が detach されると発火しないブラウザがある。
@@ -214,212 +205,47 @@ function _getMergedBoltProject() {
   return { ...projs[0], members, joints, mode: 'advanced', customLevels: [] };
 }
 
-/** 現在工事に紐づく bolt プロジェクトを返す（なければ null） */
-function _getBoltProject() {
-  return _getMergedBoltProject();
-}
 
-/** サジェスト専用サイドバーを表示すべきか判定する */
-function _shouldShowBoltSuggest() {
-  if (!_getBoltProject()) return false;
-  const cat = _activeSuggestCatEl?.value ?? '';
-  return !NO_SUGGEST_CATS.has(cat);
-}
 
-/** サジェストサイドバーを表示して描画する */
-function _showBoltSuggest() {
-  if (!elSuggestSidebar) return;
-  const searchEl = elSuggestSidebar.querySelector('#admin-suggest-search');
-  if (searchEl && searchEl.value !== _suggestSearch) searchEl.value = _suggestSearch;
-  elSuggestSidebar.style.display = 'flex'; // 先に表示、候補ゼロなら renderSidebar 内で hide される
-  _renderSuggestSidebar();
-}
-
-/** サジェストサイドバーを非表示にする */
-function _hideBoltSuggest() {
-  if (!elSuggestSidebar) return;
-  elSuggestSidebar.style.display = 'none';
-}
-
-/**
- * サジェストサイドバーのコンテンツを描画する
- * - 階層タブ: _suggestLevel に応じてアクティブ表示
- * - 候補リスト: _suggestSearch でフィルタ、自然ソート
- */
-function _renderSuggestSidebar() {
-  if (!elSuggestSidebar) return;
-  const proj = _getBoltProject();
-  if (!proj) return;
-
-  const levels    = getProjectLevels(proj); // [{ id, label }]
-  // joint.type でカテゴリを正確に判定するため継手マップを作る
-  const jointsMap = new Map((proj.joints ?? []).map(j => [j.id, j]));
-
-  // countAsMember=true の継手を部材候補に追加する（bolt の ui-members.js と同じルール）
-  // jointId = j.id（自己参照）なので getMemberCat で joint.type が取れる
-  // targetLevels = []（全階層対象）として扱う
-  const countAsMemberItems = (proj.joints ?? [])
-    .filter(j => j.countAsMember)
-    .map(j => ({ id: j.id, name: j.name, jointId: j.id, targetLevels: [] }));
-
-  const members = [...(proj.members ?? []), ...countAsMemberItems];
-
-  // ── カテゴリ・候補の事前計算 ──
-  const getMemberCat = m => JOINT_TYPE_TO_ADMIN_CAT[jointsMap.get(m.jointId)?.type ?? ''] ?? null;
-  const currentCat   = _activeSuggestCatEl?.value ?? '';
-
-  // まずカテゴリで絞った全候補（階層問わず）を計算する
-  const catFilteredAll = (currentCat && SUGGEST_FILTERABLE_CATS.has(currentCat))
-    ? members.filter(m => getMemberCat(m) === currentCat)
-    : members;
-
-  // 該当カテゴリの部材が一切ない → サイドバーを閉じて終了
-  if (currentCat && SUGGEST_FILTERABLE_CATS.has(currentCat) && catFilteredAll.length === 0) {
-    _hideBoltSuggest();
-    return;
+function _getBoltMemberCandidates() {
+  const projs = _getLinkedBoltProjects();
+  if (!projs.length) return [];
+  const jointsMap = new Map();
+  for (const p of projs) for (const j of (p.joints ?? [])) jointsMap.set(j.id, j);
+  const seen = new Set();
+  const result = [];
+  for (const p of projs) {
+    const countAsMemberItems = (p.joints ?? [])
+      .filter(j => j.countAsMember)
+      .map(j => ({ name: j.name, jointId: j.id }));
+    for (const m of [...(p.members ?? []), ...countAsMemberItems]) {
+      if (!m.name || seen.has(m.name)) continue;
+      seen.add(m.name);
+      const cat = JOINT_TYPE_TO_ADMIN_CAT[jointsMap.get(m.jointId)?.type ?? ''] ?? '';
+      result.push({ baseName: m.name, category: cat });
+    }
   }
-
-  // 各階層の候補数を計算（候補0件タブは非表示にするため）
-  const levelCounts = new Map(levels.map(l => [l.id, 0]));
-  catFilteredAll.forEach(m => {
-    const tl = m.targetLevels ?? [];
-    if (tl.length === 0) {
-      // 全階層対象: 全レベルにカウント
-      levels.forEach(l => levelCounts.set(l.id, levelCounts.get(l.id) + 1));
-    } else {
-      tl.forEach(lId => {
-        if (levelCounts.has(lId)) levelCounts.set(lId, levelCounts.get(lId) + 1);
-      });
-    }
-  });
-
-  // 候補がある階層だけ表示する
-  const visibleLevels = levels.filter(l => (levelCounts.get(l.id) ?? 0) > 0);
-
-  // _suggestLevel が 'all' または非表示タブなら最初の有効タブへ移行
-  if (visibleLevels.length > 0 && !visibleLevels.some(l => l.id === _suggestLevel)) {
-    _suggestLevel = visibleLevels[0].id;
-  }
-
-  // ── 階層タブ（候補あり階層のみ） ──
-  const tabsEl = elSuggestSidebar.querySelector('#admin-suggest-tabs');
-  if (tabsEl) {
-    tabsEl.innerHTML = visibleLevels.map(l => `
-      <button data-suggest-level="${esc(l.id)}"
-        class="px-2.5 py-1 text-xs shrink-0 border-r border-gray-700 whitespace-nowrap
-               ${l.id === _suggestLevel
-                 ? 'bg-blue-700 text-white'
-                 : 'text-gray-400 hover:text-gray-200 hover:bg-gray-700'}">
-        ${esc(l.label)}
-      </button>
-    `).join('');
-  }
-
-  // ── 現在選択中の階層で絞る ──
-  let filtered = catFilteredAll.filter(m => {
-    const tl = m.targetLevels ?? [];
-    return tl.length === 0 || tl.includes(_suggestLevel);
-  });
-
-  const search = _suggestSearch.toLowerCase();
-  if (search) filtered = filtered.filter(m => (m.name ?? '').toLowerCase().includes(search));
-
-  // 自然ソート
-  filtered.sort((a, b) => naturalCompare(a.name ?? '', b.name ?? ''));
-
-  // ── 件数 ──
-  const countEl = elSuggestSidebar.querySelector('#admin-suggest-count');
-  if (countEl) countEl.textContent = `${filtered.length}件`;
-
-  // ── リスト ──
-  const listEl = elSuggestSidebar.querySelector('#admin-suggest-list');
-  if (!listEl) return;
-  listEl.innerHTML = filtered.length
-    ? filtered.map(m => `
-        <li data-suggest-member="${esc(m.name ?? '')}"
-          class="px-2 py-1 text-xs text-gray-200 cursor-pointer hover:bg-gray-700 truncate select-none">
-          ${esc(m.name ?? '')}
-        </li>`).join('')
-    : '<li class="text-xs text-gray-600 px-2 py-2">候補なし</li>';
+  return result;
 }
 
-/**
- * サジェストサイドバーのイベントを一度だけバインドする（bindEvents 内から呼ぶ）
- */
-function _initSuggestSidebar() {
-  if (!elSuggestSidebar) return;
-  const searchEl = elSuggestSidebar.querySelector('#admin-suggest-search');
-
-  // 階層タブ / 候補クリック
-  elSuggestSidebar.addEventListener('click', e => {
-    const tab = e.target.closest('[data-suggest-level]');
-    if (tab) {
-      _suggestLevel = tab.dataset.suggestLevel;
-      _renderSuggestSidebar();
-      return;
-    }
-    const member = e.target.closest('[data-suggest-member]');
-    if (member && _activeSuggestInput) {
-      _activeSuggestInput.value = member.dataset.suggestMember;
-      if (adminState.rightPanelMode === 'bulk') _updateBulkPreview();
-      clearTimeout(_sidebarBlurTimer);
-      _activeSuggestInput.focus(); // サイドバーを維持しつつ input に戻る
-    }
-  });
-
-  // 検索入力
-  searchEl?.addEventListener('input', e => {
-    _suggestSearch = e.target.value;
-    _renderSuggestSidebar();
-  });
-
-  // mousedown: search input 以外は baseName の blur を抑止
-  elSuggestSidebar.addEventListener('mousedown', e => {
-    if (e.target !== searchEl && !searchEl?.contains(e.target)) {
-      e.preventDefault();
-    }
-  });
-
-  // search input にフォーカスが移ったとき blur タイマーをキャンセル
-  elSuggestSidebar.addEventListener('focusin', () => {
-    clearTimeout(_sidebarBlurTimer);
-  });
-
-  // サイドバー内フォーカスが完全に外れたら非表示
-  elSuggestSidebar.addEventListener('focusout', e => {
-    if (!elSuggestSidebar.contains(e.relatedTarget)) {
-      _hideBoltSuggest();
-      _activeSuggestInput = null;
-      _activeSuggestCatEl = null;
-    }
-  });
-
-  // Escape で閉じて baseName に戻る
-  searchEl?.addEventListener('keydown', e => {
-    if (e.key === 'Escape') {
-      _hideBoltSuggest();
-      _activeSuggestInput?.focus();
-    }
-  });
+function _getMergedCandidates(inputVal, cat) {
+  const boltCandidates = _getBoltMemberCandidates();
+  if (!inputVal) {
+    const base = getAllCandidates(cat, adminState.itemsCache);
+    const seen = new Set(base.map(c => c.baseName));
+    return [...base, ...boltCandidates.filter(c => !seen.has(c.baseName))];
+  }
+  const base = getSuggestions(inputVal, cat, adminState.itemsCache);
+  const seen = new Set(base.map(c => c.baseName));
+  const query = inputVal.toLowerCase();
+  return [...base, ...boltCandidates.filter(c => !seen.has(c.baseName) && c.baseName.toLowerCase().includes(query))];
 }
 
-// ── Suggest: baseName サジェスト（ドロップダウン + サイドバー） ──
+// ── Suggest: baseName インラインドロップダウン ──────────────
 
-/**
- * baseName 入力欄にサジェストを attach する
- *
- * bolt 工事リンクあり + サジェスト対象カテゴリ
- *   → サイドバーで bolt 部材名を表示
- * bolt 工事リンクなし / 対象外カテゴリ（ボルト・仮ボルト・コン止め）
- *   → 既存ドロップダウン（itemsCache + 静的カタログ）
- *
- * @param {HTMLInputElement}  inputEl  baseName input
- * @param {HTMLSelectElement} catEl    category select
- */
 function _attachSuggest(inputEl, catEl) {
   if (!inputEl) return;
 
-  // ── ドロップダウン（non-bolt モード用） ──
   const container = inputEl.parentElement;
   container.style.position = 'relative';
 
@@ -449,11 +275,9 @@ function _attachSuggest(inputEl, catEl) {
 
   function showDropdown() {
     const cat = catEl?.value ?? '';
-    // サジェスト不要カテゴリでは出さない
     if (NO_SUGGEST_CATS.has(cat)) { hideDropdown(); return; }
     const val = inputEl.value;
-    _results   = val ? getSuggestions(val, cat, adminState.itemsCache)
-                     : getAllCandidates(cat, adminState.itemsCache);
+    _results   = _getMergedCandidates(val, cat);
     _activeIdx = -1;
     renderList();
   }
@@ -478,76 +302,20 @@ function _attachSuggest(inputEl, catEl) {
     if (adminState.rightPanelMode === 'bulk') _updateBulkPreview();
   }
 
-  // bolt / 通常モードの切替
-  function updateMode() {
-    if (_activeSuggestInput !== inputEl) return;
-    if (_shouldShowBoltSuggest()) {
-      hideDropdown();
-      _showBoltSuggest();
-    } else {
-      _hideBoltSuggest();
-      showDropdown();
-    }
-  }
+  inputEl.addEventListener('focus', () => showDropdown());
 
-  // フォーカス
-  inputEl.addEventListener('focus', () => {
-    _activeSuggestInput = inputEl;
-    _activeSuggestCatEl = catEl;
-    clearTimeout(_sidebarBlurTimer);
-    if (_shouldShowBoltSuggest()) {
-      // 初回フォーカスで検索欄をリセット
-      const searchEl = elSuggestSidebar?.querySelector('#admin-suggest-search');
-      if (searchEl) { searchEl.value = ''; _suggestSearch = ''; }
-      hideDropdown();
-      _showBoltSuggest();
-    } else {
-      _hideBoltSuggest();
-      showDropdown();
-    }
-  });
+  inputEl.addEventListener('input', () => showDropdown());
 
-  // 入力: bolt モードは検索連動、通常モードはドロップダウン絞り込み
-  inputEl.addEventListener('input', () => {
-    if (_activeSuggestInput !== inputEl) {
-      _activeSuggestInput = inputEl;
-      _activeSuggestCatEl = catEl;
-    }
-    if (_shouldShowBoltSuggest()) {
-      _suggestSearch = inputEl.value;
-      const searchEl = elSuggestSidebar?.querySelector('#admin-suggest-search');
-      if (searchEl) searchEl.value = _suggestSearch;
-      _renderSuggestSidebar();
-      hideDropdown();
-    } else {
-      _hideBoltSuggest();
-      showDropdown();
-    }
-  });
+  catEl?.addEventListener('change', () => showDropdown());
 
-  // カテゴリ変更でモード再評価
-  catEl?.addEventListener('change', updateMode);
+  inputEl.addEventListener('blur', () => hideDropdown());
 
-  // blur: ドロップダウンは即非表示、サイドバーは 200ms 遅延（search input への移動を許容）
-  inputEl.addEventListener('blur', () => {
-    hideDropdown();
-    _sidebarBlurTimer = setTimeout(() => {
-      if (_activeSuggestInput === inputEl) {
-        _hideBoltSuggest();
-        _activeSuggestInput = null;
-        _activeSuggestCatEl = null;
-      }
-    }, 200);
-  });
-
-  // ドロップダウン: mousedown で blur 抑止
   suggEl.addEventListener('mousedown', e => {
     e.preventDefault();
     const row = e.target.closest('[data-si]');
     if (row) applyDropdown(parseInt(row.dataset.si, 10));
   });
 
-  // キーボード（ドロップダウンモードのみ対応）
   inputEl.addEventListener('keydown', e => {
     const isOpen = !suggEl.classList.contains('hidden');
     if (e.key === 'ArrowDown') {
@@ -562,7 +330,6 @@ function _attachSuggest(inputEl, catEl) {
       applyDropdown(_activeIdx);
     } else if (e.key === 'Escape') {
       hideDropdown();
-      _hideBoltSuggest();
     }
   });
 }
@@ -885,11 +652,6 @@ function renderItemCell(item, isPrimary, isMulti) {
 // ── Render: Right Panel ────────────────────────────────────
 
 function renderRightPanel() {
-  // 右パネル切替時はサジェストサイドバーを閉じる
-  _hideBoltSuggest();
-  _activeSuggestInput = null;
-  _activeSuggestCatEl = null;
-
   // 号車フォームモードが優先
   if (_truckPanelMode === 'new' || _truckPanelMode === 'edit') {
     _renderTruckFormPanel(_truckPanelMode);
@@ -992,10 +754,7 @@ function _renderFormPanel(mode, item) {
   // new モードかつ restore なしのとき _singleFormDraft を fallback に使う
   const draft = (!isEdit && !restore) ? _singleFormDraft : null;
 
-  const defPrefix    = restore?.prefix             ?? np.prefix?.value    ?? draft?.prefix    ?? '';
   const defBaseName  = restore?.baseName           ?? np.baseName?.value  ?? item?.name ?? draft?.baseName  ?? '';
-  const defSeparator = restore?.separator          ?? np.separator?.value ?? draft?.separator ?? '-';
-  const defSuffix    = restore?.suffix             ?? np.suffix?.value    ?? draft?.suffix    ?? '';
   const defNote      = restore?.note               ?? np.note?.value      ?? draft?.note      ?? '';
   const defCategory  = restore?.category           ?? item?.category      ?? draft?.category  ?? '';
   const defCaution   = restore?.cautionNote        ?? item?.cautionNote   ?? draft?.cautionNote        ?? '';
@@ -1051,31 +810,11 @@ function _renderFormPanel(mode, item) {
           </select>
         </div>
 
-        <hr class="border-gray-700 my-1">
-        <p class="text-xs font-semibold text-gray-400 tracking-widest">品名パーツ</p>
-
-        <div>
-          <label class="text-xs text-gray-400">接頭</label>
-          <input id="rp-prefix" type="text" value="${esc(defPrefix)}"
-            class="${inp()}" placeholder="例: 2S">
-        </div>
         <div>
           <label class="text-xs text-gray-400">品名 <span class="text-red-400">*</span></label>
           <input id="rp-baseName" type="text" value="${esc(defBaseName)}"
             class="${inp()}" placeholder="例: G500"
             autocomplete="off" spellcheck="false">
-        </div>
-        <div class="flex gap-1.5">
-          <div class="w-20 shrink-0">
-            <label class="text-xs text-gray-400">区切り</label>
-            <input id="rp-separator" type="text" value="${esc(defSeparator)}"
-              class="${inp()}" placeholder="-">
-          </div>
-          <div class="flex-1">
-            <label class="text-xs text-gray-400">枝番</label>
-            <input id="rp-suffix" type="text" value="${esc(defSuffix)}"
-              class="${inp()}" placeholder="例: 1">
-          </div>
         </div>
         <div>
           <label class="text-xs text-gray-400">補足</label>
@@ -1142,10 +881,7 @@ function _renderFormPanel(mode, item) {
 function _readFormData() {
   const q = id => elRightContent.querySelector(id);
   return {
-    prefix:             q('#rp-prefix')?.value.trim()             ?? '',
     baseName:           q('#rp-baseName')?.value.trim()           ?? '',
-    separator:          q('#rp-separator')?.value                 ?? '-',
-    suffix:             q('#rp-suffix')?.value.trim()             ?? '',
     note:               q('#rp-note')?.value.trim()               ?? '',
     category:           q('#rp-category')?.value                  ?? '',
     cautionNote:        q('#rp-cautionNote')?.value.trim()        ?? '',
@@ -1159,7 +895,6 @@ function _readBulkFormData() {
   const q = id => elRightContent.querySelector(id);
   return {
     category:      q('#rp-bulk-category')?.value        ?? '',
-    prefix:        q('#rp-bulk-prefix')?.value.trim()   ?? '',
     baseName:      q('#rp-bulk-baseName')?.value.trim() ?? '',
     separator:     q('#rp-bulk-separator')?.value       ?? '-',
     suffixStart:   q('#rp-bulk-suffixStart')?.value     ?? '1',
@@ -1175,7 +910,7 @@ function _generateBulkItems(f) {
   return Array.from({ length: count }, (_, i) => {
     const suffixVal = f.autoIncrement ? String(startNum + i) : f.suffixStart;
     const nameParts = {
-      prefix:    { value: f.prefix },
+      prefix:    { value: '' },
       baseName:  { value: f.baseName },
       separator: { value: f.separator || '-' },
       suffix:    { value: suffixVal },
@@ -1207,8 +942,8 @@ function _renderBulkDraftList() {
     return;
   }
   el.innerHTML = _bulkDraft.map((item, i) => `
-    <div class="flex items-center gap-1 py-0.5 border-b border-gray-800 last:border-0" data-bulk-row="${i}">
-      <span class="text-xs text-gray-500 w-5 text-right shrink-0">${i + 1}</span>
+    <div class="flex items-center gap-1 py-0.5 border-b border-gray-700 last:border-0" data-bulk-row="${i}">
+      <span class="text-xs text-gray-400 w-5 text-right shrink-0">${i + 1}</span>
       <span class="text-xs text-gray-200 flex-1 truncate">${esc(item.name)}</span>
       <button data-bulk-edit="${i}" class="text-xs text-blue-400 hover:text-blue-300 px-1 shrink-0">編集</button>
       <button data-bulk-del="${i}"  class="text-xs text-red-400  hover:text-red-300  px-1 shrink-0">削除</button>
@@ -1438,7 +1173,6 @@ function _renderBulkPanel() {
   const catOptions = CATEGORY_ORDER.map(c =>
     `<option value="${esc(c)}" ${defCategory === c ? 'selected' : ''}>${esc(c)}</option>`
   ).join('');
-  const defPrefix      = restore?.prefix       ?? bdraft?.prefix       ?? '';
   const defBaseName    = restore?.baseName      ?? bdraft?.baseName     ?? '';
   const defSeparator   = restore?.separator     ?? bdraft?.separator    ?? '-';
   const defSuffixStart = restore?.suffixStart   ?? bdraft?.suffixStart  ?? '1';
@@ -1485,11 +1219,6 @@ function _renderBulkPanel() {
         <p class="text-xs font-semibold text-gray-400 tracking-widest">品名パーツ</p>
 
         <div>
-          <label class="text-xs text-gray-400">接頭</label>
-          <input id="rp-bulk-prefix" type="text" value="${esc(defPrefix)}"
-            class="${inp()}" placeholder="例: 2S">
-        </div>
-        <div>
           <label class="text-xs text-gray-400">品名 <span class="text-red-400">*</span></label>
           <input id="rp-bulk-baseName" type="text" value="${esc(defBaseName)}"
             class="${inp()}" placeholder="例: B198"
@@ -1531,7 +1260,7 @@ function _renderBulkPanel() {
         <hr class="border-gray-700 my-1">
         <p class="text-xs font-semibold text-gray-400 tracking-widest">プレビュー</p>
 
-        <div id="rp-bulk-preview" class="rounded bg-gray-950 px-2 py-1.5 min-h-[48px]">
+        <div id="rp-bulk-preview" class="rounded bg-gray-800 px-2 py-1.5 min-h-[48px]">
           <p class="text-xs text-gray-600">品名を入力すると一覧が表示されます</p>
         </div>
       </div>
@@ -1582,10 +1311,10 @@ async function _handleSave() {
   }
 
   const nameParts = {
-    prefix:    { value: f.prefix },
+    prefix:    { value: '' },
     baseName:  { value: f.baseName },
-    separator: { value: f.separator || '-' },
-    suffix:    { value: f.suffix },
+    separator: { value: '-' },
+    suffix:    { value: '' },
     note:      { value: f.note },
   };
 
@@ -1613,10 +1342,7 @@ async function _handleSave() {
     _saveToHistory({
       id:                 Date.now(),
       mode:               'single',
-      prefix:             f.prefix,
       baseName:           f.baseName,
-      separator:          f.separator,
-      suffix:             f.suffix,
       note:               f.note,
       category:           f.category,
       cautionNote:        f.cautionNote,
@@ -1743,7 +1469,6 @@ async function _handleBulkSave() {
     _saveToHistory({
       id:            Date.now(),
       mode:          'bulk',
-      prefix:        f.prefix,
       baseName:      f.baseName,
       separator:     f.separator,
       suffixStart:   f.suffixStart,
@@ -1751,7 +1476,7 @@ async function _handleBulkSave() {
       count:         f.count,
       autoIncrement: f.autoIncrement,
       category:      f.category,
-      displayName:   `${f.prefix}${f.baseName}`,
+      displayName:   f.baseName,
       savedAt:       Date.now(),
     });
   }
@@ -2209,7 +1934,6 @@ function bindEvents() {
     if (e.key === 'v' || e.key === 'V') { e.preventDefault(); await _handlePaste(); return; }
   });
 
-  _initSuggestSidebar();
 }
 
 // ── Init ───────────────────────────────────────────────────
