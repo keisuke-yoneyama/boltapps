@@ -65,8 +65,9 @@ function buildBarLayout(plans, boltProjects) {
     if (!byDate[plan.deliveryDate]) byDate[plan.deliveryDate] = [];
 
     const proj  = boltProjects.find(p => p.id === plan.projectId);
-    const name  = projDisplayName(proj) || '工事';
-    const color = getProjectColor(plan.projectId || '');
+    // 物件名付きプランは物件名を優先表示・物件名で色を統一する
+    const name  = plan.propertyName || projDisplayName(proj) || '工事';
+    const color = getProjectColor(plan.propertyName || plan.projectId || '');
 
     let position = 'bar-single';
     if (plan.deliverySeriesId && plan.deliverySeriesLength > 1) {
@@ -456,7 +457,8 @@ function renderA0EditSidebar() {
       </td>
     </tr>`).join('');
 
-  const seriesLabel = plans.length > 1 ? `${plans.length}日間シリーズ` : '単体';
+  const totalDays   = plans[0]?.deliverySeriesLength || plans.length;
+  const seriesLabel = totalDays > 1 ? `${totalDays}日間シリーズ` : '単体';
   const startDate   = plans[0]?.deliveryDate || '—';
   // 開発用: シリーズIDを小さく表示（あれば）
   const seriesId    = plans[0]?.deliverySeriesId || null;
@@ -528,23 +530,49 @@ function renderA0EditSidebar() {
 
 /**
  * バークリック時にサイドバーを開く
- * planId が属するシリーズを plansCache から取得して a0edit state に格納する
+ * planId が属するシリーズを plansCache + Firestore から取得して a0edit state に格納する
+ * 月跨ぎシリーズに対応するため全キャッシュを検索し、不足時は Firestore から補完する
  */
-function openA0EditSidebar(planId, projectId) {
-  const { displayMonth, plansCache } = adminState;
-  const year     = displayMonth.getFullYear();
-  const month    = displayMonth.getMonth();
-  const monthKey = `${year}-${String(month + 1).padStart(2, '0')}`;
-  const allPlans = plansCache[monthKey] || [];
+async function openA0EditSidebar(planId, projectId) {
+  const { plansCache } = adminState;
 
-  const clicked = allPlans.find(p => p.id === planId);
+  // 全キャッシュから clicked plan を検索
+  let clicked = null;
+  for (const plans of Object.values(plansCache)) {
+    clicked = plans.find(p => p.id === planId);
+    if (clicked) break;
+  }
   if (!clicked) return;
 
   let series;
   if (clicked.deliverySeriesId) {
-    series = allPlans
-      .filter(p => p.deliverySeriesId === clicked.deliverySeriesId && p.projectId === projectId)
-      .sort((a, b) => (a.deliverySeriesIndex || 0) - (b.deliverySeriesIndex || 0));
+    const sid  = clicked.deliverySeriesId;
+    const seen = new Set();
+    series = [];
+    for (const plans of Object.values(plansCache)) {
+      for (const p of plans) {
+        if (p.deliverySeriesId === sid && p.projectId === projectId && !seen.has(p.id)) {
+          seen.add(p.id);
+          series.push(p);
+        }
+      }
+    }
+    series.sort((a, b) => (a.deliverySeriesIndex || 0) - (b.deliverySeriesIndex || 0));
+
+    // キャッシュ不足時は Firestore から補完（月跨ぎシリーズ対応）
+    const expectedLen = clicked.deliverySeriesLength ?? 1;
+    if (series.length < expectedLen) {
+      try {
+        const fetched = await getPlansBySeriesId(projectId, sid);
+        const seenIds = new Set(series.map(p => p.id));
+        for (const p of fetched) {
+          if (!seenIds.has(p.id)) series.push(p);
+        }
+        series.sort((a, b) => (a.deliverySeriesIndex ?? 0) - (b.deliverySeriesIndex ?? 0));
+      } catch (e) {
+        console.warn('[A0] シリーズ計画補完取得失敗', e);
+      }
+    }
   } else {
     series = [clicked];
   }
@@ -850,25 +878,42 @@ function handleA1PreviewDrawingNoChange(rowIndex, value) {
  * 工事選択コンボの <option> HTML を返す
  * id / projectId 両フィールドに対応（bolt プロジェクトのフィールド差異を吸収）
  */
+function renderPropertyOptions() {
+  const { boltProjects, form } = adminState.a1;
+  const seen  = new Set();
+  const names = [];
+  for (const p of (boltProjects || [])) {
+    const pn = p.propertyName || '';
+    if (!seen.has(pn)) { seen.add(pn); names.push(pn); }
+  }
+  return names.map(pn => {
+    const label      = pn || '（物件名未設定）';
+    const isSelected = form.propertyName !== null && pn === form.propertyName;
+    return `<option value="${esc(pn)}"${isSelected ? ' selected' : ''}>${esc(label)}</option>`;
+  }).join('');
+}
+
 function renderBoltProjectOptions() {
   const { boltProjects, form } = adminState.a1;
-  const selectedId = String(form.projectId ?? '');
+  const selectedId   = String(form.projectId ?? '');
+  const propertyName = form.propertyName ?? '';
 
-  return (boltProjects || []).map(p => {
-    const id   = String(p.id || p.projectId || '');
-    const name = projDisplayName(p) || id;
-    return `<option value="${esc(id)}"${id === selectedId ? ' selected' : ''}>${esc(name)}</option>`;
-  }).join('');
+  return (boltProjects || [])
+    .filter(p => (p.propertyName || '') === propertyName)
+    .map(p => {
+      const id   = String(p.id || p.projectId || '');
+      const name = projDisplayName(p) || id;
+      return `<option value="${esc(id)}"${id === selectedId ? ' selected' : ''}>${esc(name)}</option>`;
+    }).join('');
 }
 
 /**
  * A1 上部（工事選択・開始日・日数・モード）の HTML を返す
  */
 function renderA1HeaderSection() {
-  const { form } = adminState.a1;
+  const { form, boltProjects } = adminState.a1;
   const inp       = 'w-full bg-gray-700 text-gray-100 rounded px-3 py-2 text-sm';
   const radioBase = 'accent-blue-500';
-  const isNewProj = form.projectId === '__new__';
 
   const [, m, d]   = form.startDate.split('-');
   const startLabel = `${parseInt(m)}月${parseInt(d)}日`;
@@ -879,21 +924,50 @@ function renderA1HeaderSection() {
     ['all_days_holiday', '平日+土日+祝日モード'],
   ];
 
+  // null=未選択 / ''=物件名未設定 / 'name'=名前付き物件
+  const isUnnamed = form.propertyName === '';
+  const isNamed   = typeof form.propertyName === 'string' && form.propertyName !== '';
+  const isNewProj = form.projectId === '__new__';
+
+  // 名前付き物件の対象工事一覧
+  const targetProjects = isNamed
+    ? (boltProjects || []).filter(p => (p.propertyName || '') === form.propertyName)
+    : [];
+
+  // 物件名未設定に属する工事一覧（物件名未設定選択時の 工事 select 用）
+  const unnamedProjectsHtml = isUnnamed ? renderBoltProjectOptions() : '';
+
   return `
     <div>
-      <label class="text-xs text-gray-400 block mb-1">工事 <span class="text-red-400">*</span></label>
-      <select id="a1-project-id" class="${inp}">
-        <option value="">— 工事を選択 —</option>
-        ${renderBoltProjectOptions()}
-        <option value="__new__"${'__new__' === form.projectId ? ' selected' : ''}>＋ 新規工事を作成…</option>
+      <label class="text-xs text-gray-400 block mb-1">物件 <span class="text-red-400">*</span></label>
+      <select id="a1-property-id" class="${inp}">
+        <option value="__placeholder__"${form.propertyName === null ? ' selected' : ''}>— 物件を選択 —</option>
+        ${renderPropertyOptions()}
       </select>
     </div>
 
-    <div id="pf-new-project-area" class="${isNewProj ? '' : 'hidden'} space-y-2 pl-2 border-l-2 border-blue-700">
-      <label class="text-xs text-gray-400 block mb-1">新規工事名 <span class="text-red-400">*</span></label>
-      <input id="pf-new-project-name" type="text" value="${esc(form.newProjectName)}"
-        class="${inp}" placeholder="例: ○○ビル新築工事">
-    </div>
+    ${isNamed ? `
+      <div class="px-3 py-2 text-sm bg-gray-800 rounded border border-gray-700 select-none">
+        <span class="text-xs text-gray-500">対象工事（${targetProjects.length}件）: </span>
+        <span class="text-gray-300">${esc(targetProjects.map(p => projDisplayName(p) || p.id).join('・') || '（なし）')}</span>
+      </div>
+    ` : ''}
+
+    ${isUnnamed ? `
+      <div>
+        <label class="text-xs text-gray-400 block mb-1">工事 <span class="text-red-400">*</span></label>
+        <select id="a1-project-id" class="${inp}">
+          <option value="">— 工事を選択 —</option>
+          ${unnamedProjectsHtml}
+          <option value="__new__"${'__new__' === form.projectId ? ' selected' : ''}>＋ 新規工事を作成…</option>
+        </select>
+      </div>
+      <div id="pf-new-project-area" class="${isNewProj ? '' : 'hidden'} space-y-2 pl-2 border-l-2 border-blue-700">
+        <label class="text-xs text-gray-400 block mb-1">新規工事名 <span class="text-red-400">*</span></label>
+        <input id="pf-new-project-name" type="text" value="${esc(form.newProjectName)}"
+          class="${inp}" placeholder="例: ○○ビル新築工事">
+      </div>
+    ` : ''}
 
     <div>
       <label class="text-xs text-gray-400 block mb-1">搬入開始日</label>
@@ -1020,6 +1094,15 @@ let _planFormEventsBound = false;
 /** ヘッダ部（工事・日数・モード）のイベントを el に委譲してバインドする */
 function bindA1HeaderEvents(el) {
   el.addEventListener('change', e => {
+    if (e.target.id === 'a1-property-id') {
+      // __placeholder__ は未選択 → null、それ以外はそのまま（'' = 物件名未設定）
+      const val = e.target.value === '__placeholder__' ? null : e.target.value;
+      updateA1FormField('propertyName', val);
+      updateA1FormField('projectId', '');
+      updateA1FormField('newProjectName', '');
+      renderPlanForm();
+      return;
+    }
     if (e.target.id === 'a1-project-id') {
       updateA1FormField('projectId', e.target.value);
       document.getElementById('pf-new-project-area')
@@ -1094,21 +1177,47 @@ function previewRowToPlanData(row) {
 async function handlePlanFormSave() {
   const { form, previewRows } = adminState.a1;
 
-  if (!form.projectId) {
-    document.getElementById('a1-project-id')?.classList.add('ring-1', 'ring-red-500');
+  // 物件未選択
+  if (form.propertyName === null) {
+    document.getElementById('a1-property-id')?.classList.add('ring-1', 'ring-red-500');
     return;
   }
 
-  let projectId = form.projectId;
+  // 登録先の projectId と付加データを確定
+  let representativeProjectId;
+  let extraPlanFields = {};
 
-  if (form.projectId === '__new__') {
-    if (!form.newProjectName.trim()) {
-      document.getElementById('pf-new-project-name')?.classList.add('ring-1', 'ring-red-500');
+  if (form.propertyName !== '') {
+    // 名前付き物件: 最初の工事を代表として ONE プランを作成
+    // 全関連工事IDを linkedProjectIds に保存（サジェスト参照用）
+    const propProjects = (adminState.a1.boltProjects || [])
+      .filter(p => (p.propertyName || '') === form.propertyName);
+    if (!propProjects.length) {
+      alert('この物件に工事が登録されていません');
       return;
     }
-    const created = await createProject({ projectName: form.newProjectName.trim(), isActive: true });
-    adminState.a1.boltProjects.push(created);
-    projectId = created.id;
+    representativeProjectId = String(propProjects[0].id || propProjects[0].projectId || '');
+    extraPlanFields = {
+      propertyName:     form.propertyName,
+      linkedProjectIds: propProjects.map(p => String(p.id || p.projectId || '')).filter(Boolean),
+    };
+  } else {
+    // 物件名未設定: 選択した工事1件のみ
+    if (!form.projectId) {
+      document.getElementById('a1-project-id')?.classList.add('ring-1', 'ring-red-500');
+      return;
+    }
+    let pid = form.projectId;
+    if (form.projectId === '__new__') {
+      if (!form.newProjectName.trim()) {
+        document.getElementById('pf-new-project-name')?.classList.add('ring-1', 'ring-red-500');
+        return;
+      }
+      const created = await createProject({ projectName: form.newProjectName.trim(), isActive: true });
+      adminState.a1.boltProjects.push(created);
+      pid = created.id;
+    }
+    representativeProjectId = pid;
   }
 
   if (!previewRows?.length) {
@@ -1120,17 +1229,16 @@ async function handlePlanFormSave() {
   if (saveBtn) { saveBtn.disabled = true; saveBtn.innerHTML = '<span class="admin-spinner"></span> 登録中'; }
 
   const affectedMonths = new Set();
-
-  // シリーズID生成（同一 A1 登録の計画群をグループ化）
-  const seriesId    = `s-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
-  const validRows   = previewRows.filter(row => row.deliveryDate);
-  const seriesLength = validRows.length;
+  const validRows      = previewRows.filter(row => row.deliveryDate);
+  const seriesLength   = validRows.length;
+  const seriesId       = `s-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
 
   try {
     for (let idx = 0; idx < validRows.length; idx++) {
       const row = validRows[idx];
-      await createPlan(projectId, {
+      await createPlan(representativeProjectId, {
         ...previewRowToPlanData(row),
+        ...extraPlanFields,
         deliverySeriesId:     seriesId,
         deliverySeriesIndex:  idx + 1,
         deliverySeriesLength: seriesLength,
@@ -1174,6 +1282,7 @@ function initializeA1State(startDate) {
   adminState.a1 = {
     boltProjects: [],   // loadA1BoltProjects で上書きされる
     form: {
+      propertyName:      null,  // null=未選択 / ''=物件名未設定 / string=名前付き物件
       projectId:         '',
       newProjectName:    '',
       startDate,         // カレンダー選択日で固定
@@ -1295,13 +1404,14 @@ function bindCalendarEvents() {
     await loadAndRenderCalendar();
   });
 
-  document.getElementById('admin-cal-grid').addEventListener('click', e => {
+  document.getElementById('admin-cal-grid').addEventListener('click', async e => {
     // バーアイテムのクリック → サイドバー編集を優先
     const bar = e.target.closest('[data-plan-id]');
     if (bar) {
-      openA0EditSidebar(bar.dataset.planId, bar.dataset.projectId);
-      // 工事バーの搬入日に下部パネルを切り替える
-      const firstDate = adminState.a0edit.plans[0]?.deliveryDate;
+      await openA0EditSidebar(bar.dataset.planId, bar.dataset.projectId);
+      // クリックしたバーのある日付（月跨ぎシリーズでも正しく現在月の日付を使う）
+      const firstDate = bar.closest('[data-cal-date]')?.dataset.calDate
+        ?? adminState.a0edit.plans[0]?.deliveryDate;
       if (firstDate && firstDate !== adminState.selectedDate) {
         adminState.selectedDate = firstDate;
         renderCalendar();
