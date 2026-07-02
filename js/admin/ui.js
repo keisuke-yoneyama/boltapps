@@ -8,7 +8,7 @@ import { getProjectLevels } from '../modules/calculator.js';
 
 // ── 種別順（ボルトアプリ準拠） ─────────────────────────────
 const CATEGORY_ORDER = [
-  '柱', '間柱', '大梁', '小梁', 'ブレス', 'ボルト', '仮ボルト', 'デッキ', 'コン止め', 'その他',
+  '柱', '大梁', '小梁', '間柱', 'ブレス', 'ボルト', '仮ボルト', 'デッキ', 'コン止め', 'その他',
 ];
 
 function sortedGroups(groups) {
